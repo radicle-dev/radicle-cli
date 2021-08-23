@@ -1,9 +1,8 @@
 use std::convert::{TryFrom, TryInto};
-use std::io;
 use std::path::PathBuf;
 
-use anyhow::Result;
-
+use anyhow::bail;
+use anyhow::Context;
 use multihash::derive::Multihash;
 use multihash::Digest as _;
 use multihash::{MultihashDigest, Sha1Digest, U20, U32};
@@ -39,8 +38,9 @@ pub enum Code {
     Sha1,
 }
 
-pub async fn run(opts: Options) -> Result<()> {
-    let provider = Provider::<Http>::try_from(opts.rpc_url.as_str()).unwrap();
+pub async fn run(opts: Options) -> anyhow::Result<()> {
+    let provider =
+        Provider::<Http>::try_from(opts.rpc_url.as_str()).context("JSON-RPC URL parsing failed")?;
     let chain_id: u64 = if opts.testnet { 4 } else { 1 };
 
     log::debug!("Chain ID {}", chain_id);
@@ -75,7 +75,7 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     opts: Options,
     provider: Provider<P>,
     signer: S,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let abi: Abi = serde_json::from_str(ORG_ABI)?;
     let project = opts.project.unwrap();
     let commit = opts.commit.unwrap();
@@ -87,7 +87,6 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     log::info!("Anchor type 'git commit' ({:#x})", PROJECT_COMMIT_ANCHOR);
 
     let client = SignerMiddleware::new(provider, signer);
-
     let contract = Contract::new(opts.org, abi, client);
 
     // The project id, as a `bytes32`.
@@ -102,17 +101,13 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     let tag: u32 = PROJECT_COMMIT_ANCHOR;
     // The anchor hash as a `bytes` in multihash format.
     let hash: Bytes = {
+        if commit.len() != 40 {
+            bail!("Invalid SHA-1 commit specified");
+        }
         let bytes = (0..commit.len())
             .step_by(2)
             .map(|i| u8::from_str_radix(&commit[i..i + 2], 16))
             .collect::<Result<Vec<_>, _>>()?;
-
-        if bytes.len() != 20 {
-            return Err(anyhow::Error::new(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Invalid SHA-1 commit specified",
-            )));
-        }
 
         let digest: Sha1Digest<multihash::U20> = Sha1Digest::wrap(&bytes)?;
         let commit = Code::multihash_from_digest(&digest);

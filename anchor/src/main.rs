@@ -1,5 +1,4 @@
 use std::convert::{TryFrom, TryInto};
-use std::io;
 use std::process;
 use std::{env, path::PathBuf};
 
@@ -45,7 +44,7 @@ impl Options {
 impl TryFrom<Options> for anchor::Options {
     type Error = anyhow::Error;
 
-    fn try_from(opts: Options) -> Result<Self, anyhow::Error> {
+    fn try_from(opts: Options) -> anyhow::Result<Self> {
         let Options {
             org,
             project,
@@ -58,10 +57,9 @@ impl TryFrom<Options> for anchor::Options {
 
         let rpc_url = rpc_url
             .or_else(|| env::var("ETH_RPC_URL").ok())
-            .ok_or(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "An Ethereum JSON-RPC URL must be specified with `--rpc-url`",
-            ))?;
+            .ok_or_else(|| {
+                anyhow::anyhow!("An Ethereum JSON-RPC URL must be specified with `--rpc-url`")
+            })?;
 
         Ok(Self {
             org,
@@ -81,7 +79,11 @@ async fn main() {
 
     let args = Options::from_env();
     if let Err(err) = execute(args).await {
-        log::error!("Error: {}", err);
+        if let Some(cause) = err.source() {
+            log::error!("Error: {} ({})", err, cause);
+        } else {
+            log::error!("Error: {}", err);
+        }
         process::exit(1);
     }
 }
