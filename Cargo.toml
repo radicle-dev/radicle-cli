@@ -1,6 +1,26 @@
 [package]
-name = "radicle-client-tools"
-version = "0.1.0"
+name = "radicle-tools"
+version = "0.0.0"
 edition = "2018"
 
 [dependencies]
+colored = { version = "1.9" }
+atty = { version = "0.2" }
+log = { version = "0.4", features = ["std"] }
+
+[workspace]
+members = [
+  "anchor",
+]
+
+[patch.crates-io.radicle-keystore]
+git = "https://github.com/radicle-dev/radicle-keystore"
+branch = "master"
+
+[patch.crates-io.librad]
+git = "https://github.com/radicle-dev/radicle-link"
+branch = "master"
+
+[patch.crates-io.ethers]
+git = "https://github.com/gakonst/ethers-rs"
+branch = "master"

@@ -1,0 +1,18 @@
+[package]
+name = "radicle-anchor"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+radicle-tools = { path = "../" }
+log = { version = "0.4" }
+argh = { version = "0.1.5" }
+ethers = { version = "0.4", features = ["ledger"] }
+librad = { version = "0" }
+serde_json = { version = "1" }
+futures = { version = "*" }
+tokio = { version = "1.10", features = ["rt", "macros"] }
+anyhow = { version = "*" }
+multihash = { version = "0.14", features = ["sha1"] }
+rpassword = { version = "5.0" }
+colored = { version = "1.9" }
