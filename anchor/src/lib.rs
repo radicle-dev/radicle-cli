@@ -62,11 +62,7 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
     } else {
         log::debug!("Connecting to Ledger..");
 
-        let signer = Ledger::new(HDPath::LedgerLive(0), 1)
-            .await
-            .unwrap()
-            .with_chain_id(chain_id);
-
+        let signer = Ledger::new(HDPath::LedgerLive(0), chain_id).await.unwrap();
         anchor(opts, provider, signer).await
     }
 }
