@@ -1,5 +1,7 @@
-use std::path::PathBuf;
+use std::convert::{TryFrom, TryInto};
+use std::io;
 use std::process;
+use std::{env, path::PathBuf};
 
 use argh::FromArgs;
 
@@ -22,7 +24,7 @@ pub struct Options {
     pub commit: Option<String>,
     /// JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
     #[argh(option)]
-    pub rpc_url: String,
+    pub rpc_url: Option<String>,
     /// keystore file containing encrypted private key (default: none)
     #[argh(option)]
     pub keystore: Option<PathBuf>,
@@ -40,8 +42,10 @@ impl Options {
     }
 }
 
-impl From<Options> for anchor::Options {
-    fn from(opts: Options) -> Self {
+impl TryFrom<Options> for anchor::Options {
+    type Error = anyhow::Error;
+
+    fn try_from(opts: Options) -> Result<Self, anyhow::Error> {
         let Options {
             org,
             project,
@@ -52,7 +56,14 @@ impl From<Options> for anchor::Options {
             dry,
         } = opts;
 
-        Self {
+        let rpc_url = rpc_url
+            .or_else(|| env::var("ETH_RPC_URL").ok())
+            .ok_or(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "An Ethereum JSON-RPC URL must be specified with `--rpc-url`",
+            ))?;
+
+        Ok(Self {
             org,
             project,
             commit,
@@ -60,18 +71,23 @@ impl From<Options> for anchor::Options {
             keystore,
             testnet,
             dry,
-        }
+        })
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let opts = Options::from_env();
-
     logger::init(log::Level::Debug).unwrap();
 
-    if let Err(err) = anchor::run(opts.into()).await {
+    let args = Options::from_env();
+    if let Err(err) = execute(args).await {
         log::error!("Error: {}", err);
         process::exit(1);
     }
+}
+
+async fn execute(args: Options) -> anyhow::Result<()> {
+    anchor::run(args.try_into()?).await?;
+
+    Ok(())
 }
