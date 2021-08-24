@@ -3295,6 +3295,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "radicle-account"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "colored",
+ "ethers",
+ "log",
+ "radicle-tools",
+ "tokio",
+]
+
+[[package]]
 name = "radicle-anchor"
 version = "0.1.0"
 dependencies = [
