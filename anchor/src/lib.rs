@@ -117,11 +117,18 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     log::info!("Sending transaction..");
 
     let tx = contract.method::<_, ()>("anchor", (id, tag, hash))?;
-    let pending = tx.send().await?;
+    let result = loop {
+        let pending = tx.send().await?;
+        let tx_hash = *pending;
 
-    log::info!("Waiting for transaction {:?} to be processed..", *pending);
+        log::info!("Waiting for transaction {:?} to be included..", tx_hash);
 
-    let result = pending.confirmations(1).await?.unwrap();
+        if let Some(result) = pending.await? {
+            break result;
+        } else {
+            log::info!("Transaction {} dropped, retrying..", tx_hash);
+        }
+    };
 
     log::info!(
         "Project successfully anchored in block #{} ({})",
