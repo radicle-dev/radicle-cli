@@ -1,6 +1,7 @@
 use argh::FromArgs;
 use std::convert::{TryFrom, TryInto};
 use std::process;
+use std::str::FromStr;
 use std::{env, path::PathBuf};
 
 use coins_bip32::path::DerivationPath;
@@ -65,6 +66,11 @@ impl TryFrom<Options> for anchor::Options {
             .ok_or_else(|| {
                 anyhow::anyhow!("An Ethereum JSON-RPC URL must be specified with `--rpc-url`")
             })?;
+        let ledger_hdpath = ledger_hdpath.or_else(|| {
+            env::var("ETH_HDPATH")
+                .ok()
+                .and_then(|v| DerivationPath::from_str(v.as_str()).ok())
+        });
 
         Ok(Self {
             org,
