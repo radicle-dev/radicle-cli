@@ -1,8 +1,9 @@
+use argh::FromArgs;
 use std::convert::{TryFrom, TryInto};
 use std::process;
 use std::{env, path::PathBuf};
 
-use argh::FromArgs;
+use coins_bip32::path::DerivationPath;
 
 use radicle_anchor as anchor;
 use radicle_tools::logger;
@@ -27,6 +28,9 @@ pub struct Options {
     /// keystore file containing encrypted private key (default: none)
     #[argh(option)]
     pub keystore: Option<PathBuf>,
+    /// account derivation path when using a Ledger hardware wallet
+    #[argh(option)]
+    pub ledger_hdpath: Option<DerivationPath>,
     /// transact on the Ethereum "Rinkeby" testnet (default: false)
     #[argh(switch)]
     pub testnet: bool,
@@ -51,6 +55,7 @@ impl TryFrom<Options> for anchor::Options {
             commit,
             rpc_url,
             keystore,
+            ledger_hdpath,
             testnet,
             dry,
         } = opts;
@@ -67,6 +72,7 @@ impl TryFrom<Options> for anchor::Options {
             commit,
             rpc_url,
             keystore,
+            ledger_hdpath,
             testnet,
             dry,
         })
@@ -78,13 +84,18 @@ async fn main() {
     logger::init(log::Level::Debug).unwrap();
 
     let args = Options::from_env();
-    if let Err(err) = execute(args).await {
-        if let Some(cause) = err.source() {
-            log::error!("Error: {} ({})", err, cause);
-        } else {
-            log::error!("Error: {}", err);
+    match execute(args).await {
+        Err(err) => {
+            if let Some(&anchor::Error::NoWallet) = err.downcast_ref() {
+                log::error!("Error: no wallet specified: either `--ledger-hdpath` or `--keystore` must be specified");
+            } else if let Some(cause) = err.source() {
+                log::error!("Error: {} ({})", err, cause);
+            } else {
+                log::error!("Error: {}", err);
+            }
+            process::exit(1);
         }
-        process::exit(1);
+        Ok(()) => {}
     }
 }
 

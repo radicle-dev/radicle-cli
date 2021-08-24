@@ -1,11 +1,14 @@
 use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
 
-use anyhow::bail;
 use anyhow::Context;
+use anyhow::{anyhow, bail};
+
 use multihash::derive::Multihash;
 use multihash::Digest as _;
 use multihash::{MultihashDigest, Sha1Digest, U20, U32};
+
+use coins_bip32::path::DerivationPath;
 
 use ethers::{
     abi::{Abi, Bytes},
@@ -23,6 +26,7 @@ pub struct Options {
     pub project: Option<Urn>,
     pub commit: Option<String>,
     pub rpc_url: String,
+    pub ledger_hdpath: Option<DerivationPath>,
     pub keystore: Option<PathBuf>,
     pub testnet: bool,
     pub dry: bool,
@@ -36,6 +40,14 @@ const ORG_ABI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/abis/Or
 pub enum Code {
     #[mh(code = 0x11, hasher = multihash::Sha1, digest = Sha1Digest<U20>)]
     Sha1,
+}
+
+/// Anchor error.
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    /// No wallet specified.
+    #[error("no wallet specified")]
+    NoWallet,
 }
 
 pub async fn run(opts: Options) -> anyhow::Result<()> {
@@ -59,11 +71,15 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
         log::debug!("Keystore decrypted.");
 
         anchor(opts, provider, signer).await
-    } else {
+    } else if let Some(path) = &opts.ledger_hdpath {
         log::debug!("Connecting to Ledger..");
 
-        let signer = Ledger::new(HDPath::LedgerLive(0), chain_id).await.unwrap();
+        let hdpath = path.derivation_string();
+        let signer = Ledger::new(HDPath::Other(hdpath), chain_id).await?;
+
         anchor(opts, provider, signer).await
+    } else {
+        Err(anyhow!(Error::NoWallet))
     }
 }
 

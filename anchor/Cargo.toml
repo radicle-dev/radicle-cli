@@ -16,3 +16,5 @@ anyhow = { version = "*" }
 multihash = { version = "0.14", features = ["sha1"] }
 rpassword = { version = "5.0" }
 colored = { version = "1.9" }
+thiserror = { version = "*" }
+coins-bip32 = { version = "*" }

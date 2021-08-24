@@ -3313,6 +3313,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "argh",
+ "coins-bip32",
  "colored",
  "ethers",
  "futures",
@@ -3322,6 +3323,7 @@ dependencies = [
  "radicle-tools",
  "rpassword 5.0.1",
  "serde_json",
+ "thiserror",
  "tokio",
 ]
 
