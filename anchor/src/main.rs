@@ -63,9 +63,11 @@ impl TryFrom<Options> for anchor::Options {
 
         let rpc_url = rpc_url
             .or_else(|| env::var("ETH_RPC_URL").ok())
+            .and_then(|url| if url.is_empty() { None } else { Some(url) })
             .ok_or_else(|| {
                 anyhow::anyhow!("An Ethereum JSON-RPC URL must be specified with `--rpc-url`")
             })?;
+
         let ledger_hdpath = ledger_hdpath.or_else(|| {
             env::var("ETH_HDPATH")
                 .ok()
