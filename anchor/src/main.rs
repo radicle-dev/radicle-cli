@@ -77,8 +77,8 @@ impl TryFrom<Options> for anchor::Options {
             project,
             commit,
             rpc_url,
-            keystore,
             ledger_hdpath,
+            keystore,
             testnet,
             dry,
         })
