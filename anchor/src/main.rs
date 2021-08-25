@@ -6,7 +6,7 @@ use std::{env, path::PathBuf};
 
 use coins_bip32::path::DerivationPath;
 
-use radicle_anchor as anchor;
+use rad_anchor as anchor;
 use radicle_tools::logger;
 
 use anchor::{Address, Urn};

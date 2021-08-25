@@ -4,7 +4,7 @@ use std::process;
 
 use argh::FromArgs;
 
-use radicle_account as account;
+use rad_account as account;
 use radicle_tools::logger;
 
 /// Work with Ethereum accounts.

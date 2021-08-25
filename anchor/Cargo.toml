@@ -1,5 +1,5 @@
 [package]
-name = "radicle-anchor"
+name = "rad-anchor"
 version = "0.1.0"
 edition = "2018"
 
@@ -8,7 +8,7 @@ radicle-tools = { path = "../" }
 log = { version = "0.4" }
 argh = { version = "0.1.5" }
 ethers = { version = "0.4", features = ["ledger"] }
-librad = { version = "0" }
+link-identities = { version = "0" }
 serde_json = { version = "1" }
 futures = { version = "*" }
 tokio = { version = "1.10", features = ["rt", "macros"] }

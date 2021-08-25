@@ -14,14 +14,14 @@ members = [
   "account",
 ]
 
-[patch.crates-io.radicle-keystore]
-git = "https://github.com/radicle-dev/radicle-keystore"
-branch = "master"
-
-[patch.crates-io.librad]
+[patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
 branch = "master"
 
 [patch.crates-io.ethers]
 git = "https://github.com/gakonst/ethers-rs"
 branch = "master"
+
+[patch.crates-io.thrussh-encoding]
+git = "https://github.com/FintanH/thrussh.git"
+branch = "generic-agent"

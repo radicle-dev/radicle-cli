@@ -19,7 +19,7 @@ use ethers::{
 };
 
 pub use ethers::types::Address;
-pub use librad::git::identities::Urn;
+pub use link_identities::git::Urn;
 
 pub struct Options {
     pub org: Address,
