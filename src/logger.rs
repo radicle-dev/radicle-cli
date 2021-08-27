@@ -6,6 +6,7 @@ use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct Logger {
     level: Level,
+    targets: Vec<&'static str>,
 }
 
 impl Log for Logger {
@@ -14,6 +15,10 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &Record) {
+        if !self.targets.contains(&record.target()) {
+            return;
+        }
+
         if self.enabled(record.metadata()) {
             let module = record.module_path().unwrap_or_default();
 
@@ -41,8 +46,8 @@ impl Log for Logger {
 }
 
 /// Initialize a new logger.
-pub fn init(level: Level) -> Result<(), SetLoggerError> {
-    let logger = Logger { level };
+pub fn init(level: Level, targets: Vec<&'static str>) -> Result<(), SetLoggerError> {
+    let logger = Logger { level, targets };
 
     log::set_boxed_logger(Box::new(logger))?;
     log::set_max_level(level.to_level_filter());

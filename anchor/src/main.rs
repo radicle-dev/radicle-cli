@@ -32,9 +32,6 @@ pub struct Options {
     /// account derivation path when using a Ledger hardware wallet
     #[argh(option)]
     pub ledger_hdpath: Option<DerivationPath>,
-    /// transact on the Ethereum "Rinkeby" testnet (default: false)
-    #[argh(switch)]
-    pub testnet: bool,
     /// execute a dry run
     #[argh(switch)]
     pub dry: bool,
@@ -57,7 +54,6 @@ impl TryFrom<Options> for anchor::Options {
             rpc_url,
             keystore,
             ledger_hdpath,
-            testnet,
             dry,
         } = opts;
 
@@ -81,7 +77,6 @@ impl TryFrom<Options> for anchor::Options {
             rpc_url,
             ledger_hdpath,
             keystore,
-            testnet,
             dry,
         })
     }
@@ -89,7 +84,7 @@ impl TryFrom<Options> for anchor::Options {
 
 #[tokio::main]
 async fn main() {
-    logger::init(log::Level::Debug).unwrap();
+    logger::init(log::Level::Debug, vec![env!("CARGO_CRATE_NAME")]).unwrap();
 
     let args = Options::from_env();
     match execute(args).await {

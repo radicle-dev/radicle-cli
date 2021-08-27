@@ -18,6 +18,8 @@ use ethers::{
     signers::{HDPath, Ledger},
 };
 
+use ethers::prelude::Middleware;
+
 pub use ethers::types::Address;
 pub use link_identities::git::Urn;
 
@@ -28,7 +30,6 @@ pub struct Options {
     pub rpc_url: String,
     pub ledger_hdpath: Option<DerivationPath>,
     pub keystore: Option<PathBuf>,
-    pub testnet: bool,
     pub dry: bool,
 }
 
@@ -53,9 +54,7 @@ pub enum Error {
 pub async fn run(opts: Options) -> anyhow::Result<()> {
     let provider =
         Provider::<Http>::try_from(opts.rpc_url.as_str()).context("JSON-RPC URL parsing failed")?;
-    let chain_id: u64 = if opts.testnet { 4 } else { 1 };
-
-    log::debug!("Chain ID {}", chain_id);
+    let chain_id = provider.get_chainid().await?.as_u64();
 
     if let Some(keypath) = &opts.keystore {
         use colored::*;
@@ -65,10 +64,10 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
         let prompt = format!("{} Password: ", "??".cyan());
         let password = rpassword::prompt_password_stdout(&prompt).unwrap();
         let signer = ethers::signers::LocalWallet::decrypt_keystore(keypath, password)
-            .unwrap()
+            .map_err(|_| anyhow!("keystore decryption failed"))?
             .with_chain_id(chain_id);
 
-        log::debug!("Keystore decrypted.");
+        log::debug!("Keystore decrypted: {:?}.", signer);
 
         anchor(opts, provider, signer).await
     } else if let Some(path) = &opts.ledger_hdpath {
@@ -93,6 +92,7 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     let commit = opts.commit.unwrap();
 
     log::info!("Anchoring..");
+    log::info!("Chain ID {}", signer.chain_id());
     log::info!("Radicle ID {}", project);
     log::info!("Org {:?}", opts.org);
     log::info!("Anchor hash {}", commit);
