@@ -13,7 +13,7 @@ use radicle_tools::logger;
 
 use anchor::{Address, Urn};
 
-const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/USAGE"));
+const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", "USAGE"));
 
 fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::Options> {
     use lexopt::prelude::*;
