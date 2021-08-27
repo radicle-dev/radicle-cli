@@ -74,6 +74,17 @@ impl TryFrom<Options> for anchor::Options {
                 .and_then(|v| DerivationPath::from_str(v.as_str()).ok())
         });
 
+        let commit = if let Some(commit) = commit {
+            commit
+        } else {
+            get_repository_head().map_err(|_| {
+                anyhow::anyhow!(
+                    "repository head could not be retrieved, \
+                    please specify anchor hash with `--commit`"
+                )
+            })?
+        };
+
         Ok(Self {
             org,
             project,
@@ -84,6 +95,17 @@ impl TryFrom<Options> for anchor::Options {
             dry,
         })
     }
+}
+
+/// Get the `HEAD` commit hash of the current repository.
+fn get_repository_head() -> anyhow::Result<String> {
+    use std::process::Command;
+
+    let output = Command::new("git").arg("rev-parse").arg("HEAD").output()?;
+    let string = String::from_utf8(output.stdout)?;
+    let hash = string.trim_end().to_owned();
+
+    Ok(hash)
 }
 
 #[tokio::main]
