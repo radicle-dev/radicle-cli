@@ -23,13 +23,13 @@ dependencies = [
 
 [[package]]
 name = "aes"
-version = "0.7.4"
+version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "495ee669413bfbe9e8cace80f4d3d78e6d8c8d99579f97fb93bde351b185f2d4"
+checksum = "9e8b47f52ea9bae42228d07ec09eb676433d7c4ed1ebdf0f1d1c29ed446f1ab8"
 dependencies = [
  "cfg-if 1.0.0",
  "cipher",
- "cpufeatures",
+ "cpufeatures 0.2.1",
  "opaque-debug 0.3.0",
 ]
 
@@ -231,9 +231,9 @@ dependencies = [
 
 [[package]]
 name = "blake2"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a5720225ef5daecf08657f23791354e1685a8c91a4c60c7f3d3b2892f978f4"
+checksum = "0a4e37d16930f5459780f5621038b6382b9bb37c19016f39fb6b5808d831f174"
 dependencies = [
  "crypto-mac 0.8.0",
  "digest 0.9.0",
@@ -346,9 +346,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
+checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
 dependencies = [
  "serde",
 ]
@@ -567,6 +567,15 @@ name = "cpufeatures"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66c99696f6c9dd7f35d486b9d04d7e6e202aa3e8c40d553f2fdf5e7e0c6a71ef"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "cpufeatures"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95059428f66df56b63431fdb4e1947ed2190586af5c5a8a8b71122bdf5a7f469"
 dependencies = [
  "libc",
 ]
@@ -864,7 +873,7 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "0.4.1"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "ethers-contract",
  "ethers-core",
@@ -876,7 +885,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "0.4.7"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "ethers-contract-abigen",
  "ethers-contract-derive",
@@ -894,7 +903,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "0.4.7"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "Inflector",
  "anyhow",
@@ -916,7 +925,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "0.4.7"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "ethers-contract-abigen",
  "ethers-core",
@@ -930,7 +939,7 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "0.4.8"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "arrayvec 0.7.1",
  "bytes",
@@ -955,7 +964,7 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "0.4.8"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "async-trait",
  "ethers-contract",
@@ -978,7 +987,7 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "0.4.6"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -1007,7 +1016,7 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "0.4.6"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#8ba1885f0b6a882cde9665386f0ef5f0e3275f4b"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#72c77dd0cbacfaa790e3fe3747d5e94436dec0bd"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -1260,7 +1269,7 @@ dependencies = [
 [[package]]
 name = "git-trailers"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "nom",
  "thiserror",
@@ -1616,9 +1625,9 @@ checksum = "6c5d9b5843e8c9311ff602e6bd50855015e99e75159c2c54fe104cfac241f552"
 
 [[package]]
 name = "libc"
-version = "0.2.100"
+version = "0.2.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1fa8cddc8fbbee11227ef194b5317ed014b8acbf15139bd716a18ad3fe99ec5"
+checksum = "3cb00336871be5ed2c8ed44b60ae9959dc5b9f08539422ed43f09e34ecaeba21"
 
 [[package]]
 name = "libgit2-sys"
@@ -1647,7 +1656,7 @@ dependencies = [
 [[package]]
 name = "link-canonical"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "serde",
  "serde_bytes",
@@ -1659,7 +1668,7 @@ dependencies = [
 [[package]]
 name = "link-crypto"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "async-trait",
  "dyn-clone",
@@ -1681,7 +1690,7 @@ dependencies = [
 [[package]]
 name = "link-identities"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "either",
  "futures-lite",
@@ -1899,6 +1908,82 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f6bb902e437b6d86e03cce10a7e2af662292c5dfef23b65899ea3ac9354ad44"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "num"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43db66d1170d347f9a065114077f7dccb00c1b9478c89384490a3425279a4606"
+dependencies = [
+ "num-bigint",
+ "num-complex",
+ "num-integer",
+ "num-iter",
+ "num-rational",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e0d047c1062aa51e256408c560894e5251f08925980e53cf1aa5bd00eec6512"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26873667bbbb7c5182d4a37c1add32cdf09f841af72da53318fdb81543c15085"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
+dependencies = [
+ "autocfg",
+ "num-traits",
+]
+
+[[package]]
+name = "num-iter"
+version = "0.1.42"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2021c8337a54d21aca0d59a92577a029af9431cb59b909b03252b9c164fad59"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d41702bd167c2df5520b384281bc111a4b5efcf7fbc4c9c222c815b07e0a6a6a"
+dependencies = [
+ "autocfg",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]
@@ -2254,7 +2339,7 @@ dependencies = [
 [[package]]
 name = "radicle-data"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "minicbor",
  "nonempty",
@@ -2265,7 +2350,7 @@ dependencies = [
 [[package]]
 name = "radicle-git-ext"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "git2",
  "minicbor",
@@ -2303,7 +2388,7 @@ dependencies = [
 [[package]]
 name = "radicle-macros"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 dependencies = [
  "quote",
  "radicle-git-ext",
@@ -2313,7 +2398,7 @@ dependencies = [
 [[package]]
 name = "radicle-std-ext"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?branch=master#9e3541642cdd5256f662da0adf57dd1194fd3528"
+source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616c2e1f6fdb49cd5ff329909615d878739"
 
 [[package]]
 name = "radicle-tools"
@@ -2681,22 +2766,23 @@ dependencies = [
 
 [[package]]
 name = "security-framework"
-version = "2.3.1"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23a2ac85147a3a11d77ecf1bc7166ec0b92febfa4461c37944e180f319ece467"
+checksum = "5b9bd29cdffb8875b04f71c51058f940cf4e390bbfd2ce669c4f22cd70b492a5"
 dependencies = [
  "bitflags",
  "core-foundation",
  "core-foundation-sys",
  "libc",
+ "num",
  "security-framework-sys",
 ]
 
 [[package]]
 name = "security-framework-sys"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e4effb91b4b8b6fb7732e670b6cee160278ff8e6bf485c7805d9e319d76e284"
+checksum = "19133a286e494cc3311c165c4676ccb1fd47bed45b55f9d71fbd784ad4cea6f8"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -2831,7 +2917,7 @@ checksum = "1a0c8611594e2ab4ebbf06ec7cbbf0a99450b8570e96cbf5188b5d5f6ef18d81"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
- "cpufeatures",
+ "cpufeatures 0.1.5",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
@@ -2862,7 +2948,7 @@ checksum = "b362ae5752fd2137731f9fa25fd4d9058af34666ca1966fb969119cc35719f12"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
- "cpufeatures",
+ "cpufeatures 0.1.5",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
