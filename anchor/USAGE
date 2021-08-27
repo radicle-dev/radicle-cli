@@ -4,13 +4,13 @@ Usage
 
 Options
 
-    --org <address>              Radicle org under which to anchor the project.
-    --project <urn>              Radicle project to anchor.
-    --commit <hash>              Project commit hash to anchor.
-    --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545).
-    --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware wallet.
-    --keystore <file>            Keystore file containing encrypted private key (default: none).
-    --dry                        Execute a dry run.
+    --org <address>              Radicle org under which to anchor the project
+    --project <urn>              Radicle project to anchor
+    --commit <hash>              Project commit hash to anchor
+    --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
+    --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware wallet
+    --keystore <file>            Keystore file containing encrypted private key (default: none)
+    --dry-run                    Execute a dry run
     -v, --verbose                Verbose output
     --help                       Show this message
 

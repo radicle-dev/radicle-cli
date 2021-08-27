@@ -25,7 +25,7 @@ fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::
     let mut rpc_url: Option<String> = None;
     let mut keystore: Option<PathBuf> = None;
     let mut ledger_hdpath: Option<DerivationPath> = None;
-    let mut dry = false;
+    let mut dry_run = false;
 
     while let Some(arg) = parser.next()? {
         match arg {
@@ -57,8 +57,8 @@ fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::
             Long("ledger-hdpath") => {
                 ledger_hdpath = Some(parser.value()?.parse()?);
             }
-            Long("dry") => {
-                dry = true;
+            Long("dry-run") => {
+                dry_run = true;
             }
             Long("verbose") | Short('v') => {
                 *verbose = true;
@@ -103,7 +103,7 @@ fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::
         rpc_url,
         ledger_hdpath,
         keystore,
-        dry,
+        dry_run,
     })
 }
 

@@ -39,7 +39,7 @@ pub struct Options {
     /// Keystore file containing encrypted private key (default: none).
     pub keystore: Option<PathBuf>,
     /// Execute a dry run.
-    pub dry: bool,
+    pub dry_run: bool,
 }
 
 const PROJECT_COMMIT_ANCHOR: u32 = 0x0;
@@ -136,7 +136,7 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
         commit.to_bytes().to_vec()
     };
 
-    if opts.dry {
+    if opts.dry_run {
         return Ok(());
     }
     log::info!("Sending transaction..");
