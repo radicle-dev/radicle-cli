@@ -35,6 +35,9 @@ pub struct Options {
     /// execute a dry run
     #[argh(switch)]
     pub dry: bool,
+    /// verbose output
+    #[argh(switch, short = 'v')]
+    pub verbose: bool,
 }
 
 impl Options {
@@ -55,6 +58,7 @@ impl TryFrom<Options> for anchor::Options {
             keystore,
             ledger_hdpath,
             dry,
+            ..
         } = opts;
 
         let rpc_url = rpc_url
@@ -84,9 +88,14 @@ impl TryFrom<Options> for anchor::Options {
 
 #[tokio::main]
 async fn main() {
-    logger::init(log::Level::Debug, vec![env!("CARGO_CRATE_NAME")]).unwrap();
-
     let args = Options::from_env();
+    let level = if args.verbose {
+        log::Level::Debug
+    } else {
+        log::Level::Info
+    };
+    logger::init(level, vec![env!("CARGO_CRATE_NAME")]).unwrap();
+
     match execute(args).await {
         Err(err) => {
             if let Some(&anchor::Error::NoWallet) = err.downcast_ref() {
