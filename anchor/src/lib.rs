@@ -25,7 +25,7 @@ pub use link_identities::git::Urn;
 
 pub struct Options {
     pub org: Address,
-    pub project: Option<Urn>,
+    pub project: Urn,
     pub commit: String,
     pub rpc_url: String,
     pub ledger_hdpath: Option<DerivationPath>,
@@ -88,7 +88,7 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     signer: S,
 ) -> anyhow::Result<()> {
     let abi: Abi = serde_json::from_str(ORG_ABI)?;
-    let project = opts.project.unwrap();
+    let project = opts.project;
     let commit = opts.commit;
 
     log::info!("Anchoring..");

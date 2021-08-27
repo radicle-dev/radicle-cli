@@ -19,7 +19,7 @@ pub struct Options {
     pub org: Address,
     /// radicle project to anchor
     #[argh(option)]
-    pub project: Option<Urn>,
+    pub project: Urn,
     /// project commit hash to anchor
     #[argh(option)]
     pub commit: Option<String>,
