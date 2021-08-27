@@ -1609,6 +1609,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lexopt"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c5d9b5843e8c9311ff602e6bd50855015e99e75159c2c54fe104cfac241f552"
+
+[[package]]
 name = "libc"
 version = "0.2.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2230,11 +2236,11 @@ name = "rad-anchor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "argh",
  "coins-bip32",
  "colored",
  "ethers",
  "futures",
+ "lexopt",
  "link-identities",
  "log",
  "multihash 0.14.0",

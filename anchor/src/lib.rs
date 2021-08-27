@@ -23,13 +23,22 @@ use ethers::prelude::Middleware;
 pub use ethers::types::Address;
 pub use link_identities::git::Urn;
 
+/// Anchor options.
+#[derive(Debug, Clone)]
 pub struct Options {
+    /// Radicle org under which to anchor the project.
     pub org: Address,
+    /// Radicle project to anchor.
     pub project: Urn,
+    /// Project commit hash to anchor.
     pub commit: String,
+    /// JSON-RPC URL of Ethereum node (eg. http://localhost:8545).
     pub rpc_url: String,
+    /// Account derivation path when using a Ledger hardware wallet.
     pub ledger_hdpath: Option<DerivationPath>,
+    /// Keystore file containing encrypted private key (default: none).
     pub keystore: Option<PathBuf>,
+    /// Execute a dry run.
     pub dry: bool,
 }
 

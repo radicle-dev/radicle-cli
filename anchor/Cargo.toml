@@ -6,7 +6,7 @@ edition = "2018"
 [dependencies]
 radicle-tools = { path = "../" }
 log = { version = "0.4" }
-argh = { version = "0.1.5" }
+lexopt = { version = "0.1" }
 ethers = { version = "0.4", features = ["ledger"] }
 link-identities = { version = "0" }
 serde_json = { version = "1" }

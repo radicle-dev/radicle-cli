@@ -1,0 +1,27 @@
+Usage
+
+  rad-anchor --org <address> --project <urn> [<option>..]
+
+Options
+
+    --org <address>              Radicle org under which to anchor the project.
+    --project <urn>              Radicle project to anchor.
+    --commit <hash>              Project commit hash to anchor.
+    --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545).
+    --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware wallet.
+    --keystore <file>            Keystore file containing encrypted private key (default: none).
+    --dry                        Execute a dry run.
+    -v, --verbose                Verbose output
+    --help                       Show this message
+
+Environment variables
+
+  ETH_RPC_URL  Ethereum JSON-RPC URL (overwrite with '--rpc-url')
+  ETH_HDPATH   Hardware wallet derivation path (overwrite with '--ledger-hdpath')
+
+Example
+
+  rad-anchor --org 0x2f94AeA3f1760ECC7A38876A9662986385A80552 \
+             --project rad:git:hnrkemobagsicpf9sr95o3g551otspcd84c9o \
+             --rpc-url http://localhost:8545 \
+             --ledger-hdpath "m/44'/60'/7'/0/0"

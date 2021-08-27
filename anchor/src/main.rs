@@ -1,8 +1,10 @@
-use argh::FromArgs;
-use std::convert::{TryFrom, TryInto};
+use std::io::Write;
 use std::process;
 use std::str::FromStr;
 use std::{env, path::PathBuf};
+
+use anyhow::anyhow;
+use anyhow::Context as _;
 
 use coins_bip32::path::DerivationPath;
 
@@ -11,90 +13,98 @@ use radicle_tools::logger;
 
 use anchor::{Address, Urn};
 
-/// Anchor a Radicle project.
-#[derive(FromArgs)]
-pub struct Options {
-    /// radicle org under which to anchor the project
-    #[argh(option)]
-    pub org: Address,
-    /// radicle project to anchor
-    #[argh(option)]
-    pub project: Urn,
-    /// project commit hash to anchor
-    #[argh(option)]
-    pub commit: Option<String>,
-    /// JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
-    #[argh(option)]
-    pub rpc_url: Option<String>,
-    /// keystore file containing encrypted private key (default: none)
-    #[argh(option)]
-    pub keystore: Option<PathBuf>,
-    /// account derivation path when using a Ledger hardware wallet
-    #[argh(option)]
-    pub ledger_hdpath: Option<DerivationPath>,
-    /// execute a dry run
-    #[argh(switch)]
-    pub dry: bool,
-    /// verbose output
-    #[argh(switch, short = 'v')]
-    pub verbose: bool,
-}
+const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/USAGE"));
 
-impl Options {
-    pub fn from_env() -> Self {
-        argh::from_env()
+fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::Options> {
+    use lexopt::prelude::*;
+
+    let mut parser = lexopt::Parser::from_env();
+    let mut org: Option<Address> = None;
+    let mut project: Option<Urn> = None;
+    let mut commit: Option<String> = None;
+    let mut rpc_url: Option<String> = None;
+    let mut keystore: Option<PathBuf> = None;
+    let mut ledger_hdpath: Option<DerivationPath> = None;
+    let mut dry = false;
+
+    while let Some(arg) = parser.next()? {
+        match arg {
+            Long("org") => {
+                org = Some(
+                    parser
+                        .value()?
+                        .parse()
+                        .context("invalid value specified for '--org'")?,
+                );
+            }
+            Long("project") => {
+                project = Some(
+                    parser
+                        .value()?
+                        .parse()
+                        .context("invalid value specified for '--project'")?,
+                );
+            }
+            Long("commit") => {
+                commit = Some(parser.value()?.to_string_lossy().to_string());
+            }
+            Long("rpc-url") => {
+                rpc_url = Some(parser.value()?.to_string_lossy().to_string());
+            }
+            Long("keystore") => {
+                keystore = Some(parser.value()?.parse()?);
+            }
+            Long("ledger-hdpath") => {
+                ledger_hdpath = Some(parser.value()?.parse()?);
+            }
+            Long("dry") => {
+                dry = true;
+            }
+            Long("verbose") | Short('v') => {
+                *verbose = true;
+            }
+            Long("help") => {
+                *help = true;
+            }
+            _ => {
+                return Err(anyhow!(arg.unexpected()));
+            }
+        }
     }
-}
 
-impl TryFrom<Options> for anchor::Options {
-    type Error = anyhow::Error;
+    let rpc_url = rpc_url
+        .or_else(|| env::var("ETH_RPC_URL").ok())
+        .and_then(|url| if url.is_empty() { None } else { Some(url) })
+        .ok_or_else(|| {
+            anyhow::anyhow!("An Ethereum JSON-RPC URL must be specified with '--rpc-url'")
+        })?;
 
-    fn try_from(opts: Options) -> anyhow::Result<Self> {
-        let Options {
-            org,
-            project,
-            commit,
-            rpc_url,
-            keystore,
-            ledger_hdpath,
-            dry,
-            ..
-        } = opts;
+    let commit = if let Some(commit) = commit {
+        commit
+    } else {
+        get_repository_head().map_err(|_| {
+            anyhow::anyhow!(
+                "repository head could not be retrieved, \
+                please specify anchor hash with '--commit'"
+            )
+        })?
+    };
 
-        let rpc_url = rpc_url
-            .or_else(|| env::var("ETH_RPC_URL").ok())
-            .and_then(|url| if url.is_empty() { None } else { Some(url) })
-            .ok_or_else(|| {
-                anyhow::anyhow!("An Ethereum JSON-RPC URL must be specified with `--rpc-url`")
-            })?;
+    let ledger_hdpath = ledger_hdpath.or_else(|| {
+        env::var("ETH_HDPATH")
+            .ok()
+            .and_then(|v| DerivationPath::from_str(v.as_str()).ok())
+    });
 
-        let ledger_hdpath = ledger_hdpath.or_else(|| {
-            env::var("ETH_HDPATH")
-                .ok()
-                .and_then(|v| DerivationPath::from_str(v.as_str()).ok())
-        });
-
-        let commit = if let Some(commit) = commit {
-            commit
-        } else {
-            get_repository_head().map_err(|_| {
-                anyhow::anyhow!(
-                    "repository head could not be retrieved, \
-                    please specify anchor hash with `--commit`"
-                )
-            })?
-        };
-
-        Ok(Self {
-            org,
-            project,
-            commit,
-            rpc_url,
-            ledger_hdpath,
-            keystore,
-            dry,
-        })
-    }
+    Ok(anchor::Options {
+        org: org.ok_or(anyhow!("an org must be specified with '--org'"))?,
+        project: project.ok_or(anyhow!("a project must be specified with '--project'"))?,
+        commit,
+        rpc_url,
+        ledger_hdpath,
+        keystore,
+        dry,
+    })
 }
 
 /// Get the `HEAD` commit hash of the current repository.
@@ -110,18 +120,12 @@ fn get_repository_head() -> anyhow::Result<String> {
 
 #[tokio::main]
 async fn main() {
-    let args = Options::from_env();
-    let level = if args.verbose {
-        log::Level::Debug
-    } else {
-        log::Level::Info
-    };
-    logger::init(level, vec![env!("CARGO_CRATE_NAME")]).unwrap();
+    logger::init(log::Level::Error, vec![env!("CARGO_CRATE_NAME")]).unwrap();
 
-    match execute(args).await {
+    match execute().await {
         Err(err) => {
             if let Some(&anchor::Error::NoWallet) = err.downcast_ref() {
-                log::error!("Error: no wallet specified: either `--ledger-hdpath` or `--keystore` must be specified");
+                log::error!("Error: no wallet specified: either '--ledger-hdpath' or '--keystore' must be specified");
             } else if let Some(cause) = err.source() {
                 log::error!("Error: {} ({})", err, cause);
             } else {
@@ -133,8 +137,22 @@ async fn main() {
     }
 }
 
-async fn execute(args: Options) -> anyhow::Result<()> {
-    anchor::run(args.try_into()?).await?;
+async fn execute() -> anyhow::Result<()> {
+    let mut help = false;
+    let mut verbose = false;
+    let opts = parse_options(&mut help, &mut verbose)?;
+
+    if help {
+        std::io::stderr().write(USAGE)?;
+        return Ok(());
+    }
+
+    if verbose {
+        log::set_max_level(log::Level::Debug.to_level_filter());
+    } else {
+        log::set_max_level(log::Level::Info.to_level_filter());
+    }
+    anchor::run(opts).await?;
 
     Ok(())
 }
