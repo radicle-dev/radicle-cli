@@ -16,10 +16,19 @@ use anchor::{Address, Urn};
 const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", "USAGE"));
 const NAME: &str = env!("CARGO_CRATE_NAME");
 
-fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::Options> {
+enum Command {
+    Run {
+        options: anchor::Options,
+        verbose: bool,
+    },
+    Help,
+}
+
+fn parse_options() -> anyhow::Result<Command> {
     use lexopt::prelude::*;
 
     let mut parser = lexopt::Parser::from_env();
+    let mut verbose = false;
     let mut org: Option<Address> = None;
     let mut project: Option<Urn> = None;
     let mut commit: Option<String> = None;
@@ -62,10 +71,10 @@ fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::
                 dry_run = true;
             }
             Long("verbose") | Short('v') => {
-                *verbose = true;
+                verbose = true;
             }
             Long("help") => {
-                *help = true;
+                return Ok(Command::Help);
             }
             _ => {
                 return Err(anyhow!(arg.unexpected()));
@@ -97,14 +106,18 @@ fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::
             .and_then(|v| DerivationPath::from_str(v.as_str()).ok())
     });
 
-    Ok(anchor::Options {
-        org: org.ok_or_else(|| anyhow!("an org must be specified with '--org'"))?,
-        project: project.ok_or_else(|| anyhow!("a project must be specified with '--project'"))?,
-        commit,
-        rpc_url,
-        ledger_hdpath,
-        keystore,
-        dry_run,
+    Ok(Command::Run {
+        options: anchor::Options {
+            org: org.ok_or_else(|| anyhow!("an org must be specified with '--org'"))?,
+            project: project
+                .ok_or_else(|| anyhow!("a project must be specified with '--project'"))?,
+            commit,
+            rpc_url,
+            ledger_hdpath,
+            keystore,
+            dry_run,
+        },
+        verbose,
     })
 }
 
@@ -140,21 +153,19 @@ async fn main() {
 }
 
 async fn execute() -> anyhow::Result<()> {
-    let mut help = false;
-    let mut verbose = false;
-    let opts = parse_options(&mut help, &mut verbose)?;
-
-    if help {
-        std::io::stderr().write_all(USAGE)?;
-        return Ok(());
+    match parse_options()? {
+        Command::Help => {
+            std::io::stderr().write_all(USAGE)?;
+            return Ok(());
+        }
+        Command::Run { options, verbose } => {
+            if verbose {
+                logger::set_level(log::Level::Debug);
+            } else {
+                logger::set_level(log::Level::Info);
+            }
+            anchor::run(options).await?;
+        }
     }
-
-    if verbose {
-        logger::set_level(log::Level::Debug);
-    } else {
-        logger::set_level(log::Level::Info);
-    }
-    anchor::run(opts).await?;
-
     Ok(())
 }
