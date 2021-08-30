@@ -14,6 +14,7 @@ use radicle_tools::logger;
 use anchor::{Address, Urn};
 
 const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", "USAGE"));
+const NAME: &str = env!("CARGO_CRATE_NAME");
 
 fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::Options> {
     use lexopt::prelude::*;
@@ -120,7 +121,8 @@ fn get_repository_head() -> anyhow::Result<String> {
 
 #[tokio::main]
 async fn main() {
-    logger::init(log::Level::Error, vec![env!("CARGO_CRATE_NAME")]).unwrap();
+    logger::init(NAME).unwrap();
+    logger::set_level(log::Level::Error);
 
     match execute().await {
         Err(err) => {
@@ -143,14 +145,14 @@ async fn execute() -> anyhow::Result<()> {
     let opts = parse_options(&mut help, &mut verbose)?;
 
     if help {
-        std::io::stderr().write(USAGE)?;
+        std::io::stderr().write_all(USAGE)?;
         return Ok(());
     }
 
     if verbose {
-        log::set_max_level(log::Level::Debug.to_level_filter());
+        logger::set_level(log::Level::Debug);
     } else {
-        log::set_max_level(log::Level::Info.to_level_filter());
+        logger::set_level(log::Level::Info);
     }
     anchor::run(opts).await?;
 

@@ -37,7 +37,8 @@ impl TryFrom<Options> for account::Options {
 
 #[tokio::main]
 async fn main() {
-    logger::init(log::Level::Info, vec![env!("CARGO_CRATE_NAME")]).unwrap();
+    logger::init(env!("CARGO_CRATE_NAME")).unwrap();
+    logger::set_level(log::Level::Info);
 
     let args = Options::from_env();
     if let Err(err) = execute(args).await {

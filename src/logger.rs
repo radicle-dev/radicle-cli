@@ -6,7 +6,7 @@ use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct Logger {
     level: Level,
-    targets: Vec<&'static str>,
+    target: &'static str,
 }
 
 impl Log for Logger {
@@ -15,27 +15,47 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &Record) {
-        if !self.targets.contains(&record.target()) {
+        let metadata = record.metadata();
+        let is_native = self.target == record.target();
+
+        // When using the "info" level, ignore all logs from other targets.
+        if metadata.level() == Level::Info && !is_native {
             return;
         }
 
-        if self.enabled(record.metadata()) {
-            let module = record.module_path().unwrap_or_default();
-
+        if self.enabled(metadata) {
             if record.level() == Level::Error {
-                write(record, module, io::stderr());
+                write(record, record.target(), is_native, io::stderr());
             } else {
-                write(record, module, io::stdout());
+                write(record, record.target(), is_native, io::stdout());
             }
 
-            fn write(record: &log::Record, _module: &str, mut stream: impl io::Write) {
+            fn write(
+                record: &log::Record,
+                target: &str,
+                is_native: bool,
+                mut stream: impl io::Write,
+            ) {
                 let msg = record.args().to_string();
-                let message = match record.level() {
-                    Level::Error => format!("== {}", msg).red().bold(),
-                    Level::Warn => format!("{} {}", "=>".blue(), msg).yellow(),
-                    Level::Info => format!("{} {}", "=>".blue(), msg.normal().bold()).normal(),
-                    Level::Debug => format!("{} {}", "=>".blue(), msg).dimmed(),
-                    Level::Trace => format!("=> {}", msg).white().dimmed(),
+
+                let message = if is_native {
+                    match record.level() {
+                        Level::Error => format!("== {}", msg).red().bold(),
+                        Level::Warn => format!("{} {}", "=>".blue(), msg).yellow(),
+                        Level::Info => format!("{} {}", "=>".blue(), msg.normal().bold()).normal(),
+                        Level::Debug => format!("{} {}", "=>".blue(), msg).dimmed(),
+                        Level::Trace => format!("=> {}", msg).white().dimmed(),
+                    }
+                } else {
+                    let msg = format!("** {} ({})", msg, target);
+
+                    match record.level() {
+                        Level::Error => msg.red(),
+                        Level::Warn => msg.yellow(),
+                        Level::Info => msg.normal(),
+                        Level::Debug => msg.dimmed(),
+                        Level::Trace => msg.white().dimmed(),
+                    }
                 };
                 writeln!(stream, "{}", message).ok();
             }
@@ -46,11 +66,16 @@ impl Log for Logger {
 }
 
 /// Initialize a new logger.
-pub fn init(level: Level, targets: Vec<&'static str>) -> Result<(), SetLoggerError> {
-    let logger = Logger { level, targets };
+pub fn init(target: &'static str) -> Result<(), SetLoggerError> {
+    let level = log::Level::Debug;
+    let logger = Logger { level, target };
 
     log::set_boxed_logger(Box::new(logger))?;
-    log::set_max_level(level.to_level_filter());
 
     Ok(())
+}
+
+/// Set the maximum log level.
+pub fn set_level(level: log::Level) {
+    log::set_max_level(level.to_level_filter());
 }
