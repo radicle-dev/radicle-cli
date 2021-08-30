@@ -98,8 +98,8 @@ fn parse_options(help: &mut bool, verbose: &mut bool) -> anyhow::Result<anchor::
     });
 
     Ok(anchor::Options {
-        org: org.ok_or(anyhow!("an org must be specified with '--org'"))?,
-        project: project.ok_or(anyhow!("a project must be specified with '--project'"))?,
+        org: org.ok_or_else(|| anyhow!("an org must be specified with '--org'"))?,
+        project: project.ok_or_else(|| anyhow!("a project must be specified with '--project'"))?,
         commit,
         rpc_url,
         ledger_hdpath,
