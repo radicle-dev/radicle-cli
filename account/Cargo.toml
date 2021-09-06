@@ -7,7 +7,7 @@ edition = "2018"
 radicle-tools = { path = "../" }
 log = { version = "0.4" }
 argh = { version = "0.1.5" }
-ethers = { version = "0.4", features = ["ledger"] }
+ethers = { version = "0", features = ["ledger"] }
 tokio = { version = "1.10", features = ["rt", "macros"] }
 anyhow = { version = "*" }
 colored = { version = "1.9" }

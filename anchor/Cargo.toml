@@ -7,7 +7,7 @@ edition = "2018"
 radicle-tools = { path = "../" }
 log = { version = "0.4" }
 lexopt = { version = "0.1" }
-ethers = { version = "0.4", features = ["ledger"] }
+ethers = { version = "0", features = ["ledger"] }
 link-identities = { version = "0" }
 serde_json = { version = "1" }
 futures = { version = "*" }
