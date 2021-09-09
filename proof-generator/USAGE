@@ -1,0 +1,20 @@
+Usage
+
+  proof-generator --gpg-key <string> --keystore <file> --rpc-url <url> --output <file> [<option>..] 
+
+Options
+
+    --gpg-key <string>           GPG key fingerprint
+    --keystore <file>            Path to keystore file
+    --ledger-hdpath <string>     HD Derivation path of Ledger HW
+    --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
+    --output <file>              Path to where the proof should be stored
+    -v, --verbose                Verbose output
+    --help                       Show this message
+
+Example
+
+  proof-generator --gpg-key EB1729638209DCE61281F416504C9C1DE8C47EDF \
+             --rpc-url http://localhost:8545 \
+             --ledger-hdpath "m/44'/60'/0'/0/0" \
+             --output ./proof.json
