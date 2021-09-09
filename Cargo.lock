@@ -2309,6 +2309,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "proof-generator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "coins-bip32",
+ "colored",
+ "ethers",
+ "lexopt",
+ "log",
+ "radicle-tools",
+ "rpassword 5.0.1",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

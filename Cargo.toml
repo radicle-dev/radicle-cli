@@ -13,6 +13,7 @@ members = [
   "anchor",
   "account",
   "safe-transaction-client",
+  "proof-generator",
 ]
 
 [patch.crates-io.link-identities]
