@@ -12,6 +12,7 @@ log = { version = "0.4", features = ["std"] }
 members = [
   "anchor",
   "account",
+  "safe-transaction-client",
 ]
 
 [patch.crates-io.link-identities]

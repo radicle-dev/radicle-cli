@@ -1,0 +1,29 @@
+[package]
+name = "safe-transaction-client"
+authors = ["Sofia (D20F2B901893DA801CF51D6E33680DA3EACB1E39)"]
+version = "0.1.0"
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+[dependencies.serde]
+version = "1.0.130"
+default-features = false
+features = ["derive"]
+
+[dependencies.ethers]
+version = "0.5.2"
+default-features = false
+
+[dependencies.tiny-keccak]
+version = "2.0.2"
+features = ["keccak"]
+
+[dependencies.ureq]
+version = "2.2.0"
+default-features = false
+features = ["json", "tls"]
+
+[dev-dependencies]
+hex = "0.4.3"
+futures-executor = "0.3.17"
+rand_chacha = "0.3.1"
