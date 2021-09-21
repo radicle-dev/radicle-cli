@@ -139,7 +139,9 @@ async fn main() {
 
     match execute().await {
         Err(err) => {
-            if let Some(&anchor::Error::NoWallet) = err.downcast_ref() {
+            if let Some(&anchor::Error::NoWallet) =
+                err.downcast_ref::<anchor::Error<std::convert::Infallible>>()
+            {
                 log::error!("Error: no wallet specified: either '--ledger-hdpath' or '--keystore' must be specified");
             } else if let Some(cause) = err.source() {
                 log::error!("Error: {} ({})", err, cause);

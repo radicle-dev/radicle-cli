@@ -10,6 +10,9 @@ version = "1.0.130"
 default-features = false
 features = ["derive"]
 
+[dependencies.thiserror]
+version = "1"
+
 [dependencies.ethers]
 version = "0.5.2"
 default-features = false

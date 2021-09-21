@@ -1,4 +1,4 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::{Infallible, TryFrom, TryInto};
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -15,7 +15,7 @@ use ethers::{
     contract::Contract,
     prelude::{builders::ContractCall, Bytes, JsonRpcClient, Signer, SignerMiddleware, U256},
     providers::{Http, Provider},
-    signers::{HDPath, Ledger},
+    signers::{HDPath, Ledger, LocalWallet},
 };
 
 use ethers::prelude::Middleware;
@@ -84,13 +84,17 @@ pub enum Code {
 
 /// Anchor error.
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+#[allow(clippy::large_enum_variant)]
+pub enum Error<S: std::error::Error> {
     /// No wallet specified.
     #[error("no wallet specified")]
     NoWallet,
     /// Gnosis Safe error.
     #[error("safe transaction error: {0}")]
-    Safe(String),
+    Safe(#[from] safe::Error),
+    /// Signature error.
+    #[error("signer error: {0}")]
+    Signer(S),
 }
 
 pub async fn run(opts: Options) -> anyhow::Result<()> {
@@ -105,7 +109,7 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
 
         let prompt = format!("{} Password: ", "??".cyan());
         let password = rpassword::prompt_password_stdout(&prompt).unwrap();
-        let signer = ethers::signers::LocalWallet::decrypt_keystore(keypath, password)
+        let signer = LocalWallet::decrypt_keystore(keypath, password)
             .map_err(|_| anyhow!("keystore decryption failed"))?
             .with_chain_id(chain_id);
 
@@ -120,7 +124,7 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
 
         anchor(opts, provider, signer).await
     } else {
-        Err(anyhow!(Error::NoWallet))
+        Err(anyhow!(Error::<Infallible>::NoWallet))
     }
 }
 
@@ -203,7 +207,7 @@ async fn anchor<P: 'static + JsonRpcClient + Clone, S: 'static + Signer>(
     }
 }
 
-async fn anchor_safe<S: Signer>(
+async fn anchor_safe<S: Signer + 'static>(
     to: Address,
     data: Bytes,
     safe: &safe::Safe<'_>,
@@ -213,10 +217,9 @@ async fn anchor_safe<S: Signer>(
     let signed_tx = safe_tx
         .sign(signer)
         .await
-        .map_err(|e| Error::Safe(format!("{:?}", e)))?;
+        .map_err(Error::<S::Error>::Signer)?;
 
-    safe.propose(signed_tx)
-        .map_err(|e| Error::Safe(format!("{:?}", e)))?;
+    safe.propose(signed_tx)?;
 
     Ok(())
 }

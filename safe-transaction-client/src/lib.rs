@@ -4,13 +4,19 @@ use std::io;
 use ethers::prelude::*;
 use ethers::utils::to_checksum;
 
-#[derive(Debug)]
-pub enum Error<E = ()> {
+#[derive(thiserror::Error, Debug)]
+pub enum Error<E: std::fmt::Debug = ()> {
+    #[error("http request failed: {0}")]
     Ureq(ureq::Error),
-    IO(io::Error),
-    SignatureError(SignatureError),
+    #[error("i/o error: {0}")]
+    Io(#[from] io::Error),
+    #[error("signature error: {0}")]
+    SignatureError(#[from] SignatureError),
+    #[error("API error ({0}): {1}")]
     RemoteError(u16, String),
+    #[error("invalid data received from API")]
     InvalidData,
+    #[error("signature error: {0:?}")]
     Signature(E),
 }
 
@@ -28,24 +34,6 @@ impl From<ureq::Error> for Error {
             }
             e => Error::Ureq(e),
         }
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self {
-        Self::IO(e)
-    }
-}
-
-impl From<SignatureError> for Error {
-    fn from(e: SignatureError) -> Self {
-        Self::SignatureError(e)
-    }
-}
-
-impl<E> From<E> for Error<E> {
-    fn from(e: E) -> Self {
-        Self::Signature(e)
     }
 }
 
@@ -219,10 +207,9 @@ impl Safe<'_> {
 
 impl SafeTx {
     // We consume self. If signing fails, we have bigger issues than recreating the transaction.
-    pub async fn sign<S>(self, signer: &S) -> Result<SignedSafeTx, Error<S::Error>>
+    pub async fn sign<S>(self, signer: &S) -> Result<SignedSafeTx, S::Error>
     where
         S: Signer,
-        Error<S::Error>: From<S::Error>,
     {
         use ethers::abi::Tokenizable;
         use ethers::utils::keccak256;
@@ -285,13 +272,9 @@ pub struct SignedSafeTxHash {
     signature: Signature,
 }
 
-pub async fn sign_tx_hash<S>(
-    signer: &S,
-    safe_tx_hash: TxHash,
-) -> Result<SignedSafeTxHash, Error<S::Error>>
+pub async fn sign_tx_hash<S>(signer: &S, safe_tx_hash: TxHash) -> Result<SignedSafeTxHash, S::Error>
 where
     S: Signer,
-    Error<S::Error>: From<S::Error>,
 {
     let mut signature = signer.sign_message(safe_tx_hash).await?;
 
