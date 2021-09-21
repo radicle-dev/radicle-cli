@@ -23,6 +23,8 @@ use ethers::prelude::Middleware;
 pub use ethers::types::Address;
 pub use link_identities::git::Urn;
 
+use safe_transaction_client as safe;
+
 /// Anchor options.
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -44,6 +46,34 @@ pub struct Options {
 
 const PROJECT_COMMIT_ANCHOR: u32 = 0x0;
 const ORG_ABI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/abis/OrgV1.json"));
+
+/// Ethereum network.
+#[derive(Debug)]
+enum Network {
+    Homestead,
+    Rinkeby,
+}
+
+impl Network {
+    const fn safe_transaction_url(&self) -> &'static str {
+        match self {
+            Self::Homestead => "https://safe-transaction.gnosis.io",
+            Self::Rinkeby => "https://safe-transaction.rinkeby.gnosis.io",
+        }
+    }
+}
+
+impl TryFrom<u64> for Network {
+    type Error = ();
+
+    fn try_from(other: u64) -> Result<Self, ()> {
+        match other {
+            1 => Ok(Self::Homestead),
+            4 => Ok(Self::Rinkeby),
+            _ => Err(()),
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, Multihash, PartialEq)]
 #[mh(alloc_size = U32)]
@@ -99,9 +129,12 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     let abi: Abi = serde_json::from_str(ORG_ABI)?;
     let project = opts.project;
     let commit = opts.commit;
+    let chain_id = signer.chain_id();
+    let network =
+        Network::try_from(chain_id).map_err(|_| anyhow!("unsupported chain id '{}'", chain_id))?;
 
     log::info!("Anchoring..");
-    log::info!("Chain ID {}", signer.chain_id());
+    log::info!("Chain ID {} ({:?})", chain_id, network);
     log::info!("Radicle ID {}", project);
     log::info!("Org {:?}", opts.org);
     log::info!("Anchor hash {}", commit);
@@ -109,6 +142,18 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
 
     let client = SignerMiddleware::new(provider, signer);
     let contract = Contract::new(opts.org, abi, client);
+
+    let org_owner: Address = contract.method("owner", ())?.call().await?;
+    log::info!("Org owner {:#?}", org_owner);
+
+    let client = safe::Client::new(network.safe_transaction_url());
+    let safe = match client.get_safe(org_owner) {
+        Ok(safe) => Some(safe),
+        Err(err) if err.is_not_found() => None,
+        Err(err) => {
+            bail!("request to safe transaction API failed: {:?}", err);
+        }
+    };
 
     // The project id, as a `bytes32`.
     let id: [u8; 32] = {
@@ -139,9 +184,34 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     if opts.dry_run {
         return Ok(());
     }
+
+    if let Some(safe) = safe {
+        log::info!("Found Gnosis Safe at {}", org_owner);
+
+        anchor_safe(&safe, id, tag, hash).await
+    } else {
+        anchor_eoa(&contract, id, tag, hash).await
+    }
+}
+
+async fn anchor_safe(
+    _safe: &safe::Safe<'_>,
+    _id: [u8; 32],
+    _tag: u32,
+    _hash: Bytes,
+) -> anyhow::Result<()> {
+    todo!()
+}
+
+async fn anchor_eoa<M: Middleware + 'static>(
+    org: &Contract<M>,
+    id: [u8; 32],
+    tag: u32,
+    hash: Bytes,
+) -> anyhow::Result<()> {
     log::info!("Sending transaction..");
 
-    let tx = contract.method::<_, ()>("anchor", (id, tag, hash))?;
+    let tx = org.method::<_, ()>("anchor", (id, tag, hash))?;
     let result = loop {
         let pending = tx.send().await?;
         let tx_hash = *pending;

@@ -2345,6 +2345,7 @@ dependencies = [
  "multihash 0.14.0",
  "radicle-tools",
  "rpassword 5.0.1",
+ "safe-transaction-client",
  "serde_json",
  "thiserror",
  "tokio",

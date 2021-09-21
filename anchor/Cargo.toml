@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 radicle-tools = { path = "../" }
+safe-transaction-client = { path = "../safe-transaction-client" }
 log = { version = "0.4" }
 lexopt = { version = "0.1" }
 ethers = { version = "0", features = ["ledger"] }
