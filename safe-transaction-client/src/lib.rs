@@ -10,7 +10,14 @@ pub enum Error<E = ()> {
     IO(io::Error),
     SignatureError(SignatureError),
     RemoteError(u16, String),
+    InvalidData,
     Signature(E),
+}
+
+impl Error {
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, Self::RemoteError(status, _) if *status == 404)
+    }
 }
 
 impl From<ureq::Error> for Error {
@@ -59,6 +66,10 @@ pub struct Client<'a> {
 pub struct Safe<'a> {
     client: &'a Client<'a>,
     safe_address: Address,
+
+    pub owners: Vec<Address>,
+    pub threshold: u64,
+    pub nonce: U256,
 }
 
 #[derive(Debug)]
@@ -89,11 +100,42 @@ impl Client<'_> {
         }
     }
 
-    pub fn with_safe(&self, safe_address: Address) -> Safe {
-        Safe {
+    pub fn get_safe(&self, safe_address: Address) -> Result<Safe, Error> {
+        #[derive(serde::Deserialize)]
+        struct SafeResponse {
+            nonce: u64,
+            threshold: u64,
+            owners: Vec<String>,
+        }
+
+        let SafeResponse {
+            nonce,
+            threshold,
+            owners,
+        } = self
+            .agent
+            .get(&format!(
+                "{}/v1/safes/{}/",
+                self.transactions_api,
+                to_checksum(&safe_address, None),
+            ))
+            .call()?
+            .into_json()?;
+
+        let owners = owners
+            .iter()
+            .map(|o| Address::from_str(o))
+            .collect::<Result<_, _>>()
+            .map_err(|_| Error::InvalidData)?;
+        let nonce = U256::from(nonce);
+
+        Ok(Safe {
             client: self,
             safe_address,
-        }
+            nonce,
+            threshold,
+            owners,
+        })
     }
 }
 
@@ -104,31 +146,15 @@ impl Safe<'_> {
         value: U256,
         data: Bytes,
         operation: Operation,
-    ) -> Result<SafeTx> {
-        #[derive(serde::Deserialize)]
-        struct SafeResponse {
-            nonce: u64,
-        }
-
-        let SafeResponse { nonce, .. } = self
-            .client
-            .agent
-            .get(&format!(
-                "{}/v1/safes/{}/",
-                self.client.transactions_api,
-                to_checksum(&self.safe_address, None),
-            ))
-            .call()?
-            .into_json()?;
-
-        Ok(SafeTx {
+    ) -> SafeTx {
+        SafeTx {
             safe_address: self.safe_address,
             to,
             value,
             data,
-            nonce: U256::from(nonce),
+            nonce: self.nonce,
             operation,
-        })
+        }
     }
 
     pub fn propose(&self, signed_safe_tx: SignedSafeTx) -> Result {
@@ -297,12 +323,12 @@ fn check() {
     futures_executor::block_on(async {
         use rand_chacha::rand_core::SeedableRng;
 
-        // super secure RNG for tests
+        // Super secure RNG for tests
         let mut fake_rng =
             rand_chacha::ChaCha20Rng::from_seed(*b"0123456789abcdef0123456789abcdef");
         let wallet = LocalWallet::new(&mut fake_rng).with_chain_id(4u64);
 
-        // [x] propose a new transaction
+        // ... Propose a new transaction ...
 
         let value = U256::from(0u64);
         let data = match "anchor" {
@@ -312,20 +338,20 @@ fn check() {
         };
 
         let client = Client::new("https://safe-transaction.rinkeby.gnosis.io/api");
-        let safe = client.with_safe(
-            Address::from_str("0xb535CEd5f003e00CfF2424892D4885b139019F1d")
-                .expect("Invalid rinkeby address"),
-        );
+        let safe = client
+            .get_safe(
+                Address::from_str("0xb535CEd5f003e00CfF2424892D4885b139019F1d")
+                    .expect("Invalid rinkeby address"),
+            )
+            .expect("Safe exists");
         let org_rinkeby = Address::from_str("0xaFb752f961CEF7FdfB9d2925120D23Aa9B4ed7Ae")
             .expect("Invalid org address");
-        let safe_tx = safe
-            .create_transaction(
-                org_rinkeby,
-                value,
-                Bytes::from(hex::decode(data).expect("Invalid data")),
-                Operation::Call,
-            )
-            .expect("Transaction creation error?");
+        let safe_tx = safe.create_transaction(
+            org_rinkeby,
+            value,
+            Bytes::from(hex::decode(data).expect("Invalid data")),
+            Operation::Call,
+        );
 
         // Optionally update any of safe_tx' fields. The nonce is dynamically
         // set respective to the safe state.
@@ -333,7 +359,7 @@ fn check() {
         safe.propose(signed_safe_tx)
             .expect("Failed to propose transaction");
 
-        // [x] add confirmation to existing transaction
+        // ... Add confirmation to existing transaction ...
 
         let safe_tx_hash =
             TxHash::from_str("0xec812245f4c8908551914922bb1b093b3aa8c02e284c5e8c54fb8170673716cd")
