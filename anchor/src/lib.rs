@@ -11,9 +11,9 @@ use multihash::{MultihashDigest, Sha1Digest, U20, U32};
 use coins_bip32::path::DerivationPath;
 
 use ethers::{
-    abi::{Abi, Bytes},
+    abi::{Abi, Detokenize},
     contract::Contract,
-    prelude::{JsonRpcClient, Signer, SignerMiddleware},
+    prelude::{builders::ContractCall, Bytes, JsonRpcClient, Signer, SignerMiddleware, U256},
     providers::{Http, Provider},
     signers::{HDPath, Ledger},
 };
@@ -88,6 +88,9 @@ pub enum Error {
     /// No wallet specified.
     #[error("no wallet specified")]
     NoWallet,
+    /// Gnosis Safe error.
+    #[error("safe transaction error: {0}")]
+    Safe(String),
 }
 
 pub async fn run(opts: Options) -> anyhow::Result<()> {
@@ -121,7 +124,7 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
     }
 }
 
-async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
+async fn anchor<P: 'static + JsonRpcClient + Clone, S: 'static + Signer>(
     opts: Options,
     provider: Provider<P>,
     signer: S,
@@ -140,14 +143,13 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     log::info!("Anchor hash {}", commit);
     log::info!("Anchor type 'git commit' ({:#x})", PROJECT_COMMIT_ANCHOR);
 
-    let client = SignerMiddleware::new(provider, signer);
-    let contract = Contract::new(opts.org, abi, client);
+    let contract = Contract::new(opts.org, abi.clone(), provider.clone());
 
     let org_owner: Address = contract.method("owner", ())?.call().await?;
     log::info!("Org owner {:#?}", org_owner);
 
-    let client = safe::Client::new(network.safe_transaction_url());
-    let safe = match client.get_safe(org_owner) {
+    let safe_client = safe::Client::new(network.safe_transaction_url());
+    let safe = match safe_client.get_safe(org_owner) {
         Ok(safe) => Some(safe),
         Err(err) if err.is_not_found() => None,
         Err(err) => {
@@ -178,7 +180,7 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
         let digest: Sha1Digest<multihash::U20> = Sha1Digest::wrap(&bytes)?;
         let commit = Code::multihash_from_digest(&digest);
 
-        commit.to_bytes().to_vec()
+        commit.to_bytes().into()
     };
 
     if opts.dry_run {
@@ -188,32 +190,44 @@ async fn anchor<P: 'static + JsonRpcClient, S: 'static + Signer>(
     if let Some(safe) = safe {
         log::info!("Found Gnosis Safe at {}", org_owner);
 
-        anchor_safe(&safe, id, tag, hash).await
+        let call = contract.method::<_, ()>("anchor", (id, tag, hash))?;
+        let data = call.calldata().unwrap();
+
+        anchor_safe(opts.org, data, &safe, &signer).await
     } else {
-        anchor_eoa(&contract, id, tag, hash).await
+        let signer = SignerMiddleware::new(provider, signer);
+        let contract = Contract::new(opts.org, abi, signer);
+        let call = contract.method::<_, ()>("anchor", (id, tag, hash))?;
+
+        anchor_eoa(call).await
     }
 }
 
-async fn anchor_safe(
-    _safe: &safe::Safe<'_>,
-    _id: [u8; 32],
-    _tag: u32,
-    _hash: Bytes,
+async fn anchor_safe<S: Signer>(
+    to: Address,
+    data: Bytes,
+    safe: &safe::Safe<'_>,
+    signer: &S,
 ) -> anyhow::Result<()> {
-    todo!()
+    let safe_tx = safe.create_transaction(to, U256::zero(), data, safe::Operation::Call);
+    let signed_tx = safe_tx
+        .sign(signer)
+        .await
+        .map_err(|e| Error::Safe(format!("{:?}", e)))?;
+
+    safe.propose(signed_tx)
+        .map_err(|e| Error::Safe(format!("{:?}", e)))?;
+
+    Ok(())
 }
 
-async fn anchor_eoa<M: Middleware + 'static>(
-    org: &Contract<M>,
-    id: [u8; 32],
-    tag: u32,
-    hash: Bytes,
+async fn anchor_eoa<M: Middleware + 'static, D: Detokenize>(
+    call: ContractCall<M, D>,
 ) -> anyhow::Result<()> {
     log::info!("Sending transaction..");
 
-    let tx = org.method::<_, ()>("anchor", (id, tag, hash))?;
     let result = loop {
-        let pending = tx.send().await?;
+        let pending = call.send().await?;
         let tx_hash = *pending;
 
         log::info!("Waiting for transaction {:?} to be included..", tx_hash);
