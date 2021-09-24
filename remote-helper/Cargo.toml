@@ -1,0 +1,15 @@
+[package]
+name = "rad-remote-helper"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+radicle-tools = { path = "../" }
+log = { version = "0.4" }
+lexopt = { version = "0.1" }
+ethers = { version = "0" }
+link-identities = { version = "0" }
+librad = { version = "0" }
+url = { version = "*" }
+tokio = { version = "1.10", features = ["rt", "macros"] }
+anyhow = { version = "*" }

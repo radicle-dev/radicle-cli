@@ -14,9 +14,14 @@ members = [
   "account",
   "safe-transaction-client",
   "proof-generator",
+  "remote-helper",
 ]
 
 [patch.crates-io.link-identities]
+git = "https://github.com/radicle-dev/radicle-link"
+branch = "master"
+
+[patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
 branch = "master"
 
