@@ -145,6 +145,7 @@ async fn resolve(org: NameOrAddress) -> anyhow::Result<String> {
             provider.lookup_address(addr).await?,
         ),
     };
+    eprintln!("Resolving ENS record {} for {}", ENS_SEED_HOST, name);
 
     let resolver = {
         let bytes = provider
@@ -160,6 +161,8 @@ async fn resolve(org: NameOrAddress) -> anyhow::Result<String> {
         .text(ens::namehash(&name).0, ENS_SEED_HOST.to_owned())
         .call()
         .await?;
+
+    eprintln!("Resolved {} to {}", ENS_SEED_HOST, host);
 
     Ok(host)
 }
