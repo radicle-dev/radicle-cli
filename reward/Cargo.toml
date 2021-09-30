@@ -1,0 +1,27 @@
+[package]
+name = "rad-reward"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { version = "*" }
+dialoguer = "0.8.0"
+console = "0.14.1"
+git2 = "0.13"
+ethers = { version = "0.5.3", features = ["eip712","ledger"] }
+lexopt = { version = "0.1" }
+coins-bip32 = { version = "*" }
+rpassword = { version = "5.0" }
+colored = { version = "1.9" }
+tokio = { version = "1.10", features = ["rt", "macros"] }
+radicle-tools = { path = "../" }
+log = { version = "0.4" }
+thiserror = { version = "*" }
+serde_json = { version = "1" }
+serde = { version = "1.0", features = ["derive"] }
+hex = "0.4.3"
+zbase32 = "0.1.2"
+serde_bytes = "0.11.5"
+async-trait = "0.1.51"

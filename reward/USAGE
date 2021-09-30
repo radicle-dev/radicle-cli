@@ -1,0 +1,40 @@
+Usage
+
+  rad-reward [<option>..] [subcommand] 
+
+Commands
+
+    --create                       Create a new self contained proof and attach it to a commit
+    --claim                        Claim a existant proof as contributor
+    --help                         Show this message
+
+Options
+
+    --ledger-hdpath <string>     HD Derivation path of Ledger HW
+    --keystore <file>            Path to keystore file
+    --repo <path>                Path to git repo
+    --org <address>              ETH address of org
+    --contributor <address>      ETH address of contributor
+    --project <string>           Radicle Project URN
+    --commit <commit-hash>       Hash of commit to be rewarded
+    --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
+    -v, --verbose                Verbose output
+
+Examples
+
+  Creating a contribution puzzle as org
+
+  rad-reward --ledger-hdpath "m/44'/60'/0'/0/0" \
+             --repo ./ \
+             --org 0x8152237402E0f194176154c3a6eA1eB99b611482 \
+             --contributor 0x5E813e48a81977c6Fdd565ed5097eb600C73C4f0 \
+             --commit 2a43fad03b375193357dcdb9b1766cc7c4d4a7d4 \
+             --project rad:git:hnrkybhzyqzg37cmaoyh7qs8uayjzf4qn7w1y \
+             --create
+
+  Claiming a contribution reward
+
+  rad-reward --keystore ./keystore.json \
+             --rpc-url http://localhost:8545 \
+             --repo ./ \
+             --claim
