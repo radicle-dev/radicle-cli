@@ -15,6 +15,7 @@ members = [
   "safe-transaction-client",
   "proof-generator",
   "remote-helper",
+  "authorized-keys"
 ]
 
 [patch.crates-io.link-identities]
