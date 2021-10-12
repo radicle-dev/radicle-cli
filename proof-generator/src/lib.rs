@@ -113,7 +113,7 @@ async fn create_proof<T: 'static + Signer>(
     signer: &T,
     block_hash: &H256,
 ) -> anyhow::Result<Proof> {
-    let msg = create_message(&gpg_key, &signer.address(), &block_hash);
+    let msg = create_message(&gpg_key, &signer.address(), block_hash);
 
     log::info!("Signing message with ETH keypair..");
     let eth_sig = eth_sign(signer, &msg)
@@ -122,7 +122,7 @@ async fn create_proof<T: 'static + Signer>(
     log::debug!("ETH Signature: {:?}.", eth_sig);
 
     log::info!("Signing message with GPG keypair..");
-    let gpg_sig = gpg_sign(&gpg_key, &msg)?;
+    let gpg_sig = gpg_sign(gpg_key, &msg)?;
     log::debug!("GPG Signature: {:?}.", gpg_sig);
 
     Ok(Proof {
