@@ -5,10 +5,12 @@ edition = "2018"
 
 [dependencies]
 radicle-tools = { path = "../" }
+async-trait = { version = "0.1" }
 log = { version = "0.4" }
 lexopt = { version = "0.1" }
-ethers = { version = "0" }
+ethers = { version = "0.6" }
 link-identities = { version = "0" }
+radicle-git-helpers = { version = "0" }
 librad = { version = "0" }
 url = { version = "*" }
 tokio = { version = "1.10", features = ["rt", "macros"] }

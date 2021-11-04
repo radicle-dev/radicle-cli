@@ -28,7 +28,15 @@ members = [
   "authorized-keys"
 ]
 
+[patch.crates-io.link-crypto]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+
 [patch.crates-io.link-identities]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+
+[patch.crates-io.radicle-git-helpers]
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 

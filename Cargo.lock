@@ -4614,11 +4614,13 @@ name = "rad-remote-helper"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "ethers",
  "lexopt 0.1.0",
  "librad",
  "link-identities",
  "log",
+ "radicle-git-helpers",
  "radicle-tools",
  "tokio",
  "url",
@@ -4700,6 +4702,17 @@ dependencies = [
  "radicle-std-ext",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "radicle-git-helpers"
+version = "0.1.0"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+dependencies = [
+ "anyhow",
+ "git2",
+ "libgit2-sys",
+ "librad",
 ]
 
 [[package]]
