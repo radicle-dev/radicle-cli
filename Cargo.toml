@@ -17,7 +17,8 @@ members = [
   "untrack",
   "proof-generator",
   "remote-helper",
-  "authorized-keys"
+  "authorized-keys",
+  "rad-cli"
 ]
 
 [patch.crates-io.link-identities]

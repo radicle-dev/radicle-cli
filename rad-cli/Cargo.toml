@@ -1,0 +1,32 @@
+[package]
+name = "rad-cli"
+version = "0.1.0"
+edition = "2018"
+
+
+[dependencies]
+anyhow = "1.0"
+structopt = "0.3"
+spinners = "2.0.0"
+dialoguer = "0.9.0"
+indicatif = "0.16.2"
+librad = { path = "../../radicle-link/librad" }
+rad-clib = { path = "../../radicle-link/rad-clib" }
+rad-profile = { path = "../../radicle-link/rad-profile" }
+rad-identities = { path = "../../radicle-link/rad-identities" }
+
+[dependencies.thrussh-agent]
+git = "https://github.com/erak/thrussh.git"
+branch = "generic-agent"
+
+[[bin]]
+name = "rad-auth"
+path = "src/bin/auth.rs"
+
+[[bin]]
+name = "rad-init"
+path = "src/bin/init.rs"
+
+[[bin]]
+name = "rad-sync"
+path = "src/bin/sync.rs"
