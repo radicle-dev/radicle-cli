@@ -15,10 +15,6 @@ rad-clib = { path = "../../radicle-link/rad-clib" }
 rad-profile = { path = "../../radicle-link/rad-profile" }
 rad-identities = { path = "../../radicle-link/rad-identities" }
 
-[dependencies.thrussh-agent]
-git = "https://github.com/erak/thrussh.git"
-branch = "generic-agent"
-
 [[bin]]
 name = "rad-auth"
 path = "src/bin/auth.rs"

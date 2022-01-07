@@ -34,5 +34,5 @@ git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
 [patch.crates-io.thrussh-encoding]
-git = "https://github.com/FintanH/thrussh.git"
+git = "https://github.com/erak/thrussh.git"
 branch = "generic-agent"

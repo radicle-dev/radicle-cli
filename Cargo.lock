@@ -5241,7 +5241,6 @@ dependencies = [
  "rad-profile",
  "spinners",
  "structopt",
- "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
 ]
 
 [[package]]
@@ -6587,7 +6586,7 @@ dependencies = [
  "futures",
  "log",
  "thiserror",
- "thrussh-encoding 0.1.0 (git+https://github.com/FintanH/thrussh.git?branch=generic-agent)",
+ "thrussh-encoding 0.1.0 (git+https://github.com/erak/thrussh.git?branch=generic-agent)",
  "tokio",
 ]
 
@@ -6603,7 +6602,7 @@ dependencies = [
  "futures",
  "log",
  "thiserror",
- "thrussh-encoding 0.1.0 (git+https://github.com/FintanH/thrussh.git?branch=generic-agent)",
+ "thrussh-encoding 0.1.0 (git+https://github.com/erak/thrussh.git?branch=generic-agent)",
 ]
 
 [[package]]
