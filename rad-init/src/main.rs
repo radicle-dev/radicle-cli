@@ -3,7 +3,8 @@
 // This file is part of radicle-link, distributed under the GPLv3 with Radicle
 // Linking Exception. For full terms see the included LICENSE file.
 
-extern crate rad_cli;
+// extern crate rad_cli;
+use radicle_tools::cli;
 
 use std::thread::sleep;
 use std::time::Duration;
@@ -14,7 +15,7 @@ use librad::{
 };
 use rad_clib::{keys::ssh::SshAuthSock, storage::ssh};
 
-use rad_cli::{proc::some_or_exit, profile, project, tui};
+use cli::{proc::some_or_exit, profile, project, tui};
 
 fn main() -> anyhow::Result<()> {
     tui::headline("Initializing local 🌱 project");

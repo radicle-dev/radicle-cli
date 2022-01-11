@@ -114,12 +114,6 @@ dependencies = [
 
 [[package]]
 name = "ansi_term"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30275ad0ad84ec1c06dde3b3f7d23c6006b7d76d61a85e7060b426b747eff70d"
-
-[[package]]
-name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
@@ -972,7 +966,7 @@ version = "2.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0610544180c38b88101fecf2dd634b174a62eef6946f84dfc6a7127512b381c"
 dependencies = [
- "ansi_term 0.11.0",
+ "ansi_term",
  "atty",
  "bitflags",
  "strsim 0.8.0",
@@ -1007,9 +1001,9 @@ checksum = "218d6bd3dde8e442a975fa1cd233c0e5fded7596bccfe39f58eca98d22421e0a"
 
 [[package]]
 name = "cmake"
-version = "0.1.46"
+version = "0.1.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7b858541263efe664aead4a5209a4ae5c5d2811167d4ed4ee0944503f8d2089"
+checksum = "e8ad8cef104ac57b68b89df3208164d228503abbdce70f6880ffa3d970e7443a"
 dependencies = [
  "cc",
 ]
@@ -1266,9 +1260,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-channel"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06ed27e177f16d65f0f0c22a213e17c696ace5dd64b14258b52f9417ccb52db4"
+checksum = "e54ea8bc3fb1ee042f5aace6e3c6e025d3874866da222930f70ce62aceba0bfa"
 dependencies = [
  "cfg-if 1.0.0",
  "crossbeam-utils",
@@ -1287,9 +1281,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.5"
+version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ec02e091aa634e2c3ada4a392989e7c3116673ef0ac5b72232439094d73b7fd"
+checksum = "97242a70df9b89a65d0b6df3c4bf5b9ce03c5b7309019777fbde37e7537f8762"
 dependencies = [
  "cfg-if 1.0.0",
  "crossbeam-utils",
@@ -1657,16 +1651,6 @@ version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e69600ff1703123957937708eb27f7a564e48885c537782722ed0ba3189ce1d7"
 dependencies = [
- "dirs-sys",
-]
-
-[[package]]
-name = "dirs"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
-dependencies = [
- "cfg-if 0.1.10",
  "dirs-sys",
 ]
 
@@ -2564,7 +2548,7 @@ dependencies = [
  "git-hash 0.8.0",
  "jwalk",
  "num_cpus",
- "prodash 16.0.1",
+ "prodash 16.1.3",
  "quick-error",
  "sha1",
  "walkdir",
@@ -5100,9 +5084,9 @@ dependencies = [
 
 [[package]]
 name = "prodash"
-version = "16.0.1"
+version = "16.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5151fbc8c0f63101e8e087bf35aa0216b838f73cfec5300348047b3bdbcaa785"
+checksum = "79b828b82b039761e012573c3f4b73c16bc549205bd288ae65f1b99f2e394317"
 dependencies = [
  "bytesize",
  "human_format",
@@ -5229,18 +5213,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "rad-cli"
+name = "rad-auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "dialoguer",
- "indicatif",
- "librad 0.1.0",
  "rad-clib",
- "rad-identities",
  "rad-profile",
- "spinners",
+ "radicle-tools",
  "structopt",
+ "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
 ]
 
 [[package]]
@@ -5285,6 +5266,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-init"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "librad 0.1.0",
+ "rad-clib",
+ "rad-profile",
+ "radicle-tools",
+ "structopt",
+ "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
+]
+
+[[package]]
 name = "rad-profile"
 version = "0.1.0"
 dependencies = [
@@ -5295,6 +5289,19 @@ dependencies = [
  "serde",
  "structopt",
  "thiserror",
+ "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
+]
+
+[[package]]
+name = "rad-publish"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "librad 0.1.0",
+ "rad-clib",
+ "rad-profile",
+ "radicle-tools",
+ "structopt",
  "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
 ]
 
@@ -5486,8 +5493,14 @@ name = "radicle-tools"
 version = "0.0.0"
 dependencies = [
  "atty",
- "colored 1.9.3",
+ "colored",
+ "dialoguer",
+ "indicatif",
+ "librad 0.1.0",
  "log",
+ "rad-clib",
+ "rad-identities",
+ "rad-profile",
 ]
 
 [[package]]
@@ -6371,29 +6384,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
-name = "spinner"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e3a7cd01625b7e43e62815677d692cb59b221c2fdc2853d1eb86a260ee0c272"
-dependencies = [
- "ansi_term 0.7.5",
- "term",
-]
-
-[[package]]
-name = "spinners"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5df293c7047c11695b5e7a5c736851865c846e6a326562495498e5f12246e152"
-dependencies = [
- "lazy_static",
- "maplit",
- "spinner",
- "strum",
- "strum_macros",
-]
-
-[[package]]
 name = "spki"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6522,16 +6512,6 @@ dependencies = [
  "rand 0.8.4",
  "redox_syscall 0.2.10",
  "remove_dir_all",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "term"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0863a3345e70f61d613eab32ee046ccd1bcc5f9105fe402c61fcd0c13eeb8b5"
-dependencies = [
- "dirs",
  "winapi 0.3.9",
 ]
 

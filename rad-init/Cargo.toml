@@ -1,0 +1,18 @@
+[package]
+name = "rad-init"
+version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+anyhow = "1.0"
+structopt = "0.3"
+radicle-tools = { path = "../" }
+librad = { path = "../../radicle-link/librad" }
+rad-clib = { path = "../../radicle-link/rad-clib" }
+rad-profile = { path = "../../radicle-link/rad-profile" }
+
+[dependencies.thrussh-agent]
+git = "https://github.com/erak/thrussh"
+branch = "generic-agent"

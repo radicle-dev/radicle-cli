@@ -7,6 +7,13 @@ edition = "2018"
 colored = { version = "1.9" }
 atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
+dialoguer = "0.9.0"
+indicatif = "0.16.2"
+librad = { path = "../radicle-link/librad" }
+rad-clib = { path = "../radicle-link/rad-clib" }
+rad-profile = { path = "../radicle-link/rad-profile" }
+rad-identities = { path = "../radicle-link/rad-identities" }
+
 
 [workspace]
 members = [
@@ -18,7 +25,9 @@ members = [
   "proof-generator",
   "remote-helper",
   "authorized-keys",
-  "rad-cli"
+  "rad-auth",
+  "rad-init",
+  "rad-publish",
 ]
 
 [patch.crates-io.link-identities]

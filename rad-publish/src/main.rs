@@ -1,13 +1,19 @@
-extern crate rad_cli;
+// Copyright © 2021 The Radicle Link Contributors
+//
+// This file is part of radicle-link, distributed under the GPLv3 with Radicle
+// Linking Exception. For full terms see the included LICENSE file.
+
+// extern crate rad_cli;
+use radicle_tools::cli;
 
 use librad::profile::RadHome;
 
 use rad_clib::{keys::ssh::SshAuthSock};
 
-use rad_cli::{proc::some_or_exit, keys, id, tui, profile, project, seed};
+use cli::{proc::some_or_exit, keys, id, tui, profile, project, seed};
 
 fn main() -> anyhow::Result<()> {
-    tui::headline("Syncing your local 🌱 projects");
+    tui::headline("Publishing your local 🌱 project");
 
     let seed = "http://localhost:8778".to_string();
     let home = RadHome::default();

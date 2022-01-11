@@ -3,13 +3,14 @@
 // This file is part of radicle-link, distributed under the GPLv3 with Radicle
 // Linking Exception. For full terms see the included LICENSE file.
 
-extern crate rad_cli;
+// extern crate rad_cli;
+use radicle_tools::cli;
 
 use structopt::StructOpt;
 
 use rad_clib::keys::ssh::SshAuthSock;
 
-use rad_cli::{keys, person, proc::some_or_exit, profile, tui};
+use cli::{keys, person, proc::some_or_exit, profile, tui};
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
