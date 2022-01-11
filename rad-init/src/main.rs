@@ -9,14 +9,21 @@ use librad::{
 };
 use rad_clib::{keys::ssh::SshAuthSock, storage::ssh};
 
-use cli::{proc::some_or_exit, profile, project, tui};
+use cli::{profile, project, tui};
 
 fn main() -> anyhow::Result<()> {
+    match run() {
+        Ok(()) => Ok(()),
+        Err(_) => std::process::exit(0),
+    }
+}
+
+fn run() -> anyhow::Result<()> {
     tui::headline("Initializing local 🌱 project");
     
-    some_or_exit(project::current());
+    let _project = project::current();
 
-    let profile = some_or_exit(profile::default());
+    let profile = profile::default()?;
     let (signer, storage) = ssh::storage(&profile, SshAuthSock::default())?;
 
     let name = tui::text_input("Name", None);
@@ -32,7 +39,7 @@ fn main() -> anyhow::Result<()> {
         default_branch: Some(Cstring::from(branch)),
     };
 
-    some_or_exit(project::create(&storage, signer, &profile, payload));
+    let _profile = project::create(&storage, signer, &profile, payload)?;
     spinner.finish();
 
     tui::success("Project initialized.");

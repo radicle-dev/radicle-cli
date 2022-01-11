@@ -5492,6 +5492,7 @@ source = "git+https://github.com/radicle-dev/radicle-link?branch=master#e6f73616
 name = "radicle-tools"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "atty",
  "colored",
  "dialoguer",

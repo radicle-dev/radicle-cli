@@ -7,21 +7,28 @@ use librad::{
 
 use rad_clib::{keys::ssh::SshAuthSock};
 
-use cli::{proc::some_or_exit, keys, tui, profile, project, seed};
+use cli::{keys, tui, profile, project, seed};
 
 fn main() -> anyhow::Result<()> {
+    match run() {
+        Ok(()) => Ok(()),
+        Err(_) => std::process::exit(0),
+    }
+}
+
+fn run() -> anyhow::Result<()> {
     tui::headline("Publishing your local 🌱 project");
 
     let seed = "http://localhost:8778".to_string();
     let home = RadHome::default();
 
-    let profile = some_or_exit(profile::default());
-    let storage = some_or_exit(keys::storage(&profile, SshAuthSock::default()));
+    let profile = profile::default()?;
+    let storage = keys::storage(&profile, SshAuthSock::default())?;
     
 
-    let peer_id = some_or_exit(profile::peer_id(&storage));
-    let urn = some_or_exit(profile::user(&storage));
-    let monorepo = some_or_exit(profile::repo(&home, &profile));
+    let peer_id = profile::peer_id(&storage)?;
+    let urn = profile::user(&storage)?;
+    let monorepo = profile::repo(&home, &profile)?;
 
     tui::info("Using config:");
     tui::format::seed_config(&seed, &profile, &urn);
@@ -51,6 +58,5 @@ fn main() -> anyhow::Result<()> {
     } else {
         tui::warning("No exisiting project(s) found. Skipping sync.");
     }
-    println!();
     Ok(())
 }

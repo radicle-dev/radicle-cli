@@ -1,11 +1,12 @@
-// Copyright © 2021 The Radicle Link Contributors
+// Copyright © 2021 The Radicle Client Tools Contributors
 //
-// This file is part of radicle-link, distributed under the GPLv3 with Radicle
+// This file is part of radicle-client-tools, distributed under the GPLv3 with Radicle
 // Linking Exception. For full terms see the included LICENSE file.
 
 pub mod profile {
 
     use super::tui;
+    use anyhow::{Error, Result};
     use librad::{
         crypto::peer::PeerId,
         git::{storage::Storage, Urn},
@@ -14,51 +15,54 @@ pub mod profile {
     use rad_profile;
     use std::path::PathBuf;
 
-    pub fn default() -> Option<Profile> {
+    pub fn default() -> Result<Profile, Error> {
         match rad_profile::get(None, None) {
-            Ok(profile) => profile,
+            Ok(profile) => Ok(profile.unwrap()),
             Err(err) => {
                 tui::error(&format!("Could not get active profile. {:?}", err));
-                None
+                Err(anyhow::Error::new(err))
             }
         }
     }
 
-    pub fn repo(home: &RadHome, profile: &Profile) -> Option<PathBuf> {
+    pub fn repo(home: &RadHome, profile: &Profile) -> Result<PathBuf, Error> {
         match home {
             RadHome::Root(buf) => {
                 let mut path = buf.to_path_buf();
                 path.push(profile.id());
                 path.push("git");
-                Some(path)
+                Ok(path)
             }
-            _ => None,
+            _ => Err(anyhow::Error::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Radicle home is not set.",
+            ))),
         }
     }
 
-    pub fn user(storage: &Storage) -> Option<Urn> {
+    pub fn user(storage: &Storage) -> Result<Urn, Error> {
         match storage.config_readonly() {
             Ok(config) => match config.user() {
-                Ok(urn) => urn,
+                Ok(urn) => Ok(urn.unwrap()),
                 Err(err) => {
                     tui::error(&format!("Could not read user. {:?}", err));
-                    None
+                    Err(anyhow::Error::new(err))
                 }
             },
-            Err(_err) => None,
+            Err(err) => Err(anyhow::Error::new(err)),
         }
     }
 
-    pub fn peer_id(storage: &Storage) -> Option<PeerId> {
+    pub fn peer_id(storage: &Storage) -> Result<PeerId, Error> {
         match storage.config_readonly() {
             Ok(config) => match config.peer_id() {
-                Ok(peer_id) => Some(peer_id),
+                Ok(peer_id) => Ok(peer_id),
                 Err(err) => {
                     tui::error(&format!("Could not read peer id. {:?}", err));
-                    None
+                    Err(anyhow::Error::new(err))
                 }
             },
-            Err(_err) => None,
+            Err(err) => Err(anyhow::Error::new(err)),
         }
     }
 }
@@ -66,6 +70,7 @@ pub mod profile {
 pub mod person {
 
     use super::tui;
+    use anyhow::{Result, Error};
     use librad::{
         canonical::Cstring,
         git::{identities::Person, storage::Storage, Urn},
@@ -82,8 +87,8 @@ pub mod person {
         }
     }
 
-    pub fn create(profile: &Profile, name: &str) -> Option<Person> {
-        let (signer, storage) = ssh::storage(&profile, SshAuthSock::default()).ok()?;
+    pub fn create(profile: &Profile, name: &str) -> Result<Person, Error> {
+        let (signer, storage) = ssh::storage(&profile, SshAuthSock::default())?;
         let paths = profile.paths().clone();
         let payload = payload::Person {
             name: Cstring::from(name),
@@ -97,10 +102,10 @@ pub mod person {
             vec![],
             person::Creation::New { path: None },
         ) {
-            Ok(person) => Some(person),
+            Ok(person) => Ok(person),
             Err(err) => {
                 tui::error(&format!("Could not create person. {:?}", err));
-                None
+                Err(err)
             }
         }
     }
@@ -129,6 +134,7 @@ pub mod person {
 pub mod project {
 
     use super::tui;
+    use anyhow::{Result, Error};
     use librad::{
         crypto::BoxedSigner,
         git::identities::Project,
@@ -144,7 +150,7 @@ pub mod project {
         signer: BoxedSigner,
         profile: &Profile,
         payload: payload::Project,
-    ) -> Option<Project> {
+    ) -> Result<Project, Error> {
         let path = Path::new("../").to_path_buf();
         let paths = profile.paths().clone();
         let whoami = project::WhoAmI::from(None);
@@ -159,11 +165,15 @@ pub mod project {
             vec![],
             rad_identities::project::Creation::Existing { path },
         ) {
-            Ok(project) => Some(project),
+            Ok(project) => Ok(project),
             Err(err) => {
                 tui::error("Project could not be initialized.");
                 tui::format::error_detail(&format!("{}", err));
-                None
+                // Err(anyhow::Error::new(std::io::Error::new(
+                //     err.kind(),
+                //     &format!("{}", err),
+                // )))
+                Err(err)
             }
         }
     }
@@ -188,6 +198,7 @@ pub mod project {
 pub mod keys {
 
     use super::tui;
+    use anyhow::{Error, Result};
     use librad::{
         crypto::keystore::{
             crypto::Pwhash,
@@ -215,14 +226,13 @@ pub mod keys {
         }
     }
 
-    pub fn storage(profile: &Profile, sock: SshAuthSock) -> Option<Storage> {
+    pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<Storage, Error> {
         match ssh::storage(&profile, sock) {
-            Ok((_, storage)) => Some(storage),
+            Ok((_, storage)) => Ok(storage),
             Err(err) => {
                 tui::error("Could not read ssh key:");
                 tui::format::error_detail(&format!("{}", err));
-                println!();
-                None
+                Err(anyhow::Error::new(err))
             }
         }
     }
@@ -231,13 +241,12 @@ pub mod keys {
         profile: &Profile,
         pass: Pwhash<CachedPrompt>,
         sock: SshAuthSock,
-    ) -> Option<ProfileId> {
+    ) -> Result<ProfileId, Error> {
         match rad_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new()) {
-            Ok(id) => Some(id),
+            Ok(id) => Ok(id),
             Err(err) => {
                 tui::error(&format!("Could not add ssh key. {:?}", err));
-                println!();
-                None
+                Err(anyhow::Error::new(err))
             }
         }
     }
@@ -423,15 +432,6 @@ pub mod tui {
 
         pub fn error_detail(detail: &str) {
             println!("  {} {}", style("⊙").red(), &detail);
-        }
-    }
-}
-
-pub mod proc {
-    pub fn some_or_exit<T>(option: Option<T>) -> T {
-        match option {
-            Some(value) => value,
-            None => std::process::exit(0),
         }
     }
 }
