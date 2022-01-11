@@ -1,16 +1,8 @@
 use radicle_tools::cli;
-
-use structopt::StructOpt;
-
 use rad_clib::keys::ssh::SshAuthSock;
-
 use cli::{keys, person, profile, tui};
 
-#[derive(Debug, StructOpt)]
-pub struct Args {
-    #[structopt(short, long)]
-    pub add: bool,
-}
+mod args;
 
 fn main() -> anyhow::Result<()> {
     match run() {
@@ -23,13 +15,14 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run() -> anyhow::Result<()> {
-    let Args { add } = Args::from_args();
+    let args = args::parse()?;
+
     let sock = SshAuthSock::default();
 
     tui::headline("Initializing your 🌱 profile and identity");
 
     let profiles = rad_profile::list(None)?;
-    if profiles.len() > 0 && !add {
+    if profiles.len() > 0 && !args.add {
         tui::warning("Found existing profile(s):");
         let profile = profile::default()?;
         tui::format::profile_list(&profiles, &profile);
@@ -56,3 +49,5 @@ fn run() -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+

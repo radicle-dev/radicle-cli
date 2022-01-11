@@ -7,7 +7,7 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 anyhow = "1.0"
-structopt = "0.3"
+lexopt = "0.2.0"
 radicle-tools = { path = "../" }
 rad-clib = { path = "../../radicle-link/rad-clib" }
 rad-profile = { path = "../../radicle-link/rad-profile" }

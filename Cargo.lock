@@ -3553,6 +3553,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c5d9b5843e8c9311ff602e6bd50855015e99e75159c2c54fe104cfac241f552"
 
 [[package]]
+name = "lexopt"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de7513aea7d10dc0694d719ac53de3b74f1600e41b9f81ed9f395d8ec36a2a70"
+
+[[package]]
 name = "libc"
 version = "0.2.112"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5100,7 +5106,7 @@ dependencies = [
  "coins-bip32 0.6.0",
  "colored 1.9.3",
  "ethers",
- "lexopt",
+ "lexopt 0.1.0",
  "log",
  "radicle-tools",
  "rpassword 5.0.1",
@@ -5200,7 +5206,7 @@ dependencies = [
  "colored 1.9.3",
  "ethers",
  "futures",
- "lexopt",
+ "lexopt 0.1.0",
  "link-identities 0.1.0 (git+https://github.com/radicle-dev/radicle-link?branch=master)",
  "log",
  "multihash 0.14.0",
@@ -5217,10 +5223,10 @@ name = "rad-auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "lexopt 0.2.0",
  "rad-clib",
  "rad-profile",
  "radicle-tools",
- "structopt",
  "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
 ]
 
@@ -5274,7 +5280,6 @@ dependencies = [
  "rad-clib",
  "rad-profile",
  "radicle-tools",
- "structopt",
  "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
 ]
 
@@ -5301,7 +5306,6 @@ dependencies = [
  "rad-clib",
  "rad-profile",
  "radicle-tools",
- "structopt",
  "thrussh-agent 0.1.0 (git+https://github.com/erak/thrussh?branch=generic-agent)",
 ]
 
@@ -5311,7 +5315,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ethers",
- "lexopt",
+ "lexopt 0.1.0",
  "librad 0.1.0 (git+https://github.com/radicle-dev/radicle-link?branch=master)",
  "link-identities 0.1.0 (git+https://github.com/radicle-dev/radicle-link?branch=master)",
  "log",
