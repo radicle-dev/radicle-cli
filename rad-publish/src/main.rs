@@ -1,10 +1,13 @@
 use radicle_tools::cli;
 
-use librad::profile::RadHome;
+use librad::{
+    git::Urn,
+    profile::RadHome
+};
 
 use rad_clib::{keys::ssh::SshAuthSock};
 
-use cli::{proc::some_or_exit, keys, id, tui, profile, project, seed};
+use cli::{proc::some_or_exit, keys, tui, profile, project, seed};
 
 fn main() -> anyhow::Result<()> {
     tui::headline("Publishing your local 🌱 project");
@@ -25,11 +28,11 @@ fn main() -> anyhow::Result<()> {
 
     let projects = project::list(&storage)?;
     if projects.len() > 0 {
-        let self_id = id::from_urn(&urn);
+        let self_id = Urn::encode_id(&urn);
 
         for project in projects {
             tui::info(&format!("Syncing project {:?}", project.urn().to_string()));
-            let project_id = id::from_urn(&project.urn());
+            let project_id = Urn::encode_id(&project.urn());
 
             let mut spinner = tui::spinner("Pushing delegate id...");
             seed::push_delegate_id(&monorepo, &seed, &self_id, peer_id);

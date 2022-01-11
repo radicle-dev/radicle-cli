@@ -427,13 +427,6 @@ pub mod tui {
     }
 }
 
-pub mod id {
-    use librad::git::Urn;
-    pub fn from_urn(urn: &Urn) -> String {
-        urn.to_string().split(":").last().unwrap().to_string()
-    }
-}
-
 pub mod proc {
     pub fn some_or_exit<T>(option: Option<T>) -> T {
         match option {
