@@ -70,7 +70,7 @@ pub mod profile {
 pub mod person {
 
     use super::tui;
-    use anyhow::{Result, Error};
+    use anyhow::{Error, Result};
     use librad::{
         canonical::Cstring,
         git::{identities::Person, storage::Storage, Urn},
@@ -134,16 +134,17 @@ pub mod person {
 pub mod project {
 
     use super::tui;
-    use anyhow::{Result, Error};
+    use anyhow::{Error, Result};
+    use git2::{Config, Repository};
     use librad::{
         crypto::BoxedSigner,
-        git::identities::Project,
-        git::storage::Storage,
+        git::{identities::Project, local::url::LocalUrl, storage::Storage, types::remote::Remote},
         identities::payload::{self},
         profile::Profile,
+        reflike,
     };
     use rad_identities::{self, project};
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     pub fn create(
         storage: &Storage,
@@ -184,13 +185,43 @@ pub mod project {
         Ok(projects)
     }
 
-    pub fn current() -> Option<PathBuf> {
-        let path = Path::new(".git");
-        if path.exists() {
-            Some(path.to_path_buf())
-        } else {
-            tui::error("This is not a git repository.");
-            None
+    pub fn config() -> Result<Config, Error> {
+        match Config::open(Path::new(".git/config")) {
+            Ok(config) => Ok(config),
+            Err(err) => {
+                tui::error("Could not read git config.");
+                Err(anyhow::Error::new(err))
+            }
+        }
+    }
+
+    pub fn repository() -> Result<Repository, Error> {
+        match Repository::open(".") {
+            Ok(repo) => Ok(repo),
+            Err(err) => {
+                tui::error("This is not a git repository.");
+                Err(anyhow::Error::new(err))
+            }
+        }
+    }
+
+    pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
+        match Remote::<LocalUrl>::find(&repo, reflike!("rad")) {
+            Ok(remote) => match remote {
+                Some(remote) => Ok(remote),
+                None => {
+                    let msg = "Could not find radicle URL in git config. Did you run `rad init`?";
+                    tui::error(msg);
+                    Err(anyhow::Error::new(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        msg,
+                    )))
+                }
+            },
+            Err(err) => {
+                tui::error("Could not find radicle entry in git config. Did you run `rad init`?");
+                Err(anyhow::Error::new(err))
+            }
         }
     }
 }
@@ -204,6 +235,7 @@ pub mod keys {
             crypto::Pwhash,
             pinentry::{Pinentry, SecUtf8},
         },
+        crypto::BoxedSigner,
         git::storage::Storage,
         profile::{Profile, ProfileId},
     };
@@ -237,6 +269,17 @@ pub mod keys {
         }
     }
 
+    pub fn signer(profile: &Profile, sock: SshAuthSock) -> Result<BoxedSigner, Error> {
+        match ssh::storage(&profile, sock) {
+            Ok((signer, _)) => Ok(signer),
+            Err(err) => {
+                tui::error("Could not read ssh key:");
+                tui::format::error_detail(&format!("{}", err));
+                Err(anyhow::Error::new(err))
+            }
+        }
+    }
+
     pub fn add(
         profile: &Profile,
         pass: Pwhash<CachedPrompt>,
@@ -253,13 +296,21 @@ pub mod keys {
 }
 
 pub mod seed {
+    use super::tui;
+    use anyhow::Result;
     use librad::crypto::peer::PeerId;
+    use std::io::{Error, ErrorKind};
     use std::{
         path::PathBuf,
         process::{Command, Stdio},
     };
-    pub fn push_delegate_id(repo: &PathBuf, seed: &str, self_id: &str, peer_id: PeerId) {
-        Command::new("git")
+    pub fn push_delegate_id(
+        repo: &PathBuf,
+        seed: &str,
+        self_id: &str,
+        peer_id: PeerId,
+    ) -> Result<(), anyhow::Error> {
+        let output = Command::new("git")
             .stdout(Stdio::null())
             .current_dir(repo.as_path())
             .arg("push")
@@ -270,12 +321,28 @@ pub mod seed {
                 "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
                 self_id, peer_id
             ))
-            .spawn()
+            .output()
             .expect("Git failed to start.");
+        match output.status.success() {
+            true => Ok(()),
+            false => {
+                tui::error("Could not push delegate id.");
+                tui::format::error_detail(&format!("{}", String::from_utf8_lossy(&output.stderr)));
+                Err(anyhow::Error::new(Error::new(
+                    ErrorKind::Other,
+                    String::from_utf8_lossy(&output.stderr),
+                )))
+            }
+        }
     }
 
-    pub fn push_project_id(repo: &PathBuf, seed: &str, project_id: &str, peer_id: PeerId) {
-        Command::new("git")
+    pub fn push_project_id(
+        repo: &PathBuf,
+        seed: &str,
+        project_id: &str,
+        peer_id: PeerId,
+    ) -> Result<(), anyhow::Error> {
+        let output = Command::new("git")
             .stdout(Stdio::null())
             .current_dir(repo.as_path())
             .arg("push")
@@ -287,12 +354,29 @@ pub mod seed {
                 "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
                 project_id, peer_id
             ))
-            .spawn()
+            .output()
             .expect("Git failed to start.");
+
+        match output.status.success() {
+            true => Ok(()),
+            false => {
+                tui::error("Could not push project id.");
+                tui::format::error_detail(&format!("{}", String::from_utf8_lossy(&output.stderr)));
+                Err(anyhow::Error::new(Error::new(
+                    ErrorKind::Other,
+                    String::from_utf8_lossy(&output.stderr),
+                )))
+            }
+        }
     }
 
-    pub fn push_refs(repo: &PathBuf, seed: &str, project_id: &str, peer_id: PeerId) {
-        Command::new("git")
+    pub fn push_refs(
+        repo: &PathBuf,
+        seed: &str,
+        project_id: &str,
+        peer_id: PeerId,
+    ) -> Result<(), anyhow::Error> {
+        let output = Command::new("git")
             .stdout(Stdio::null())
             .current_dir(repo.as_path())
             .arg("push")
@@ -312,8 +396,20 @@ pub mod seed {
                 "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
                 project_id, peer_id
             ))
-            .spawn()
+            .output()
             .expect("Git failed to start.");
+
+        match output.status.success() {
+            true => Ok(()),
+            false => {
+                tui::error("Could not push other refs.");
+                tui::format::error_detail(&format!("{}", String::from_utf8_lossy(&output.stderr)));
+                Err(anyhow::Error::new(Error::new(
+                    ErrorKind::Other,
+                    String::from_utf8_lossy(&output.stderr),
+                )))
+            }
+        }
     }
 }
 

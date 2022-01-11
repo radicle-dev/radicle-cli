@@ -24,39 +24,33 @@ fn run() -> anyhow::Result<()> {
 
     let profile = profile::default()?;
     let storage = keys::storage(&profile, SshAuthSock::default())?;
-    
+
+    let repo = project::repository()?;
+    let remote = project::remote(&repo)?;
+    let project_id = Urn::encode_id(&remote.url.urn);
 
     let peer_id = profile::peer_id(&storage)?;
     let urn = profile::user(&storage)?;
     let monorepo = profile::repo(&home, &profile)?;
+    let self_id = Urn::encode_id(&urn);
 
     tui::info("Using config:");
     tui::format::seed_config(&seed, &profile, &urn);
 
-    let projects = project::list(&storage)?;
-    if projects.len() > 0 {
-        let self_id = Urn::encode_id(&urn);
+    tui::info(&format!("Syncing project {:?}", project_id));    
 
-        for project in projects {
-            tui::info(&format!("Syncing project {:?}", project.urn().to_string()));
-            let project_id = Urn::encode_id(&project.urn());
-
-            let mut spinner = tui::spinner("Pushing delegate id...");
-            seed::push_delegate_id(&monorepo, &seed, &self_id, peer_id);
-            
-            spinner.finish();              
-            spinner = tui::spinner("Pushing project id...");
-            seed::push_project_id(&monorepo, &seed, &project_id, peer_id);
-            
-            spinner.finish();   
-            spinner = tui::spinner("Pushing rad/*, signed refs and heads...");
-            seed::push_refs(&monorepo, &seed, &project_id, peer_id);
-            
-            spinner.finish();
-        }
-        tui::success("All projects synched.");
-    } else {
-        tui::warning("No exisiting project(s) found. Skipping sync.");
-    }
+    let mut spinner = tui::spinner("Pushing delegate id...");
+    seed::push_delegate_id(&monorepo, &seed, &self_id, peer_id)?;
+    
+    spinner.finish();              
+    spinner = tui::spinner("Pushing project id...");
+    seed::push_project_id(&monorepo, &seed, &project_id, peer_id)?;
+    
+    spinner.finish();   
+    spinner = tui::spinner("Pushing rad/*, signed refs and heads...");
+    seed::push_refs(&monorepo, &seed, &project_id, peer_id)?;
+    
+    spinner.finish();
+    tui::success("Projects published.");
     Ok(())
 }

@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+git2 = "0.13.20"
 colored = { version = "1.9" }
 atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
@@ -15,6 +16,8 @@ rad-clib = { path = "../radicle-link/rad-clib" }
 rad-profile = { path = "../radicle-link/rad-profile" }
 rad-identities = { path = "../radicle-link/rad-identities" }
 
+[dependencies.radicle-git-ext]
+path = "../radicle-link/git-ext"
 
 [workspace]
 members = [

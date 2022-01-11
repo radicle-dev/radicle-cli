@@ -7,9 +7,9 @@ use librad::{
     canonical::Cstring,
     identities::payload::{self},
 };
-use rad_clib::{keys::ssh::SshAuthSock, storage::ssh};
+use rad_clib::{keys::ssh::SshAuthSock};
 
-use cli::{profile, project, tui};
+use cli::{keys, profile, project, tui};
 
 fn main() -> anyhow::Result<()> {
     match run() {
@@ -21,10 +21,10 @@ fn main() -> anyhow::Result<()> {
 fn run() -> anyhow::Result<()> {
     tui::headline("Initializing local 🌱 project");
     
-    let _project = project::current();
-
+    let _repo = project::repository()?;
     let profile = profile::default()?;
-    let (signer, storage) = ssh::storage(&profile, SshAuthSock::default())?;
+    let storage = keys::storage(&profile, SshAuthSock::default())?;
+    let signer = keys::signer(&profile, SshAuthSock::default())?;
 
     let name = tui::text_input("Name", None);
     let description = tui::text_input("Description", Some("".to_string()));

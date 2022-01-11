@@ -5500,12 +5500,14 @@ dependencies = [
  "atty",
  "colored",
  "dialoguer",
+ "git2",
  "indicatif",
  "librad 0.1.0",
  "log",
  "rad-clib",
  "rad-identities",
  "rad-profile",
+ "radicle-git-ext 0.1.0",
 ]
 
 [[package]]
