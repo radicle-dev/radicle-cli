@@ -12,7 +12,7 @@ use cli::{keys, tui, profile, project, seed};
 fn main() -> anyhow::Result<()> {
     match run() {
         Ok(()) => Ok(()),
-        Err(_) => std::process::exit(0),
+        Err(_) => std::process::exit(1),
     }
 }
 

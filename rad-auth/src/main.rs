@@ -9,7 +9,7 @@ fn main() -> anyhow::Result<()> {
         Ok(()) => Ok(()),
         Err(_) => {
             println!();
-            std::process::exit(0);
+            std::process::exit(1);
         }
     }
 }
