@@ -1,6 +1,7 @@
 use anyhow::{Error, Result};
 
 use librad::crypto::keystore::crypto::Pwhash;
+use librad::crypto::BoxedSigner;
 use librad::git::storage::Storage;
 
 use librad::profile::{Profile, ProfileId};
@@ -10,6 +11,17 @@ use rad_clib::storage::ssh;
 
 use rad_terminal::compoments as term;
 use rad_terminal::keys::CachedPrompt;
+
+pub fn signer(profile: &Profile, sock: SshAuthSock) -> Result<BoxedSigner, Error> {
+    match ssh::storage(profile, sock) {
+        Ok((signer, _)) => Ok(signer),
+        Err(err) => {
+            term::error("Could not read ssh key:");
+            term::format::error_detail(&format!("{}", err));
+            Err(anyhow::Error::new(err))
+        }
+    }
+}
 
 pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<Storage, Error> {
     match ssh::storage(profile, sock) {

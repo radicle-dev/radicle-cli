@@ -4532,6 +4532,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dialoguer",
+ "git2",
  "indicatif",
  "librad",
  "rad-clib",
@@ -4564,6 +4565,19 @@ dependencies = [
  "thrussh-agent",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "rad-init"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "librad",
+ "rad-clib",
+ "rad-common",
+ "rad-profile",
+ "rad-terminal",
+ "radicle-tools",
 ]
 
 [[package]]

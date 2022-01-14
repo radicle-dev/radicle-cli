@@ -19,6 +19,7 @@ members = [
   "terminal",
   "common",
   "auth",
+  "init",
   "track",
   "untrack",
   "proof-generator",
