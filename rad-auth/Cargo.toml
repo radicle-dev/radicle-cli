@@ -9,9 +9,33 @@ license = "GPL-3.0-or-later"
 anyhow = "1.0"
 lexopt = "0.2.0"
 radicle-tools = { path = "../" }
-rad-clib = { path = "../../radicle-link/rad-clib" }
-rad-profile = { path = "../../radicle-link/rad-profile" }
+librad = "0"
+# rad-clib = { path = "../../radicle-link/rad-clib" }
+# rad-profile = { path = "../../radicle-link/rad-profile" }
+# rad-clib = "0"
+# rad-profile = "0"
 
-[dependencies.thrussh-agent]
-git = "https://github.com/erak/thrussh"
-branch = "generic-agent"
+# [patch.crates-io.rad-clib]
+# # path = "../radicle-link/rad-clib"
+# git = "https://github.com/radicle-dev/radicle-link"
+# branch = "master"
+
+# [patch.crates-io.librad]
+# # path = "../radicle-link/librad"
+# git = "https://github.com/radicle-dev/radicle-link/"
+# branch = "master"
+
+# [patch.crates-io.rad-profile]
+# # path = "../radicle-link/rad-profile"
+# git = "https://github.com/radicle-dev/radicle-link/"
+# # git = "https://github.com/radicle-dev/radicle-link"
+# branch = "master"
+
+# [patch.crates-io.rad-identities]
+# # path = "../radicle-link/rad-identities"
+# git = "https://github.com/radicle-dev/radicle-link"
+# branch = "master"
+
+# [dependencies.thrussh-agent]
+# git = "https://github.com/erak/thrussh"
+# branch = "generic-agent"

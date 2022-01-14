@@ -5,19 +5,29 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-git2 = "0.13.20"
+# git2 = "=0.13.20"
 colored = { version = "1.9" }
 atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
 dialoguer = "0.9.0"
 indicatif = "0.16.2"
-librad = { path = "../radicle-link/librad" }
-rad-clib = { path = "../radicle-link/rad-clib" }
-rad-profile = { path = "../radicle-link/rad-profile" }
-rad-identities = { path = "../radicle-link/rad-identities" }
+librad = "0"
+# rad-clib = "0"
+rad-profile = "0"
+# rad-identities = "0"
+# radicle-keystore = "0"
+link-identities = "0"
+# link-git = "0"
+# radicle-git-ext = "0"
 
-[dependencies.radicle-git-ext]
-path = "../radicle-link/git-ext"
+# [dependencies.radicle-git-ext]
+# path = "../radicle-link/git-ext"
+
+# [dependencies.link-git]
+# git = "https://github.com/radicle-dev/radicle-link"
+# branch = "master"
+# # path = "../link-git"
+# features = ["git2"]
 
 [workspace]
 members = [
@@ -38,7 +48,13 @@ members = [
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
-[patch.crates-io.librad]
+# [patch.crates-io.radicle-git-ext]
+# git = "https://github.com/radicle-dev/radicle-link"
+# branch = "master"
+# # features = ["link-git"]
+
+
+[patch.crates-io.rad-clib]
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
@@ -47,5 +63,5 @@ git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
 [patch.crates-io.thrussh-encoding]
-git = "https://github.com/erak/thrussh.git"
+git = "https://github.com/FintanH/thrussh.git"
 branch = "generic-agent"
