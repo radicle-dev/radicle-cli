@@ -4,12 +4,14 @@ use anyhow::{Error, Result};
 
 use git2::Repository;
 
-use librad::{
-    crypto::BoxedSigner,
-    git::{identities::Project, storage::Storage},
-    identities::payload::{self},
-    profile::Profile,
-};
+use librad::crypto::BoxedSigner;
+use librad::git::identities::Project;
+use librad::git::local::url::LocalUrl;
+use librad::git::storage::Storage;
+use librad::git::types::remote::Remote;
+use librad::identities::payload::{self};
+use librad::profile::Profile;
+use librad::reflike;
 
 use rad_identities::{self, project};
 use rad_terminal::compoments as term;
@@ -48,6 +50,26 @@ pub fn repository() -> Result<Repository, Error> {
         Ok(repo) => Ok(repo),
         Err(err) => {
             term::error("This is not a git repository.");
+            Err(anyhow::Error::new(err))
+        }
+    }
+}
+
+pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
+    match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
+        Ok(remote) => match remote {
+            Some(remote) => Ok(remote),
+            None => {
+                let msg = "Could not find radicle URL in git config. Did you run `rad init`?";
+                term::error(msg);
+                Err(anyhow::Error::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    msg,
+                )))
+            }
+        },
+        Err(err) => {
+            term::error("Could not find radicle entry in git config. Did you run `rad init`?");
             Err(anyhow::Error::new(err))
         }
     }

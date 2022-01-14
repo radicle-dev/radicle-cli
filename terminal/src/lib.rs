@@ -88,6 +88,7 @@ pub mod compoments {
 
     pub mod format {
         use dialoguer::console::style;
+        use librad::git::Urn;
         use librad::profile::Profile;
 
         pub fn error_detail(detail: &str) {
@@ -107,6 +108,17 @@ pub mod compoments {
                     println!("  {} {}", style("⋅").white(), &p.id().to_string());
                 }
             }
+            println!();
+        }
+
+        pub fn seed_config(seed: &str, profile: &Profile, urn: &Urn) {
+            println!("  ⋅ {} {}", style("(Seed)").magenta(), seed);
+            println!(
+                "  ⋅ {} {}",
+                style("(Profile)").magenta(),
+                &profile.id().to_string()
+            );
+            println!("  ⋅ {} {}", style("(Identity)").magenta(), &urn.to_string());
             println!();
         }
     }
