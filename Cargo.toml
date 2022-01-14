@@ -13,6 +13,8 @@ members = [
   "anchor",
   "account",
   "safe-transaction-client",
+  "track",
+  "untrack",
   "proof-generator",
   "remote-helper",
   "authorized-keys"
@@ -20,15 +22,15 @@ members = [
 
 [patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-branch = "master"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
 [patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
-branch = "master"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
-[patch.crates-io.ethers]
-git = "https://github.com/gakonst/ethers-rs"
-branch = "master"
+[patch.crates-io.rad-clib]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
 [patch.crates-io.thrussh-encoding]
 git = "https://github.com/FintanH/thrussh.git"
