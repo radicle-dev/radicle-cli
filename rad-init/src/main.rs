@@ -1,5 +1,3 @@
-use radicle_tools::cli;
-
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -9,7 +7,7 @@ use librad::{
 };
 use rad_clib::{keys::ssh::SshAuthSock};
 
-use cli::{keys, profile, project, tui};
+use libcli::{keys, profile, project, tui};
 
 fn main() -> anyhow::Result<()> {
     match run() {

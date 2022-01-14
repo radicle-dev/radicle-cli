@@ -4,30 +4,10 @@ version = "0.0.0"
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
-# git2 = "=0.13.20"
 colored = { version = "1.9" }
 atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
-dialoguer = "0.9.0"
-indicatif = "0.16.2"
-librad = "0"
-# rad-clib = "0"
-rad-profile = "0"
-# rad-identities = "0"
-# radicle-keystore = "0"
-link-identities = "0"
-# link-git = "0"
-# radicle-git-ext = "0"
 
-# [dependencies.radicle-git-ext]
-# path = "../radicle-link/git-ext"
-
-# [dependencies.link-git]
-# git = "https://github.com/radicle-dev/radicle-link"
-# branch = "master"
-# # path = "../link-git"
-# features = ["git2"]
 
 [workspace]
 members = [
@@ -39,6 +19,7 @@ members = [
   "proof-generator",
   "remote-helper",
   "authorized-keys",
+  "libcli",
   "rad-auth",
   "rad-init",
   "rad-publish",
@@ -48,17 +29,23 @@ members = [
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
-# [patch.crates-io.radicle-git-ext]
-# git = "https://github.com/radicle-dev/radicle-link"
-# branch = "master"
-# # features = ["link-git"]
-
+[patch.crates-io.librad]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
 [patch.crates-io.rad-clib]
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
-[patch.crates-io.rad-clib]
+[patch.crates-io.radicle-git-ext]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+
+[patch.crates-io.rad-profile]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+
+[patch.crates-io.rad-identities]
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 

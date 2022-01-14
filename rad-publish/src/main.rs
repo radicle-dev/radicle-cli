@@ -1,5 +1,3 @@
-use radicle_tools::cli;
-
 use librad::{
     git::Urn,
     profile::RadHome
@@ -7,7 +5,7 @@ use librad::{
 
 use rad_clib::{keys::ssh::SshAuthSock};
 
-use cli::{keys, tui, profile, project, seed};
+use libcli::{keys, tui, profile, project, seed};
 
 fn main() -> anyhow::Result<()> {
     match run() {

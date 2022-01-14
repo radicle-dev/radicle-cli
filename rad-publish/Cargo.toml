@@ -9,9 +9,6 @@ license = "GPL-3.0-or-later"
 anyhow = "1.0"
 radicle-tools = { path = "../" }
 librad = "0"
-# rad-clib = "0"
-# rad-profile = "0"
-
-# [dependencies.thrussh-agent]
-# git = "https://github.com/erak/thrussh"
-# branch = "generic-agent"
+rad-clib = "0"
+rad-profile = "0"
+libcli = { path = "../libcli" }

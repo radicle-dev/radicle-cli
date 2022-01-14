@@ -1,6 +1,6 @@
-use radicle_tools::cli;
 use rad_clib::keys::ssh::SshAuthSock;
-use cli::{keys, person, profile, tui};
+use rad_profile;
+use libcli::{keys, person, profile, tui};
 
 mod args;
 
