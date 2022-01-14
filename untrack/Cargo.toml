@@ -1,0 +1,13 @@
+[package]
+name = "rad-untrack"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+lexopt = { version = "0.1" }
+log = { version = "0.4" }
+radicle-tools = { path = "../" }
+anyhow = { version = "1.0" }
+colored = { version = "1.9" }
+librad = { version = "0" }
+rad-clib = { version = "0" }
