@@ -4,15 +4,21 @@ version = "0.0.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 colored = { version = "1.9" }
 atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
+librad = { version = "0" }
+rad-profile = { version = "0" }
 
 [workspace]
 members = [
   "anchor",
   "account",
   "safe-transaction-client",
+  "terminal",
+  "common",
+  "auth",
   "track",
   "untrack",
   "proof-generator",
@@ -29,6 +35,14 @@ git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 
 [patch.crates-io.rad-clib]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+
+[patch.crates-io.rad-profile]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+
+[patch.crates-io.rad-identities]
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
 

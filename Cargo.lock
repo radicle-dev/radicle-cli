@@ -1067,6 +1067,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a28b32d32ca44b70c3e4acd7db1babf555fa026e385fb95f18028f88848b3c31"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "once_cell",
+ "regex",
+ "terminal_size",
+ "unicode-width",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1429,6 +1444,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dialoguer"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61579ada4ec0c6031cfac3f86fdba0d195a7ebeb5e36693bd53cb5999a25beeb"
+dependencies = [
+ "console",
+ "lazy_static",
+ "tempfile",
+ "zeroize",
+]
+
+[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1575,6 +1602,12 @@ dependencies = [
  "subtle",
  "zeroize",
 ]
+
+[[package]]
+name = "encode_unicode"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
 name = "encoding_rs"
@@ -2840,6 +2873,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "indicatif"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d207dc617c7a380ab07ff572a6e52fa202a2a8f355860ac9c38e23f8196be1b"
+dependencies = [
+ "console",
+ "lazy_static",
+ "number_prefix",
+ "regex",
+]
+
+[[package]]
 name = "inotify"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3059,6 +3104,12 @@ name = "lexopt"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c5d9b5843e8c9311ff602e6bd50855015e99e75159c2c54fe104cfac241f552"
+
+[[package]]
+name = "lexopt"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de7513aea7d10dc0694d719ac53de3b74f1600e41b9f81ed9f395d8ec36a2a70"
 
 [[package]]
 name = "libc"
@@ -3867,6 +3918,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "number_prefix"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
+
+[[package]]
 name = "oid"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4327,7 +4384,7 @@ dependencies = [
  "coins-bip32 0.6.0",
  "colored 1.9.3",
  "ethers",
- "lexopt",
+ "lexopt 0.1.0",
  "log",
  "radicle-tools",
  "rpassword 5.0.1",
@@ -4427,7 +4484,7 @@ dependencies = [
  "colored 1.9.3",
  "ethers",
  "futures",
- "lexopt",
+ "lexopt 0.1.0",
  "link-identities",
  "log",
  "multihash 0.14.0",
@@ -4437,6 +4494,19 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "rad-auth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt 0.2.0",
+ "rad-clib",
+ "rad-common",
+ "rad-profile",
+ "rad-terminal",
+ "radicle-tools",
 ]
 
 [[package]]
@@ -4457,12 +4527,67 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dialoguer",
+ "indicatif",
+ "librad",
+ "rad-clib",
+ "rad-identities",
+ "rad-profile",
+ "rad-terminal",
+]
+
+[[package]]
+name = "rad-identities"
+version = "0.1.0"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+dependencies = [
+ "anyhow",
+ "clap",
+ "either",
+ "git2",
+ "lazy_static",
+ "libgit2-sys",
+ "librad",
+ "nonempty",
+ "rad-clib",
+ "radicle-git-ext",
+ "radicle-std-ext",
+ "serde",
+ "serde_json",
+ "similar",
+ "structopt",
+ "thiserror",
+ "thrussh-agent",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "rad-profile"
+version = "0.1.0"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+dependencies = [
+ "anyhow",
+ "futures-lite",
+ "librad",
+ "rad-clib",
+ "serde",
+ "structopt",
+ "thiserror",
+ "thrussh-agent",
+]
+
+[[package]]
 name = "rad-remote-helper"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "ethers",
- "lexopt",
+ "lexopt 0.1.0",
  "librad",
  "link-identities",
  "log",
@@ -4472,12 +4597,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-terminal"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dialoguer",
+ "indicatif",
+ "librad",
+ "rad-clib",
+ "rad-profile",
+]
+
+[[package]]
 name = "rad-track"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "colored 1.9.3",
- "lexopt",
+ "lexopt 0.1.0",
  "librad",
  "log",
  "rad-clib",
@@ -4490,7 +4627,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "colored 1.9.3",
- "lexopt",
+ "lexopt 0.1.0",
  "librad",
  "log",
  "rad-clib",
@@ -4581,9 +4718,12 @@ source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c81
 name = "radicle-tools"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "atty",
  "colored 1.9.3",
+ "librad",
  "log",
+ "rad-profile",
 ]
 
 [[package]]
@@ -5323,6 +5463,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "similar"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e24979f63a11545f5f2c60141afe249d4f19f84581ea2138065e400941d83d3"
+
+[[package]]
 name = "simple_asn1"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5528,6 +5674,16 @@ dependencies = [
  "libc",
  "redox_syscall",
  "remove_dir_all",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "terminal_size"
+version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "633c1a546cee861a1a6d0dc69ebeca693bf4296661ba7852b9d21d159e0506df"
+dependencies = [
+ "libc",
  "winapi 0.3.9",
 ]
 

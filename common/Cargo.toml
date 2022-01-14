@@ -1,0 +1,14 @@
+[package]
+name = "rad-common"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+dialoguer = "0.9.0"
+indicatif = "0.16.2"
+librad = { version = "0" }
+rad-clib = { version = "0" }
+rad-profile = { version = "0" }
+rad-identities = { version = "0" }
+rad-terminal = { path = "../terminal" }
