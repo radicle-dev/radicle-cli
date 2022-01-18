@@ -72,6 +72,12 @@ dependencies = [
 
 [[package]]
 name = "ahash"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8fd72866655d1904d6b0997d0b07ba561047d070fbe29de039031c641b61217"
+
+[[package]]
+name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
@@ -332,7 +338,7 @@ dependencies = [
  "js-sys",
  "leb128",
  "maplit",
- "nonzero_ext 0.2.0",
+ "nonzero_ext",
  "rand 0.8.4",
  "serde",
  "serde_json",
@@ -911,7 +917,7 @@ dependencies = [
 [[package]]
 name = "cob"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "automerge",
  "either",
@@ -1338,17 +1344,6 @@ checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
 dependencies = [
  "cfg-if 1.0.0",
  "num_cpus",
-]
-
-[[package]]
-name = "dashmap"
-version = "5.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b799062aaf67eb976af3bdca031ee6f846d2f0a5710ddbb0d2efee33f3cc4760"
-dependencies = [
- "cfg-if 1.0.0",
- "num_cpus",
- "parking_lot",
 ]
 
 [[package]]
@@ -2363,7 +2358,7 @@ dependencies = [
  "byteorder",
  "bytesize",
  "clru",
- "dashmap 4.0.2",
+ "dashmap",
  "filebuffer",
  "git-diff",
  "git-features",
@@ -2436,7 +2431,7 @@ version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "046792b44be24ca39889f2a5cf202ca7fbcf96b66392cfbfa406a990219a47ba"
 dependencies = [
- "dashmap 4.0.2",
+ "dashmap",
  "libc",
  "once_cell",
  "signal-hook",
@@ -2447,7 +2442,7 @@ dependencies = [
 [[package]]
 name = "git-trailers"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "nom 5.1.2",
  "thiserror",
@@ -2540,15 +2535,15 @@ dependencies = [
 
 [[package]]
 name = "governor"
-version = "0.4.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac3de427a64787873c3b196285e6684cddbf0ae7d1d8d56eaafbb4120c4cb641"
+checksum = "06c5d2f987ee8f6dff3fa1a352058dc59b990e447e4c7846aa7d804971314f7b"
 dependencies = [
- "dashmap 5.0.0",
+ "dashmap",
  "futures",
  "futures-timer",
  "no-std-compat",
- "nonzero_ext 0.3.0",
+ "nonzero_ext",
  "parking_lot",
  "quanta",
  "rand 0.8.4",
@@ -2604,11 +2599,21 @@ checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
 
 [[package]]
 name = "hashbrown"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e91b62f79061a0bc2e046024cb7ba44b08419ed238ecbd9adbd787434b9e8c25"
+dependencies = [
+ "ahash 0.3.8",
+ "autocfg 1.0.1",
+]
+
+[[package]]
+name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
 dependencies = [
- "ahash",
+ "ahash 0.7.6",
 ]
 
 [[package]]
@@ -2869,7 +2874,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282a6247722caba404c065016bbfa522806e51714c34f5dfc3e4a3a46fcb4223"
 dependencies = [
  "autocfg 1.0.1",
- "hashbrown",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -2994,7 +2999,7 @@ version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877e398ffb23c1c311c417ef5e72e8699c3822dbf835468f009c6ce91b6c206b"
 dependencies = [
- "ahash",
+ "ahash 0.7.6",
  "base64 0.13.0",
  "bytecount",
  "fancy-regex",
@@ -3140,7 +3145,7 @@ checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
 [[package]]
 name = "librad"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "async-lock",
  "async-stream",
@@ -3151,7 +3156,7 @@ dependencies = [
  "bstr",
  "bytes 0.5.6",
  "cob",
- "dashmap 4.0.2",
+ "dashmap",
  "deadpool",
  "directories",
  "either",
@@ -3179,9 +3184,10 @@ dependencies = [
  "multihash 0.11.4",
  "nom 5.1.2",
  "nonempty",
- "nonzero_ext 0.2.0",
+ "nonzero_ext",
  "notify",
  "num_cpus",
+ "once_cell",
  "parking_lot",
  "percent-encoding",
  "picky-asn1",
@@ -3258,7 +3264,7 @@ dependencies = [
 [[package]]
 name = "link-async"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "blocking",
  "futures",
@@ -3273,7 +3279,7 @@ dependencies = [
 [[package]]
 name = "link-canonical"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "link-canonical-derive",
  "nom 7.1.0",
@@ -3287,7 +3293,7 @@ dependencies = [
 [[package]]
 name = "link-canonical-derive"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -3298,7 +3304,7 @@ dependencies = [
 [[package]]
 name = "link-crypto"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "async-trait",
  "dyn-clone",
@@ -3320,7 +3326,7 @@ dependencies = [
 [[package]]
 name = "link-git"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "arc-swap",
  "async-process",
@@ -3355,7 +3361,7 @@ dependencies = [
 [[package]]
 name = "link-identities"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "either",
  "futures-lite",
@@ -3385,7 +3391,7 @@ dependencies = [
 [[package]]
 name = "link-replication"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "async-trait",
  "blocking",
@@ -3406,7 +3412,7 @@ dependencies = [
 [[package]]
 name = "link-tracking"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "cob",
  "link-canonical",
@@ -3443,16 +3449,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "274353858935c992b13c0ca408752e2121da852d07dec7ce5f108c77dfa14d1f"
 dependencies = [
- "hashbrown",
-]
-
-[[package]]
-name = "mach"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b823e83b2affd8f40a9ee8c29dbc56404c1e34cd2710921f2801e2cf29527afa"
-dependencies = [
- "libc",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -3716,6 +3713,9 @@ name = "no-std-compat"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b93853da6d84c2e3c7d730d6473e8817692dd89be387eb01b94d7f108ecb5b8c"
+dependencies = [
+ "hashbrown 0.8.2",
+]
 
 [[package]]
 name = "nom"
@@ -3760,12 +3760,6 @@ name = "nonzero_ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44a1290799eababa63ea60af0cbc3f03363e328e58f32fb0294798ed3e85f444"
-
-[[package]]
-name = "nonzero_ext"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38bf9645c8b145698bb0b18a4637dcacbc421ea49bef2317e4fd8065a387cf21"
 
 [[package]]
 name = "notify"
@@ -4396,17 +4390,11 @@ dependencies = [
 
 [[package]]
 name = "quanta"
-version = "0.9.3"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20afe714292d5e879d8b12740aa223c6a88f118af41870e8b6196e39a02238a8"
+checksum = "d98dc777a7a39b76b1a26ae9d3f691f4c1bc0455090aa0b64dfa8cb7fc34c135"
 dependencies = [
- "crossbeam-utils",
  "libc",
- "mach",
- "once_cell",
- "raw-cpuid",
- "wasi 0.10.2+wasi-snapshot-preview1",
- "web-sys",
  "winapi 0.3.9",
 ]
 
@@ -4512,7 +4500,7 @@ dependencies = [
 [[package]]
 name = "rad-clib"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "futures-lite",
  "librad",
@@ -4545,7 +4533,7 @@ dependencies = [
 [[package]]
 name = "rad-identities"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "anyhow",
  "clap",
@@ -4584,7 +4572,7 @@ dependencies = [
 [[package]]
 name = "rad-profile"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "anyhow",
  "futures-lite",
@@ -4680,7 +4668,7 @@ dependencies = [
 [[package]]
 name = "radicle-data"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "minicbor",
  "nonempty",
@@ -4692,7 +4680,7 @@ dependencies = [
 [[package]]
 name = "radicle-git-ext"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "git2",
  "link-git",
@@ -4707,7 +4695,7 @@ dependencies = [
 [[package]]
 name = "radicle-git-helpers"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "anyhow",
  "git2",
@@ -4742,7 +4730,7 @@ dependencies = [
 [[package]]
 name = "radicle-macros"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 dependencies = [
  "proc-macro-error",
  "quote",
@@ -4753,7 +4741,7 @@ dependencies = [
 [[package]]
 name = "radicle-std-ext"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?rev=cc7d348ff79f338c8136903393fedd7f098665d6#cc7d348ff79f338c8136903393fedd7f098665d6"
+source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [[package]]
 name = "radicle-tools"
@@ -4876,15 +4864,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9fcdd2e881d02f1d9390ae47ad8e5696a9e4be7b547a1da2afbc61973217004"
 dependencies = [
  "rand_core 0.5.1",
-]
-
-[[package]]
-name = "raw-cpuid"
-version = "10.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "929f54e29691d4e6a9cc558479de70db7aa3d98cd6fe7ab86d7507aa2886b9d2"
-dependencies = [
- "bitflags",
 ]
 
 [[package]]

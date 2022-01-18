@@ -30,35 +30,35 @@ members = [
 
 [patch.crates-io.link-crypto]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.radicle-git-helpers]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.rad-clib]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.rad-profile]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.radicle-git-ext]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.rad-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-rev = "cc7d348ff79f338c8136903393fedd7f098665d6"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.thrussh-encoding]
 git = "https://github.com/FintanH/thrussh.git"
