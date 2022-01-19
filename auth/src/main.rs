@@ -8,8 +8,10 @@ mod args;
 fn main() -> anyhow::Result<()> {
     match run() {
         Ok(()) => Ok(()),
-        Err(_) => {
-            println!();
+        Err(err) => {
+            term::format::error("Authentication failed", &err);
+            term::blank();
+
             std::process::exit(1);
         }
     }
@@ -28,21 +30,32 @@ fn run() -> anyhow::Result<()> {
             "Your active profile is {}",
             term::format::highlight(&profile.id().to_string())
         ));
-        term::info("Change active profile?");
 
         let selection = term::format::profile_select(&profiles, &profile);
 
+        if !keys::is_ready(selection, sock.clone())? {
+            term::warning("Your profile key is not in ssh-agent");
+
+            let pass = term::pwhash(term::secret_input());
+            let spinner = term::spinner("Unlocking...");
+
+            keys::add(selection, pass, sock)?;
+            spinner.finish_and_clear();
+
+            term::success("Profile key added to ssh-agent");
+        }
+
         if selection.id() != profile.id() {
-            profile::set(selection.id())?;
-            term::success(&format!("Profile changed to {}", selection.id()));
-        } else {
-            term::info("Active profile not changed");
+            let id = selection.id();
+            profile::set(id)?;
+
+            term::success(&format!("Profile changed to {}", id));
         }
     } else {
         term::headline("Initializing your 🌱 profile and identity");
 
         let username = term::text_input("Username", None);
-        let pass = term::pwhash(term::secret_input());
+        let pass = term::pwhash(term::secret_input_with_confirmation());
 
         let mut spinner = term::spinner("Creating your profile...");
         let (profile, _) = rad_profile::create(None, pass.clone())?;

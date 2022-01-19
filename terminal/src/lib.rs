@@ -82,8 +82,17 @@ pub mod compoments {
     pub fn secret_input() -> SecUtf8 {
         SecUtf8::from(
             Password::with_theme(&ColorfulTheme::default())
-                .with_prompt("Password")
-                .with_confirmation("Repeat password", "Error: the passwords don't match.")
+                .with_prompt("Passphrase")
+                .interact()
+                .unwrap(),
+        )
+    }
+
+    pub fn secret_input_with_confirmation() -> SecUtf8 {
+        SecUtf8::from(
+            Password::with_theme(&ColorfulTheme::default())
+                .with_prompt("Passphrase")
+                .with_confirmation("Repeat passphrase", "Error: the passphrases don't match.")
                 .interact()
                 .unwrap(),
         )

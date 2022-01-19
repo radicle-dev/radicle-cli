@@ -31,3 +31,9 @@ pub fn add(
     rad_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new())
         .context("could not add ssh key")
 }
+
+pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
+    rad_profile::ssh_ready(None, profile.id().clone(), sock)
+        .context("could not lookup ssh key")
+        .map(|(_, is_ready)| is_ready)
+}
