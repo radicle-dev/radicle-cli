@@ -22,11 +22,14 @@ pub fn create(
     profile: &Profile,
     payload: payload::Project,
 ) -> Result<Project, Error> {
-    let path = Path::new("../").to_path_buf();
+    // Currently, radicle link adds the project name to the path, so we're forced to
+    // have them match, and specify the parent folder instead of the current folder.
+    let path = Path::new("..").to_path_buf();
     let paths = profile.paths().clone();
     let whoami = project::WhoAmI::from(None);
     let delegations = Vec::new().into_iter().collect();
-    match project::create::<payload::Project>(
+
+    project::create::<payload::Project>(
         storage,
         paths,
         signer,
@@ -35,14 +38,7 @@ pub fn create(
         payload,
         vec![],
         rad_identities::project::Creation::Existing { path },
-    ) {
-        Ok(project) => Ok(project),
-        Err(err) => {
-            term::error("Project could not be initialized.");
-            term::format::error_detail(&format!("{}", err));
-            Err(err)
-        }
-    }
+    )
 }
 
 pub fn repository() -> Result<Repository, Error> {

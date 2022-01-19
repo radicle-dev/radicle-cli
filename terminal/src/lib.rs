@@ -33,16 +33,20 @@ pub mod compoments {
         println!();
     }
 
+    pub fn blank() {
+        println!()
+    }
+
     pub fn info(info: &str) {
         println!("{} {}", style("ℹ").blue(), info);
     }
 
     pub fn warning(warning: &str) {
-        println!("{} {}", style("⚠").yellow(), warning);
+        eprintln!("{} {}", style("⚠").yellow(), warning);
     }
 
     pub fn error(error: &str) {
-        println!("{} {}", style("✖").red(), error);
+        eprintln!("{} {}", style("✗").red(), style(error).red());
     }
 
     pub fn success(success: &str) {
@@ -91,8 +95,21 @@ pub mod compoments {
         use librad::git::Urn;
         use librad::profile::Profile;
 
+        pub fn highlight(input: &str) -> String {
+            style(input).green().bold().to_string()
+        }
+
+        pub fn error(header: &str, error: &anyhow::Error) {
+            eprintln!(
+                "{} {} {:#}",
+                style("✗").red(),
+                style(header).on_red(),
+                style(error).red()
+            );
+        }
+
         pub fn error_detail(detail: &str) {
-            println!("  {} {}", style("⊙").red(), &detail);
+            eprintln!("  {} {}", style("⊙").red(), &detail);
         }
 
         pub fn profile_list(profiles: &[Profile], active: &Profile) {
