@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Context as _, Error, Result};
 
 use librad::crypto::keystore::crypto::Pwhash;
 use librad::crypto::BoxedSigner;
@@ -6,31 +6,20 @@ use librad::git::storage::Storage;
 
 use librad::profile::{Profile, ProfileId};
 
+use rad_clib::keys;
 use rad_clib::keys::ssh::SshAuthSock;
+use rad_clib::storage;
 use rad_clib::storage::ssh;
 
-use rad_terminal::compoments as term;
 use rad_terminal::keys::CachedPrompt;
 
-pub fn signer(profile: &Profile, sock: SshAuthSock) -> Result<BoxedSigner, Error> {
+pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<(BoxedSigner, Storage), Error> {
     match ssh::storage(profile, sock) {
-        Ok((signer, _)) => Ok(signer),
-        Err(err) => {
-            term::error("Could not read ssh key:");
-            term::format::error_detail(&format!("{}", err));
-            Err(anyhow::Error::new(err))
-        }
-    }
-}
-
-pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<Storage, Error> {
-    match ssh::storage(profile, sock) {
-        Ok((_, storage)) => Ok(storage),
-        Err(err) => {
-            term::error("Could not read ssh key:");
-            term::format::error_detail(&format!("{}", err));
-            Err(anyhow::Error::new(err))
-        }
+        Ok(result) => Ok(result),
+        Err(storage::Error::SshKeys(keys::ssh::Error::NoSuchKey(_))) => Err(anyhow!(
+            "the radicle ssh key for this profile is not in ssh-agent"
+        )),
+        Err(err) => Err(anyhow!(err)),
     }
 }
 
@@ -39,11 +28,6 @@ pub fn add(
     pass: Pwhash<CachedPrompt>,
     sock: SshAuthSock,
 ) -> Result<ProfileId, Error> {
-    match rad_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new()) {
-        Ok(id) => Ok(id),
-        Err(err) => {
-            term::error(&format!("Could not add ssh key. {:?}", err));
-            Err(anyhow::Error::new(err))
-        }
-    }
+    rad_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new())
+        .context("could not add ssh key")
 }

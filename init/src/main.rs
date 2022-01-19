@@ -37,8 +37,7 @@ fn run() -> anyhow::Result<()> {
 
     let _repo = project::repository()?;
     let profile = profile::default()?;
-    let storage = keys::storage(&profile, SshAuthSock::default())?;
-    let signer = keys::signer(&profile, SshAuthSock::default())?;
+    let (signer, storage) = keys::storage(&profile, SshAuthSock::default())?;
 
     let description = term::text_input("Description", None);
     let branch = term::text_input("Default branch", Some("master".to_string()));

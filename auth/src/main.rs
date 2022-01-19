@@ -50,7 +50,7 @@ fn run() -> anyhow::Result<()> {
         spinner = term::spinner("Adding your key to ssh-agent...");
 
         let _id = keys::add(&profile, pass, sock.clone())?;
-        let storage = keys::storage(&profile, sock)?;
+        let (_, storage) = keys::storage(&profile, sock)?;
 
         spinner.finish();
         spinner = term::spinner("Creating identity...");

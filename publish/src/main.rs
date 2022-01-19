@@ -19,7 +19,7 @@ fn run() -> anyhow::Result<()> {
     let home = RadHome::default();
 
     let profile = profile::default()?;
-    let storage = keys::storage(&profile, SshAuthSock::default())?;
+    let (_, storage) = keys::storage(&profile, SshAuthSock::default())?;
 
     let repo = project::repository()?;
     let remote = project::remote(&repo)?;
