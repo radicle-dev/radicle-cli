@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Context as _, Error, Result};
 
 use git2::Repository;
 
@@ -53,20 +53,10 @@ pub fn repository() -> Result<Repository, Error> {
 
 pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
     match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
-        Ok(remote) => match remote {
-            Some(remote) => Ok(remote),
-            None => {
-                let msg = "Could not find radicle URL in git config. Did you run `rad init`?";
-                term::error(msg);
-                Err(anyhow::Error::new(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    msg,
-                )))
-            }
-        },
-        Err(err) => {
-            term::error("Could not find radicle entry in git config. Did you run `rad init`?");
-            Err(anyhow::Error::new(err))
-        }
+        Ok(Some(remote)) => Ok(remote),
+        Ok(None) => Err(anyhow!(
+            "could not find radicle remote in git config. Did you forget to run `rad init`?"
+        )),
+        Err(err) => Err(err).context("could not read git remote configuration"),
     }
 }

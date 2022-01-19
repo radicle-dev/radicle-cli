@@ -3,28 +3,47 @@ use librad::git::Urn;
 use librad::profile::RadHome;
 
 use rad_clib::keys::ssh::SshAuthSock;
-use rad_common::{keys, profile, project, seed};
+use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::compoments as term;
 
 fn main() -> anyhow::Result<()> {
     match run() {
         Ok(()) => Ok(()),
-        Err(_) => std::process::exit(1),
+        Err(err) => {
+            term::format::error("Publishing failed", &err);
+            term::blank();
+
+            std::process::exit(1);
+        }
     }
 }
 
 fn run() -> anyhow::Result<()> {
-    term::headline("Publishing your local 🌱 project");
-
     let seed = "http://localhost:8778".to_string();
     let home = RadHome::default();
 
     let profile = profile::default()?;
     let (_, storage) = keys::storage(&profile, SshAuthSock::default())?;
 
+    term::info("Reading local git config...");
+
     let repo = project::repository()?;
     let remote = project::remote(&repo)?;
     let project_id = Urn::encode_id(&remote.url.urn);
+    let git_version = git::version()?;
+
+    term::info(&format!(
+        "Publishing 🌱 project {}",
+        term::format::highlight(&remote.url.urn.to_string())
+    ));
+    term::info(&format!("Git version {}", git_version));
+
+    if git_version < git::VERSION_REQUIRED {
+        anyhow::bail!(
+            "a minimum git version of {} is required, please update your installation",
+            git::VERSION_REQUIRED
+        );
+    }
 
     let peer_id = profile::peer_id(&storage)?;
     let urn = profile::user(&storage)?;

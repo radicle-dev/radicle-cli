@@ -1,0 +1,136 @@
+use anyhow::anyhow;
+use anyhow::Context as _;
+use std::process::Command;
+
+pub const VERSION_REQUIRED: Version = Version {
+    major: 2,
+    minor: 34,
+    patch: 0,
+};
+
+#[derive(PartialEq, Eq, Debug, PartialOrd, Ord)]
+pub struct Version {
+    pub major: u8,
+    pub minor: u8,
+    pub patch: u8,
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+impl std::str::FromStr for Version {
+    type Err = anyhow::Error;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let rest = input
+            .strip_prefix("git version ")
+            .ok_or(anyhow!("malformed git version string"))?;
+        let rest = rest
+            .split(' ')
+            .next()
+            .ok_or(anyhow!("malformed git version string"))?;
+        let rest = rest.trim_end();
+
+        let mut parts = rest.split('.');
+        let major = parts
+            .next()
+            .ok_or(anyhow!("malformed git version string"))?
+            .parse()?;
+        let minor = parts
+            .next()
+            .ok_or(anyhow!("malformed git version string"))?
+            .parse()?;
+
+        let patch = match parts.next() {
+            None => 0,
+            Some(patch) => patch.parse()?,
+        };
+
+        Ok(Self {
+            major,
+            minor,
+            patch,
+        })
+    }
+}
+
+pub fn version() -> Result<Version, anyhow::Error> {
+    let output = Command::new("git").arg("version").output()?;
+
+    if output.status.success() {
+        let output = String::from_utf8(output.stdout)?;
+        let version = output
+            .parse()
+            .with_context(|| format!("unable to parse git version string {:?}", output))?;
+
+        return Ok(version);
+    }
+    Err(anyhow!("failed to run `git version`"))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_version_ord() {
+        assert!(
+            Version {
+                major: 2,
+                minor: 34,
+                patch: 1
+            } > Version {
+                major: 2,
+                minor: 34,
+                patch: 0
+            }
+        );
+        assert!(
+            Version {
+                major: 2,
+                minor: 24,
+                patch: 12
+            } < Version {
+                major: 2,
+                minor: 34,
+                patch: 0
+            }
+        );
+    }
+
+    #[test]
+    fn test_version_from_str() {
+        assert_eq!(
+            Version::from_str("git version 2.34.1\n").ok(),
+            Some(Version {
+                major: 2,
+                minor: 34,
+                patch: 1
+            })
+        );
+
+        assert_eq!(
+            Version::from_str("git version 2.34.1 (macOS)").ok(),
+            Some(Version {
+                major: 2,
+                minor: 34,
+                patch: 1
+            })
+        );
+
+        assert_eq!(
+            Version::from_str("git version 2.34").ok(),
+            Some(Version {
+                major: 2,
+                minor: 34,
+                patch: 0
+            })
+        );
+
+        assert!(Version::from_str("2.34").is_err());
+    }
+}
