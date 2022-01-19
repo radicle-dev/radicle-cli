@@ -40,8 +40,6 @@ fn run() -> anyhow::Result<()> {
     let description = term::text_input("Description", None);
     let branch = term::text_input("Default branch", Some("master".to_string()));
 
-    term::blank();
-
     let spinner = term::spinner(&format!(
         "Initializing new project in {}...",
         path.display()
@@ -60,9 +58,10 @@ fn run() -> anyhow::Result<()> {
             spinner.finish();
 
             term::success(&format!(
-                "Project initialized with URN {}",
+                "Project initialized: {}",
                 term::format::highlight(&urn.to_string())
             ));
+            term::blank();
             term::info(&format!(
                 "To publish, run `rad publish` or `git push rad {}`",
                 branch
