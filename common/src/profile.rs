@@ -5,7 +5,7 @@ use anyhow::{Error, Result};
 use librad::crypto::peer::PeerId;
 use librad::git::storage::Storage;
 use librad::git::Urn;
-use librad::profile::{Profile, RadHome};
+use librad::profile::{Profile, ProfileId, RadHome};
 
 use rad_profile;
 use rad_terminal::compoments as term;
@@ -18,6 +18,12 @@ pub fn default() -> Result<Profile, Error> {
             Err(anyhow::Error::new(err))
         }
     }
+}
+
+pub fn set(id: &ProfileId) -> Result<(), Error> {
+    rad_profile::set(None, id.clone())?;
+
+    Ok(())
 }
 
 pub fn repo(home: &RadHome, profile: &Profile) -> Result<PathBuf, Error> {

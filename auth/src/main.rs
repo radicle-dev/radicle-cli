@@ -20,15 +20,27 @@ fn run() -> anyhow::Result<()> {
 
     let sock = SshAuthSock::default();
 
-    term::headline("Initializing your 🌱 profile and identity");
-
     let profiles = rad_profile::list(None)?;
     if !profiles.is_empty() && !args.add {
-        term::warning("Found existing profile(s):");
         let profile = profile::default()?;
-        term::format::profile_list(&profiles, &profile);
-        term::info("If you want to create a new profile, please use --add.");
+
+        term::info(&format!(
+            "Your active profile is {}",
+            term::format::highlight(&profile.id().to_string())
+        ));
+        term::info("Change active profile?");
+
+        let selection = term::format::profile_select(&profiles, &profile);
+
+        if selection.id() != profile.id() {
+            profile::set(selection.id())?;
+            term::success(&format!("Profile changed to {}", selection.id()));
+        } else {
+            term::info("Active profile not changed");
+        }
     } else {
+        term::headline("Initializing your 🌱 profile and identity");
+
         let username = term::text_input("Username", None);
         let pass = term::pwhash(term::secret_input());
 

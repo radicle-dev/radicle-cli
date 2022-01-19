@@ -50,7 +50,6 @@ pub mod compoments {
     }
 
     pub fn success(success: &str) {
-        println!();
         println!("{} {}", style("✔").green(), success);
     }
 
@@ -92,6 +91,7 @@ pub mod compoments {
 
     pub mod format {
         use dialoguer::console::style;
+        use dialoguer::theme::ColorfulTheme;
         use librad::git::Urn;
         use librad::profile::Profile;
 
@@ -112,20 +112,15 @@ pub mod compoments {
             eprintln!("  {} {}", style("⊙").red(), &detail);
         }
 
-        pub fn profile_list(profiles: &[Profile], active: &Profile) {
-            for p in profiles {
-                if p.id() == active.id() {
-                    println!(
-                        "  {} {} {}",
-                        style("⊙").magenta(),
-                        &p.id().to_string(),
-                        style("(active)").magenta()
-                    );
-                } else {
-                    println!("  {} {}", style("⋅").white(), &p.id().to_string());
-                }
-            }
-            println!();
+        pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> &'a Profile {
+            let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
+            let selection = dialoguer::Select::with_theme(&ColorfulTheme::default())
+                .items(&profiles.iter().map(|p| p.id()).collect::<Vec<_>>())
+                .default(active)
+                .interact()
+                .unwrap();
+
+            &profiles[selection]
         }
 
         pub fn seed_config(seed: &str, profile: &Profile, urn: &Urn) {
