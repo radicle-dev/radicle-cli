@@ -23,7 +23,7 @@ fn run() -> anyhow::Result<()> {
     let sock = SshAuthSock::default();
 
     let profiles = rad_profile::list(None)?;
-    if !profiles.is_empty() && !args.add {
+    if !profiles.is_empty() && !args.new {
         let profile = profile::default()?;
 
         term::info(&format!(
