@@ -57,12 +57,13 @@ fn run() -> anyhow::Result<()> {
         let username = term::text_input("Username", None);
         let pass = term::pwhash(term::secret_input_with_confirmation());
 
-        let mut spinner = term::spinner("Creating your profile...");
-        let (profile, _) = rad_profile::create(None, pass.clone())?;
-        spinner.finish();
-        spinner = term::spinner("Adding your key to ssh-agent...");
+        let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
+        let (profile, peer_id) = rad_profile::create(None, pass.clone())?;
 
-        let _id = keys::add(&profile, pass, sock.clone())?;
+        spinner.finish();
+        spinner = term::spinner("Adding to ssh-agent...");
+
+        let profile_id = keys::add(&profile, pass, sock.clone())?;
         let (_, storage) = keys::storage(&profile, sock)?;
 
         spinner.finish();
@@ -71,7 +72,20 @@ fn run() -> anyhow::Result<()> {
         let person = person::create(&profile, &username)?;
         person::set_local(&storage, &person);
         spinner.finish();
-        term::success("Profile and identity created.");
+
+        term::blank();
+        term::success(&format!(
+            "Profile {} created.",
+            term::format::highlight(&profile_id.to_string())
+        ));
+        term::info(&format!(
+            "Your radicle Peer ID is {}. This identifies your device.",
+            term::format::highlight(&peer_id.to_string())
+        ));
+        term::info(&format!(
+            "Your personal 🌱 URN is {}. This identifies you across devices.",
+            term::format::highlight(&person.urn().to_string())
+        ));
     }
     Ok(())
 }

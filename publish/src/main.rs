@@ -1,3 +1,4 @@
+// TODO: Warn if git version is < 2.34
 use librad::git::Urn;
 use librad::profile::RadHome;
 
