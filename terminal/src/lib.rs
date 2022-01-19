@@ -23,9 +23,21 @@ pub mod compoments {
     use librad::crypto::keystore::pinentry::SecUtf8;
 
     use dialoguer::{console::style, theme::ColorfulTheme, Input, Password};
-    use indicatif::ProgressBar;
+    use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 
     use super::keys;
+
+    pub struct Spinner {
+        progress: ProgressBar,
+        message: String,
+    }
+
+    impl Spinner {
+        pub fn finish(&self) {
+            self.progress.finish_and_clear();
+            self::success(&self.message);
+        }
+    }
 
     pub fn headline(headline: &str) {
         println!();
@@ -53,11 +65,26 @@ pub mod compoments {
         println!("{} {}", style("✔").green(), success);
     }
 
-    pub fn spinner(message: &str) -> ProgressBar {
-        let spinner = ProgressBar::new_spinner();
-        spinner.enable_steady_tick(120);
-        spinner.set_message(message.to_string());
-        spinner
+    pub fn spinner(message: &str) -> Spinner {
+        let message = message.to_owned();
+        let style = ProgressStyle::default_spinner()
+            .tick_strings(&[
+                &style("⠁").yellow().to_string(),
+                &style("⠈").yellow().to_string(),
+                &style("⠐").yellow().to_string(),
+                &style("⠠").yellow().to_string(),
+                &style("⠄").yellow().to_string(),
+                &style("⠂").yellow().to_string(),
+            ])
+            .template("{spinner} {msg}")
+            .on_finish(ProgressFinish::AndClear);
+
+        let progress = ProgressBar::new(!0);
+        progress.set_style(style);
+        progress.enable_steady_tick(99);
+        progress.set_message(message.clone());
+
+        Spinner { message, progress }
     }
 
     pub fn pwhash(secret: SecUtf8) -> Pwhash<keys::CachedPrompt> {

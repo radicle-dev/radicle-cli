@@ -1,8 +1,6 @@
 // TODO: Support '--help' flag
 // TODO: Take default branch from current git branch
-use std::thread::sleep;
-use std::time::Duration;
-
+// TODO: Configure git monorepo signing key etc.
 use anyhow::bail;
 
 use librad::canonical::Cstring;
@@ -48,7 +46,6 @@ fn run() -> anyhow::Result<()> {
         "Initializing new project in {}...",
         path.display()
     ));
-    sleep(Duration::from_secs(1));
 
     let payload = payload::Project {
         name: Cstring::from(name),
@@ -60,7 +57,7 @@ fn run() -> anyhow::Result<()> {
         Ok(proj) => {
             let urn = proj.urn();
 
-            spinner.finish_and_clear();
+            spinner.finish();
 
             term::success(&format!(
                 "Project initialized with URN {}",
@@ -72,7 +69,7 @@ fn run() -> anyhow::Result<()> {
             ));
         }
         Err(err) => {
-            spinner.finish_and_clear();
+            spinner.finish();
 
             use rad_common::identities::git::existing::Error;
             use rad_common::identities::git::validation;

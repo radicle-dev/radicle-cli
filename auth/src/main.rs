@@ -40,7 +40,7 @@ fn run() -> anyhow::Result<()> {
             let spinner = term::spinner("Unlocking...");
 
             keys::add(selection, pass, sock)?;
-            spinner.finish_and_clear();
+            spinner.finish();
 
             term::success("Profile key added to ssh-agent");
         }
@@ -67,17 +67,16 @@ fn run() -> anyhow::Result<()> {
         let (_, storage) = keys::storage(&profile, sock)?;
 
         spinner.finish();
-        spinner = term::spinner("Creating identity...");
 
         let person = person::create(&profile, &username)?;
         person::set_local(&storage, &person);
-        spinner.finish();
 
-        term::blank();
         term::success(&format!(
             "Profile {} created.",
             term::format::highlight(&profile_id.to_string())
         ));
+
+        term::blank();
         term::info(&format!(
             "Your radicle Peer ID is {}. This identifies your device.",
             term::format::highlight(&peer_id.to_string())
