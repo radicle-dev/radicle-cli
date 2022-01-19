@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Context as _, Error, Result};
 
 use librad::crypto::peer::PeerId;
 use librad::git::storage::Storage;
@@ -12,11 +12,9 @@ use rad_terminal::compoments as term;
 
 pub fn default() -> Result<Profile, Error> {
     match rad_profile::get(None, None) {
-        Ok(profile) => Ok(profile.unwrap()),
-        Err(err) => {
-            term::error(&format!("Could not get active profile. {:?}", err));
-            Err(anyhow::Error::new(err))
-        }
+        Ok(Some(profile)) => Ok(profile),
+        Ok(None) => Err(anyhow!("could not get active profile")),
+        Err(err) => Err(err).context("could not get active profile"),
     }
 }
 

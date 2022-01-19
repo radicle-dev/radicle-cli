@@ -19,10 +19,9 @@ fn main() -> anyhow::Result<()> {
 
 fn run() -> anyhow::Result<()> {
     let args = args::parse()?;
-
     let sock = SshAuthSock::default();
-
     let profiles = rad_profile::list(None)?;
+
     if !profiles.is_empty() && !args.new {
         let profile = profile::default()?;
 
