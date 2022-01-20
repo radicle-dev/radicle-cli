@@ -7,9 +7,11 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 anyhow = "1.0"
-radicle-tools = { path = "../" }
+lexopt = { version = "0.1" }
 librad = "0"
 rad-clib = "0"
 rad-profile = "0"
 rad-common = { path = "../common" }
 rad-terminal = { path = "../terminal" }
+radicle-tools = { path = "../" }
+url = { version = "*" }
