@@ -1,6 +1,5 @@
-// TODO: Warn if git version is < 2.34
 use librad::git::Urn;
-use librad::profile::RadHome;
+use librad::profile::Profile;
 
 use rad_clib::keys::ssh::SshAuthSock;
 use rad_common::{git, keys, profile, project, seed};
@@ -20,9 +19,7 @@ fn main() -> anyhow::Result<()> {
 
 fn run() -> anyhow::Result<()> {
     let seed = "http://localhost:8778".to_string();
-    let home = RadHome::default();
-
-    let profile = profile::default()?;
+    let profile = Profile::load()?;
     let (_, storage) = keys::storage(&profile, SshAuthSock::default())?;
 
     term::info("Reading local git config...");
@@ -36,6 +33,7 @@ fn run() -> anyhow::Result<()> {
         "Publishing 🌱 project {}",
         term::format::highlight(&remote.url.urn.to_string())
     ));
+    term::info(&format!("Publishing to {}", term::format::highlight(&seed)));
     term::info(&format!("Git version {}", git_version));
 
     if git_version < git::VERSION_REQUIRED {
@@ -47,26 +45,36 @@ fn run() -> anyhow::Result<()> {
 
     let peer_id = profile::peer_id(&storage)?;
     let urn = profile::user(&storage)?;
-    let monorepo = profile::repo(&home, &profile)?;
+    let monorepo = profile.paths().git_dir();
     let self_id = Urn::encode_id(&urn);
 
-    term::info("Using config:");
-    term::format::seed_config(&seed, &profile, &urn);
+    let mut spinner = term::spinner(&format!("Syncing delegate identity {}...", &self_id));
+    match seed::push_delegate_id(monorepo, &seed, &self_id, peer_id) {
+        Ok(_) => spinner.finish(),
+        Err(err) => {
+            spinner.failed();
+            return Err(err);
+        }
+    }
 
-    term::info(&format!("Syncing project {:?}", project_id));
+    spinner = term::spinner("Syncing project id...");
+    match seed::push_project_id(monorepo, &seed, &project_id, peer_id) {
+        Ok(_) => spinner.finish(),
+        Err(err) => {
+            spinner.failed();
+            return Err(err);
+        }
+    }
 
-    let mut spinner = term::spinner("Pushing delegate id...");
-    seed::push_delegate_id(&monorepo, &seed, &self_id, peer_id)?;
+    spinner = term::spinner("Syncing rad/*, signed refs and heads...");
+    match seed::push_refs(monorepo, &seed, &project_id, peer_id) {
+        Ok(_) => spinner.finish(),
+        Err(err) => {
+            spinner.failed();
+            return Err(err);
+        }
+    }
+    term::success("Project published.");
 
-    spinner.finish();
-    spinner = term::spinner("Pushing project id...");
-    seed::push_project_id(&monorepo, &seed, &project_id, peer_id)?;
-
-    spinner.finish();
-    spinner = term::spinner("Pushing rad/*, signed refs and heads...");
-    seed::push_refs(&monorepo, &seed, &project_id, peer_id)?;
-
-    spinner.finish();
-    term::success("Projects published.");
     Ok(())
 }

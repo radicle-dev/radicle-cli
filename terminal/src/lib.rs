@@ -19,6 +19,8 @@ pub mod keys {
 }
 
 pub mod compoments {
+    use std::fmt;
+
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
     use librad::crypto::keystore::pinentry::SecUtf8;
 
@@ -33,9 +35,14 @@ pub mod compoments {
     }
 
     impl Spinner {
-        pub fn finish(&self) {
+        pub fn finish(self) {
             self.progress.finish_and_clear();
             self::success(&self.message);
+        }
+
+        pub fn failed(self) {
+            self.progress.finish_and_clear();
+            self::eprintln(style("✗").red(), self.message);
         }
     }
 
@@ -47,6 +54,10 @@ pub mod compoments {
 
     pub fn blank() {
         println!()
+    }
+
+    pub fn eprintln(prefix: impl fmt::Display, msg: impl fmt::Display) {
+        eprintln!("{} {}", prefix, msg);
     }
 
     pub fn info(info: &str) {
@@ -131,7 +142,7 @@ pub mod compoments {
         use librad::git::Urn;
         use librad::profile::Profile;
 
-        pub fn highlight(input: &str) -> String {
+        pub fn highlight<D: std::fmt::Display>(input: D) -> String {
             style(input).green().bold().to_string()
         }
 

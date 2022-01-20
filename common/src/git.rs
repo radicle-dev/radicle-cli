@@ -71,6 +71,22 @@ pub fn version() -> Result<Version, anyhow::Error> {
     Err(anyhow!("failed to run `git version`"))
 }
 
+pub fn git<S: AsRef<std::ffi::OsStr>>(
+    repo: &std::path::Path,
+    args: impl IntoIterator<Item = S>,
+) -> Result<String, anyhow::Error> {
+    let output = Command::new("git").current_dir(repo).args(args).output()?;
+
+    if output.status.success() {
+        return Ok(String::from_utf8_lossy(&output.stdout).into());
+    }
+
+    Err(anyhow::Error::new(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        String::from_utf8_lossy(&output.stderr),
+    )))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
