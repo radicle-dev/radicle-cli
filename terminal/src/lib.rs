@@ -137,6 +137,8 @@ pub mod compoments {
     }
 
     pub mod format {
+        use std::io::Write;
+
         use dialoguer::console::style;
         use dialoguer::theme::ColorfulTheme;
         use librad::git::Urn;
@@ -146,9 +148,19 @@ pub mod compoments {
             style(input).green().bold().to_string()
         }
 
+        pub fn error_blob(err: impl std::error::Error) {
+            std::io::stderr()
+                .write_fmt(format_args!("{:#}", style(err).red()))
+                .ok();
+        }
+
+        pub fn error_header(header: &str) {
+            eprintln!("{} {}", style("✗").red(), style(header).on_red());
+        }
+
         pub fn error(header: &str, error: &anyhow::Error) {
             eprintln!(
-                "{} {} {:#}",
+                "{} {} {}",
                 style("✗").red(),
                 style(header).on_red(),
                 style(error).red()

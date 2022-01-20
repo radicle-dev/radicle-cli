@@ -9,9 +9,16 @@ fn main() -> anyhow::Result<()> {
     match run() {
         Ok(()) => Ok(()),
         Err(err) => {
-            term::format::error("Publishing failed", &err);
-            term::blank();
-
+            match err.downcast_ref::<std::io::Error>() {
+                Some(e) => {
+                    term::format::error_header("Publishing failed");
+                    term::format::error_blob(e);
+                }
+                None => {
+                    term::format::error("Publishing failed", &err);
+                    term::blank();
+                }
+            }
             std::process::exit(1);
         }
     }
