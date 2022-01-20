@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use std::process::Command;
 
+pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
 pub const VERSION_REQUIRED: Version = Version {
     major: 2,
     minor: 34,

@@ -5,20 +5,13 @@ use rad_clib::keys::ssh::SshAuthSock;
 use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::compoments as term;
 
+use anyhow::Context as _;
+
 fn main() -> anyhow::Result<()> {
     match run() {
         Ok(()) => Ok(()),
         Err(err) => {
-            match err.downcast_ref::<std::io::Error>() {
-                Some(e) => {
-                    term::format::error_header("Publishing failed");
-                    term::format::error_blob(e);
-                }
-                None => {
-                    term::format::error("Publishing failed", &err);
-                    term::blank();
-                }
-            }
+            term::format::error("Publishing failed", &err);
             std::process::exit(1);
         }
     }
@@ -54,6 +47,10 @@ fn run() -> anyhow::Result<()> {
     let urn = profile::user(&storage)?;
     let monorepo = profile.paths().git_dir();
     let self_id = Urn::encode_id(&urn);
+    let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
+        .context("git signing key is not properly configured")?;
+
+    term::info(&format!("Git signing key {}", signing_key));
 
     let mut spinner = term::spinner(&format!("Syncing delegate identity {}...", &self_id));
     match seed::push_delegate_id(monorepo, &seed, &self_id, peer_id) {
@@ -73,7 +70,7 @@ fn run() -> anyhow::Result<()> {
         }
     }
 
-    spinner = term::spinner("Syncing rad/*, signed refs and heads...");
+    spinner = term::spinner("Syncing project refs...");
     match seed::push_refs(monorepo, &seed, &project_id, peer_id) {
         Ok(_) => spinner.finish(),
         Err(err) => {

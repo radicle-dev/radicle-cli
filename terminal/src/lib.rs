@@ -159,11 +159,16 @@ pub mod compoments {
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
+            let err = style(error).red().to_string();
+            let err = err.trim_end();
+            let separator = if err.len() > 64 { "\n" } else { " " };
+
             eprintln!(
-                "{} {} {}",
+                "{} {}{}{}",
                 style("✗").red(),
                 style(header).on_red(),
-                style(error).red()
+                separator,
+                err
             );
         }
 
