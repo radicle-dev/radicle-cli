@@ -151,11 +151,14 @@ fn run(options: Options) -> anyhow::Result<()> {
 
         if is_routable {
             term::info(&format!(
-                "Your project is available at https://{}/seeds/{}/projects/{} (Web)",
+                "Your project is available on the web at https://{}/seeds/{}/projects/{}",
                 GATEWAY_HOST, host, project_urn,
             ));
         }
-        term::info(&format!("Your project is available at {} (Git)", git_url));
+        term::info(&format!(
+            "Your project repository is available via git at {}",
+            git_url
+        ));
     }
 
     Ok(())
