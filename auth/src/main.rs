@@ -1,6 +1,6 @@
 use rad_clib::keys::ssh::SshAuthSock;
 
-use rad_common::{keys, person, profile};
+use rad_common::{git, keys, person, profile};
 use rad_terminal::compoments as term;
 
 mod args;
@@ -38,7 +38,7 @@ fn run() -> anyhow::Result<()> {
             let pass = term::pwhash(term::secret_input());
             let spinner = term::spinner("Unlocking...");
 
-            keys::add(selection, pass, sock)?;
+            keys::add(selection, pass, sock.clone())?;
             spinner.finish();
 
             term::success("Profile key added to ssh-agent");
@@ -48,8 +48,11 @@ fn run() -> anyhow::Result<()> {
             let id = selection.id();
             profile::set(id)?;
 
-            term::success(&format!("Profile changed to {}", id));
+            term::success(&format!("Profile {} activated", id));
         }
+        let (signer, _) = keys::storage(&profile, sock)?;
+
+        git::configure_signing_key(profile.paths().git_dir(), &signer.peer_id())?;
     } else {
         term::headline("Initializing your 🌱 profile and identity");
 
@@ -58,6 +61,8 @@ fn run() -> anyhow::Result<()> {
 
         let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
         let (profile, peer_id) = rad_profile::create(None, pass.clone())?;
+        let monorepo = profile.paths().git_dir();
+        let _key = git::configure_signing_key(monorepo, &peer_id)?;
 
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");

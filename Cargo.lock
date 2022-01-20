@@ -4519,6 +4519,8 @@ name = "rad-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.13.0",
+ "byteorder",
  "dialoguer",
  "git2",
  "indicatif",

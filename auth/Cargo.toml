@@ -13,4 +13,3 @@ rad-profile = "0"
 radicle-tools = { path = "../" }
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
-

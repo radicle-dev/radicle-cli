@@ -2,6 +2,8 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use std::process::Command;
 
+use librad::PeerId;
+
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
 pub const VERSION_REQUIRED: Version = Version {
     major: 2,
@@ -86,6 +88,19 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
         std::io::ErrorKind::Other,
         String::from_utf8_lossy(&output.stderr),
     )))
+}
+
+pub fn configure_signing_key(
+    repo: &std::path::Path,
+    peer_id: &PeerId,
+) -> Result<String, anyhow::Error> {
+    let key = crate::keys::to_ssh_key(peer_id)?;
+
+    git(
+        repo,
+        ["config", "--local", "--add", CONFIG_SIGNING_KEY, &key],
+    )
+    .context("git signing key could not be configured")
 }
 
 #[cfg(test)]
