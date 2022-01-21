@@ -60,6 +60,13 @@ pub mod compoments {
         println!()
     }
 
+    pub fn prefixed(prefix: &str, text: &str) -> String {
+        text.split('\n')
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| format!("  {}: {}\n", prefix, line))
+            .collect()
+    }
+
     pub fn eprintln(prefix: impl fmt::Display, msg: impl fmt::Display) {
         eprintln!("{} {}", prefix, msg);
     }
@@ -69,7 +76,7 @@ pub mod compoments {
     }
 
     pub fn subcommand(msg: &str) {
-        println!("{} {}", style("$").yellow(), msg);
+        println!("{} {}", style("$").dim(), style(msg).dim());
     }
 
     pub fn warning(warning: &str) {

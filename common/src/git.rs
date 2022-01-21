@@ -86,14 +86,7 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
         } else {
             &output.stdout
         };
-        let out: String = String::from_utf8_lossy(out).into();
-        let out = out
-            .split('\n')
-            .filter(|line| !line.trim().is_empty())
-            .map(|line| format!("  git: {}\n", line))
-            .collect();
-
-        return Ok(out);
+        return Ok(String::from_utf8_lossy(out).into());
     }
 
     Err(anyhow::Error::new(std::io::Error::new(
