@@ -67,6 +67,10 @@ pub mod compoments {
             .collect()
     }
 
+    pub fn usage(name: &str, version: &str, description: &str, usage: &str) {
+        println!("{} v{}\n{}\n{}", name, version, description, usage);
+    }
+
     pub fn eprintln(prefix: impl fmt::Display, msg: impl fmt::Display) {
         eprintln!("{} {}", prefix, msg);
     }
@@ -89,6 +93,15 @@ pub mod compoments {
 
     pub fn success(success: &str) {
         println!("{} {}", style("✔").green(), success);
+    }
+
+    pub fn failure(error: &anyhow::Error) {
+        eprintln!(
+            "{} {} {}",
+            style("✗").red(),
+            style("Error:").red(),
+            style(error).red()
+        );
     }
 
     pub fn spinner(message: &str) -> Spinner {

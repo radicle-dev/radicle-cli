@@ -1,6 +1,4 @@
-// TODO: Support '--help' flag
 // TODO: Take default branch from current git branch
-// TODO: Configure git monorepo signing key etc.
 use anyhow::bail;
 
 use librad::canonical::Cstring;
@@ -9,8 +7,43 @@ use librad::identities::payload::{self};
 use rad_common::{keys, profile, project};
 use rad_terminal::compoments as term;
 
+const NAME: &str = "rad init";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DESCRIPTION: &str = "Initialize radicle projects from git repositories";
+const USAGE: &str = r#"
+USAGE
+    rad init [OPTIONS]
+
+OPTIONS
+    --help    Print help
+"#;
+
+pub struct Options {
+    help: bool,
+}
+
+impl Options {
+    pub fn from_env() -> anyhow::Result<Self> {
+        use lexopt::prelude::*;
+
+        let mut parser = lexopt::Parser::from_env();
+        let mut help = false;
+
+        while let Some(arg) = parser.next()? {
+            match arg {
+                Long("help") => help = true,
+                _ => return Err(anyhow::anyhow!(arg.unexpected())),
+            }
+        }
+
+        Ok(Options { help })
+    }
+}
+
 fn main() -> anyhow::Result<()> {
-    match run() {
+    let options = Options::from_env()?;
+
+    match run(options) {
         Ok(()) => Ok(()),
         Err(err) => {
             term::format::error("Project initialization failed", &err);
@@ -21,7 +54,12 @@ fn main() -> anyhow::Result<()> {
     }
 }
 
-fn run() -> anyhow::Result<()> {
+fn run(options: Options) -> anyhow::Result<()> {
+    if options.help {
+        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
+        return Ok(());
+    }
+
     let cwd = std::env::current_dir()?;
     let path = cwd.as_path();
     let name = path.file_name().unwrap().to_string_lossy().to_string();

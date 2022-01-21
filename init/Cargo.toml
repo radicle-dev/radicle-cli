@@ -8,6 +8,7 @@ license = "GPL-3.0-or-later"
 [dependencies]
 anyhow = "1.0"
 librad = "0"
+lexopt = "0.1"
 rad-clib = "0"
 rad-profile = "0"
 radicle-tools = { path = "../" }
