@@ -21,7 +21,7 @@ fn run() -> anyhow::Result<()> {
     let args = args::parse()?;
     let sock = SshAuthSock::default();
     let profiles = match rad_profile::list(None) {
-        Ok(profiles) if !args.new => Some(profiles),
+        Ok(profiles) if !args.init => Some(profiles),
         _ => None,
     };
 

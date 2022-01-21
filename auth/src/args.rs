@@ -1,25 +1,25 @@
 #[derive(Debug)]
 pub struct Args {
-    pub new: bool,
+    pub init: bool,
 }
 
 pub fn parse() -> Result<Args, lexopt::Error> {
     use lexopt::prelude::*;
 
-    let mut new = false;
+    let mut init = false;
     let mut parser = lexopt::Parser::from_env();
     while let Some(arg) = parser.next()? {
         match arg {
-            Long("new") => {
-                new = true;
+            Long("init") => {
+                init = true;
             }
             Long("help") => {
-                println!("Usage: rad auth [--new]");
+                println!("Usage: rad auth [--init]");
                 std::process::exit(0);
             }
             _ => return Err(arg.unexpected()),
         }
     }
 
-    Ok(Args { new })
+    Ok(Args { init })
 }
