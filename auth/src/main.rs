@@ -74,11 +74,11 @@ fn run() -> anyhow::Result<()> {
         spinner = term::spinner("Adding to ssh-agent...");
 
         let profile_id = keys::add(&profile, pass, sock.clone())?;
-        let (_, storage) = keys::storage(&profile, sock)?;
+        let (signer, storage) = keys::storage(&profile, sock)?;
 
         spinner.finish();
 
-        let person = person::create(&profile, &username)?;
+        let person = person::create(&profile, &username, signer, &storage)?;
         person::set_local(&storage, &person);
 
         term::success(&format!(

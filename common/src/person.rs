@@ -6,10 +6,9 @@ use librad::git::identities::Person;
 use librad::git::storage::Storage;
 use librad::git::Urn;
 
+use librad::crypto::BoxedSigner;
 use librad::identities::payload;
 use librad::profile::Profile;
-
-use rad_clib::{keys::ssh::SshAuthSock, storage::ssh};
 
 use rad_identities::{self, local, person};
 use rad_terminal::compoments as term;
@@ -21,14 +20,18 @@ pub fn get(storage: &Storage, urn: &Urn) -> Option<Person> {
     }
 }
 
-pub fn create(profile: &Profile, name: &str) -> Result<Person, Error> {
-    let (signer, storage) = ssh::storage(profile, SshAuthSock::default())?;
+pub fn create(
+    profile: &Profile,
+    name: &str,
+    signer: BoxedSigner,
+    storage: &Storage,
+) -> Result<Person, Error> {
     let paths = profile.paths().clone();
     let payload = payload::Person {
         name: Cstring::from(name),
     };
     match person::create::<payload::Person>(
-        &storage,
+        storage,
         paths,
         signer,
         payload,
