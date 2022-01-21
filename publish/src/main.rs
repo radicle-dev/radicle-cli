@@ -99,7 +99,7 @@ fn run(options: Options) -> anyhow::Result<()> {
             spinner.finish();
 
             if options.verbose {
-                println!("{}", output);
+                term::blob(output);
             }
         }
         Err(err) => {
@@ -114,7 +114,7 @@ fn run(options: Options) -> anyhow::Result<()> {
             spinner.finish();
 
             if options.verbose {
-                println!("{}", output);
+                term::blob(output);
             }
         }
         Err(err) => {
@@ -129,7 +129,7 @@ fn run(options: Options) -> anyhow::Result<()> {
             spinner.finish();
 
             if options.verbose {
-                println!("{}", output);
+                term::blob(output);
             }
         }
         Err(err) => {

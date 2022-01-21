@@ -81,7 +81,19 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
     let output = Command::new("git").current_dir(repo).args(args).output()?;
 
     if output.status.success() {
-        return Ok(String::from_utf8_lossy(&output.stdout).into());
+        let out = if output.stdout.is_empty() {
+            &output.stderr
+        } else {
+            &output.stdout
+        };
+        let out: String = String::from_utf8_lossy(out).into();
+        let out = out
+            .split('\n')
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| format!("  git: {}\n", line))
+            .collect();
+
+        return Ok(out);
     }
 
     Err(anyhow::Error::new(std::io::Error::new(

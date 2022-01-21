@@ -52,6 +52,10 @@ pub mod compoments {
         println!();
     }
 
+    pub fn blob(text: impl fmt::Display) {
+        println!("{}", style(text).dim());
+    }
+
     pub fn blank() {
         println!()
     }
