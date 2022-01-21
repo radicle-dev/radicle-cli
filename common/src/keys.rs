@@ -33,6 +33,13 @@ pub fn add(
         .context("could not add ssh key")
 }
 
+pub fn ssh_auth_sock() -> SshAuthSock {
+    if std::env::var("SSH_AGENT_PID").is_err() {
+        rad_terminal::compoments::warning("Warning: ssh-agent is not running!");
+    }
+    SshAuthSock::default()
+}
+
 pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
     rad_profile::ssh_ready(None, profile.id().clone(), sock)
         .context("could not lookup ssh key, is ssh-agent running?")

@@ -1,5 +1,3 @@
-use rad_clib::keys::ssh::SshAuthSock;
-
 use rad_common::{git, keys, person, profile};
 use rad_terminal::compoments as term;
 
@@ -19,7 +17,8 @@ fn main() -> anyhow::Result<()> {
 
 fn run() -> anyhow::Result<()> {
     let args = args::parse()?;
-    let sock = SshAuthSock::default();
+    let sock = keys::ssh_auth_sock();
+
     let profiles = match rad_profile::list(None) {
         Ok(profiles) if !args.init => Some(profiles),
         _ => None,

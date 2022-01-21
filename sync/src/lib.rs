@@ -1,7 +1,6 @@
 use librad::git::Urn;
 use librad::profile::Profile;
 
-use rad_clib::keys::ssh::SshAuthSock;
 use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::compoments as term;
 
@@ -48,7 +47,8 @@ impl Options {
 pub fn run(options: Options) -> anyhow::Result<()> {
     let seed = &options.seed;
     let profile = Profile::load()?;
-    let (_, storage) = keys::storage(&profile, SshAuthSock::default())?;
+    let sock = keys::ssh_auth_sock();
+    let (_, storage) = keys::storage(&profile, sock)?;
 
     term::info("Reading local git config...");
 

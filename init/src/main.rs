@@ -6,8 +6,6 @@ use anyhow::bail;
 use librad::canonical::Cstring;
 use librad::identities::payload::{self};
 
-use rad_clib::keys::ssh::SshAuthSock;
-
 use rad_common::{keys, profile, project};
 use rad_terminal::compoments as term;
 
@@ -35,7 +33,8 @@ fn run() -> anyhow::Result<()> {
 
     let _repo = project::repository()?;
     let profile = profile::default()?;
-    let (signer, storage) = keys::storage(&profile, SshAuthSock::default())?;
+    let sock = keys::ssh_auth_sock();
+    let (signer, storage) = keys::storage(&profile, sock)?;
 
     let description = term::text_input("Description", None);
     let branch = term::text_input("Default branch", Some("master".to_string()));
