@@ -4588,21 +4588,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rad-publish"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt 0.1.0",
- "librad",
- "rad-clib",
- "rad-common",
- "rad-profile",
- "rad-terminal",
- "radicle-tools",
- "url",
-]
-
-[[package]]
 name = "rad-remote-helper"
 version = "0.1.0"
 dependencies = [
@@ -4616,6 +4601,21 @@ dependencies = [
  "radicle-git-helpers",
  "radicle-tools",
  "tokio",
+ "url",
+]
+
+[[package]]
+name = "rad-sync"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt 0.1.0",
+ "librad",
+ "rad-clib",
+ "rad-common",
+ "rad-profile",
+ "rad-terminal",
+ "radicle-tools",
  "url",
 ]
 

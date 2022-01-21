@@ -1,3 +1,5 @@
+// TODO: Allow default seed configuration in .gitconfig
+// TODO: Push to rad master on publish
 use librad::git::Urn;
 use librad::profile::Profile;
 
@@ -51,7 +53,7 @@ fn main() -> anyhow::Result<()> {
     match run(options) {
         Ok(()) => Ok(()),
         Err(err) => {
-            term::format::error("Publishing failed", &err);
+            term::format::error("Sync failed", &err);
             std::process::exit(1);
         }
     }
@@ -71,10 +73,10 @@ fn run(options: Options) -> anyhow::Result<()> {
     let git_version = git::version()?;
 
     term::info(&format!(
-        "Publishing 🌱 project {}",
+        "Syncing 🌱 project {}",
         term::format::highlight(project_urn)
     ));
-    term::info(&format!("Publishing to {}", term::format::highlight(seed)));
+    term::info(&format!("Syncing to {}", term::format::highlight(seed)));
     term::info(&format!("Git version {}", git_version));
 
     if git_version < git::VERSION_REQUIRED {
@@ -137,7 +139,7 @@ fn run(options: Options) -> anyhow::Result<()> {
             return Err(err);
         }
     }
-    term::success("Project published");
+    term::success("Project synced");
     term::blank();
 
     if let Some(host) = seed.host() {
