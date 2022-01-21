@@ -35,7 +35,7 @@ pub fn add(
 
 pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
     rad_profile::ssh_ready(None, profile.id().clone(), sock)
-        .context("could not lookup ssh key")
+        .context("could not lookup ssh key, is ssh-agent running?")
         .map(|(_, is_ready)| is_ready)
 }
 

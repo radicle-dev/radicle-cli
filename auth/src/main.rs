@@ -20,9 +20,12 @@ fn main() -> anyhow::Result<()> {
 fn run() -> anyhow::Result<()> {
     let args = args::parse()?;
     let sock = SshAuthSock::default();
-    let profiles = rad_profile::list(None)?;
+    let profiles = match rad_profile::list(None) {
+        Ok(profiles) if !args.new => Some(profiles),
+        _ => None,
+    };
 
-    if !profiles.is_empty() && !args.new {
+    if let Some(profiles) = profiles {
         let profile = profile::default()?;
 
         term::info(&format!(
@@ -30,10 +33,14 @@ fn run() -> anyhow::Result<()> {
             term::format::highlight(&profile.id().to_string())
         ));
 
-        let selection = term::format::profile_select(&profiles, &profile);
+        let selection = if profiles.len() > 1 {
+            term::format::profile_select(&profiles, &profile)
+        } else {
+            &profile
+        };
 
         if !keys::is_ready(selection, sock.clone())? {
-            term::warning("Your profile key is not in ssh-agent");
+            term::warning("Your radicle key is not in ssh-agent");
 
             let pass = term::pwhash(term::secret_input());
             let spinner = term::spinner("Unlocking...");
@@ -41,7 +48,7 @@ fn run() -> anyhow::Result<()> {
             keys::add(selection, pass, sock.clone())?;
             spinner.finish();
 
-            term::success("Profile key added to ssh-agent");
+            term::success("Radicle key added to ssh-agent");
         }
 
         if selection.id() != profile.id() {
