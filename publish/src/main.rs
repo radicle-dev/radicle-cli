@@ -3,16 +3,8 @@ use std::path::Path;
 use rad_common::git;
 use rad_terminal::compoments as term;
 
-fn main() -> anyhow::Result<()> {
-    let options = rad_sync::Options::from_env()?;
-
-    match run(options) {
-        Ok(()) => Ok(()),
-        Err(err) => {
-            term::format::error("Publish failed", &err);
-            std::process::exit(1);
-        }
-    }
+fn main() {
+    term::run_command::<rad_sync::Options>("Publish", run);
 }
 
 fn run(options: rad_sync::Options) -> anyhow::Result<()> {

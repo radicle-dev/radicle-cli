@@ -3,24 +3,15 @@ use rad_terminal::compoments as term;
 
 mod args;
 
-fn main() -> anyhow::Result<()> {
-    match run() {
-        Ok(()) => Ok(()),
-        Err(err) => {
-            term::format::error("Authentication failed", &err);
-            term::blank();
-
-            std::process::exit(1);
-        }
-    }
+fn main() {
+    term::run_command::<args::Options>("Authentication", run);
 }
 
-fn run() -> anyhow::Result<()> {
-    let args = args::parse()?;
+fn run(options: args::Options) -> anyhow::Result<()> {
     let sock = keys::ssh_auth_sock();
 
     let profiles = match rad_profile::list(None) {
-        Ok(profiles) if !args.init => Some(profiles),
+        Ok(profiles) if !options.init => Some(profiles),
         _ => None,
     };
 

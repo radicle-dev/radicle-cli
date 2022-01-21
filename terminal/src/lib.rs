@@ -19,7 +19,7 @@ pub mod keys {
 }
 
 pub mod compoments {
-    use std::fmt;
+    use std::{fmt, process};
 
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
     use librad::crypto::keystore::pinentry::SecUtf8;
@@ -28,6 +28,10 @@ pub mod compoments {
     use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 
     use super::keys;
+
+    pub trait Args: Sized {
+        fn from_env() -> anyhow::Result<Self>;
+    }
 
     pub struct Spinner {
         progress: ProgressBar,
@@ -43,6 +47,27 @@ pub mod compoments {
         pub fn failed(self) {
             self.progress.finish_and_clear();
             self::eprintln(style("✗").red(), self.message);
+        }
+    }
+
+    pub fn run_command<A>(name: &str, run: fn(A) -> anyhow::Result<()>) -> !
+    where
+        A: Args,
+    {
+        let options = match A::from_env() {
+            Ok(opts) => opts,
+            Err(err) => {
+                self::failure(&err);
+                process::exit(1);
+            }
+        };
+
+        match run(options) {
+            Ok(()) => process::exit(0),
+            Err(err) => {
+                self::format::error(&format!("{} failed", name), &err);
+                process::exit(1);
+            }
         }
     }
 
@@ -189,7 +214,7 @@ pub mod compoments {
         pub fn error(header: &str, error: &anyhow::Error) {
             let err = style(error).red().to_string();
             let err = err.trim_end();
-            let separator = if err.len() > 64 { "\n" } else { " " };
+            let separator = if err.len() > 160 { "\n" } else { " " };
 
             eprintln!(
                 "{} {}{}{}",

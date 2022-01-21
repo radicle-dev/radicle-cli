@@ -6,6 +6,7 @@ use librad::identities::payload::{self};
 
 use rad_common::{keys, profile, project};
 use rad_terminal::compoments as term;
+use rad_terminal::compoments::Args;
 
 const NAME: &str = "rad init";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -22,8 +23,8 @@ pub struct Options {
     help: bool,
 }
 
-impl Options {
-    pub fn from_env() -> anyhow::Result<Self> {
+impl Args for Options {
+    fn from_env() -> anyhow::Result<Self> {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_env();
@@ -40,18 +41,8 @@ impl Options {
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let options = Options::from_env()?;
-
-    match run(options) {
-        Ok(()) => Ok(()),
-        Err(err) => {
-            term::format::error("Project initialization failed", &err);
-            term::blank();
-
-            std::process::exit(1);
-        }
-    }
+fn main() {
+    term::run_command::<Options>("Project initialization", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {

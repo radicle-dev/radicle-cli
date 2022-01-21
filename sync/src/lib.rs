@@ -3,6 +3,7 @@ use librad::profile::Profile;
 
 use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::compoments as term;
+use rad_terminal::compoments::Args;
 
 use anyhow::Context as _;
 use url::Url;
@@ -14,8 +15,8 @@ pub struct Options {
     verbose: bool,
 }
 
-impl Options {
-    pub fn from_env() -> anyhow::Result<Self> {
+impl Args for Options {
+    fn from_env() -> anyhow::Result<Self> {
         use lexopt::prelude::*;
         use std::str::FromStr;
 
