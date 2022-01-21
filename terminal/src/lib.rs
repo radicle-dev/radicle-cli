@@ -68,6 +68,10 @@ pub mod compoments {
         println!("{} {}", style("ℹ").blue(), info);
     }
 
+    pub fn subcommand(msg: &str) {
+        println!("{} {}", style("$").yellow(), msg);
+    }
+
     pub fn warning(warning: &str) {
         eprintln!("{} {}", style("⚠").yellow(), warning);
     }

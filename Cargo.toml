@@ -20,6 +20,7 @@ members = [
   "common",
   "auth",
   "init",
+  "publish",
   "sync",
   "track",
   "untrack",

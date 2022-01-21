@@ -4588,6 +4588,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-publish"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt 0.1.0",
+ "rad-common",
+ "rad-sync",
+ "rad-terminal",
+]
+
+[[package]]
 name = "rad-remote-helper"
 version = "0.1.0"
 dependencies = [
