@@ -12,6 +12,7 @@ pub mod keys {
 
     impl Pinentry for CachedPrompt {
         type Error = std::io::Error;
+
         fn get_passphrase(&self) -> Result<SecUtf8, Self::Error> {
             Ok(self.0.clone())
         }
@@ -24,7 +25,7 @@ pub mod compoments {
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
     use librad::crypto::keystore::pinentry::SecUtf8;
 
-    use dialoguer::{console::style, theme::ColorfulTheme, Input, Password};
+    use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
     use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 
     use super::keys;
@@ -101,7 +102,7 @@ pub mod compoments {
     }
 
     pub fn info(info: &str) {
-        println!("{} {}", style("ℹ").blue(), info);
+        println!("{} {}", style("=>").blue(), info);
     }
 
     pub fn subcommand(msg: &str) {
@@ -109,21 +110,21 @@ pub mod compoments {
     }
 
     pub fn warning(warning: &str) {
-        eprintln!("{} {}", style("⚠").yellow(), warning);
+        eprintln!("{} {}", style("**").yellow(), style(warning).yellow());
     }
 
     pub fn error(error: &str) {
-        eprintln!("{} {}", style("✗").red(), style(error).red());
+        eprintln!("{} {}", style("==").red(), style(error).red());
     }
 
     pub fn success(success: &str) {
-        println!("{} {}", style("✔").green(), success);
+        println!("{} {}", style("OK").green(), success);
     }
 
     pub fn failure(error: &anyhow::Error) {
         eprintln!(
             "{} {} {}",
-            style("✗").red(),
+            style("==").red(),
             style("Error:").red(),
             style(error).red()
         );
@@ -133,12 +134,10 @@ pub mod compoments {
         let message = message.to_owned();
         let style = ProgressStyle::default_spinner()
             .tick_strings(&[
-                &style("⠁").yellow().to_string(),
-                &style("⠈").yellow().to_string(),
-                &style("⠐").yellow().to_string(),
-                &style("⠠").yellow().to_string(),
-                &style("⠄").yellow().to_string(),
-                &style("⠂").yellow().to_string(),
+                &style("\\ ").yellow().to_string(),
+                &style("| ").yellow().to_string(),
+                &style("/ ").yellow().to_string(),
+                &style("| ").yellow().to_string(),
             ])
             .template("{spinner} {msg}")
             .on_finish(ProgressFinish::AndClear);
@@ -156,14 +155,29 @@ pub mod compoments {
         Pwhash::new(prompt, KdfParams::recommended())
     }
 
+    pub fn theme() -> ColorfulTheme {
+        ColorfulTheme {
+            success_prefix: style("OK".to_owned()).for_stderr().green(),
+            prompt_prefix: style("::".to_owned()).blue().for_stderr(),
+            active_item_style: Style::new().for_stderr().on_blue(),
+            active_item_prefix: style("->".to_owned()).yellow().for_stderr(),
+            picked_item_prefix: style("->".to_owned()).yellow().for_stderr(),
+            inactive_item_prefix: style("  ".to_string()).for_stderr(),
+
+            ..ColorfulTheme::default()
+        }
+    }
+
     pub fn text_input(message: &str, default: Option<String>) -> String {
+        let theme = theme();
+
         match default {
-            Some(default) => Input::with_theme(&ColorfulTheme::default())
+            Some(default) => Input::with_theme(&theme)
                 .with_prompt(message)
                 .default(default)
                 .interact_text()
                 .unwrap(),
-            None => Input::with_theme(&ColorfulTheme::default())
+            None => Input::with_theme(&theme)
                 .with_prompt(message)
                 .interact_text()
                 .unwrap(),
@@ -172,7 +186,7 @@ pub mod compoments {
 
     pub fn secret_input() -> SecUtf8 {
         SecUtf8::from(
-            Password::with_theme(&ColorfulTheme::default())
+            Password::with_theme(&theme())
                 .with_prompt("Passphrase")
                 .interact()
                 .unwrap(),
@@ -181,7 +195,7 @@ pub mod compoments {
 
     pub fn secret_input_with_confirmation() -> SecUtf8 {
         SecUtf8::from(
-            Password::with_theme(&ColorfulTheme::default())
+            Password::with_theme(&theme())
                 .with_prompt("Passphrase")
                 .with_confirmation("Repeat passphrase", "Error: the passphrases don't match.")
                 .interact()
@@ -190,25 +204,13 @@ pub mod compoments {
     }
 
     pub mod format {
-        use std::io::Write;
-
         use dialoguer::console::style;
-        use dialoguer::theme::ColorfulTheme;
-        use librad::git::Urn;
         use librad::profile::Profile;
+
+        use super::theme;
 
         pub fn highlight<D: std::fmt::Display>(input: D) -> String {
             style(input).green().bold().to_string()
-        }
-
-        pub fn error_blob(err: impl std::error::Error) {
-            std::io::stderr()
-                .write_fmt(format_args!("{:#}", style(err).red()))
-                .ok();
-        }
-
-        pub fn error_header(header: &str) {
-            eprintln!("{} {}", style("✗").red(), style(header).on_red());
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
@@ -218,37 +220,22 @@ pub mod compoments {
 
             eprintln!(
                 "{} {}{}{}",
-                style("✗").red(),
+                style("==").red(),
                 style(header).on_red(),
                 separator,
                 err
             );
         }
 
-        pub fn error_detail(detail: &str) {
-            eprintln!("  {} {}", style("⊙").red(), &detail);
-        }
-
         pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> &'a Profile {
             let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
-            let selection = dialoguer::Select::with_theme(&ColorfulTheme::default())
+            let selection = dialoguer::Select::with_theme(&theme())
                 .items(&profiles.iter().map(|p| p.id()).collect::<Vec<_>>())
                 .default(active)
                 .interact()
                 .unwrap();
 
             &profiles[selection]
-        }
-
-        pub fn seed_config(seed: &str, profile: &Profile, urn: &Urn) {
-            println!("  ⋅ {} {}", style("(Seed)").magenta(), seed);
-            println!(
-                "  ⋅ {} {}",
-                style("(Profile)").magenta(),
-                &profile.id().to_string()
-            );
-            println!("  ⋅ {} {}", style("(Identity)").magenta(), &urn.to_string());
-            println!();
         }
     }
 }
