@@ -1,3 +1,5 @@
+use anyhow::Context as _;
+
 use rad_common::{git, keys, person, profile};
 use rad_terminal::compoments as term;
 
@@ -30,15 +32,19 @@ fn run(options: args::Options) -> anyhow::Result<()> {
         };
 
         if !keys::is_ready(selection, sock.clone())? {
-            term::warning("Your radicle key is not in ssh-agent");
+            term::warning("Adding your radicle key to ssh-agent");
 
+            // TODO: We should show the spinner on the passphrase prompt,
+            // otherwise it seems like the passphrase is valid even if it isn't.
             let pass = term::pwhash(term::secret_input());
             let spinner = term::spinner("Unlocking...");
 
-            keys::add(selection, pass, sock.clone())?;
+            keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
             spinner.finish();
 
             term::success("Radicle key added to ssh-agent");
+        } else {
+            term::success("Signing key already in ssh-agent");
         }
 
         if selection.id() != profile.id() {
@@ -50,6 +56,7 @@ fn run(options: args::Options) -> anyhow::Result<()> {
         let (signer, _) = keys::storage(&profile, sock)?;
 
         git::configure_signing_key(profile.paths().git_dir(), &signer.peer_id())?;
+        term::success("Signing key configured in git");
     } else {
         term::headline("Initializing your 🌱 profile and identity");
 

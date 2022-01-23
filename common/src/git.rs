@@ -101,11 +101,8 @@ pub fn configure_signing_key(
 ) -> Result<String, anyhow::Error> {
     let key = crate::keys::to_ssh_key(peer_id)?;
 
-    git(
-        repo,
-        ["config", "--local", "--add", CONFIG_SIGNING_KEY, &key],
-    )
-    .context("git signing key could not be configured")
+    git(repo, ["config", "--local", CONFIG_SIGNING_KEY, &key])
+        .context("git signing key could not be configured")
 }
 
 #[cfg(test)]
