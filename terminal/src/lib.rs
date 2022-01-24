@@ -159,9 +159,9 @@ pub mod compoments {
         ColorfulTheme {
             success_prefix: style("OK".to_owned()).for_stderr().green(),
             prompt_prefix: style("::".to_owned()).blue().for_stderr(),
-            active_item_style: Style::new().for_stderr().magenta().bright(),
-            active_item_prefix: style("->".to_owned()).magenta().bright().for_stderr(),
-            picked_item_prefix: style("->".to_owned()).magenta().bright().for_stderr(),
+            active_item_style: Style::new().for_stderr().yellow().reverse(),
+            active_item_prefix: style(" *".to_owned()).yellow().for_stderr(),
+            picked_item_prefix: style(" *".to_owned()).yellow().for_stderr(),
             inactive_item_prefix: style("  ".to_string()).for_stderr(),
 
             ..ColorfulTheme::default()
