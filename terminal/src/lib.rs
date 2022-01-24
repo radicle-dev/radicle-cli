@@ -203,6 +203,25 @@ pub mod compoments {
         )
     }
 
+    pub fn select<'a, T>(options: &'a [T], active: &'a T) -> &'a T
+    where
+        T: fmt::Display + Eq + PartialEq,
+    {
+        let theme = theme();
+        let active = options.iter().position(|o| o == active);
+        let mut selection = dialoguer::Select::with_theme(&theme);
+
+        if let Some(active) = active {
+            selection.default(active);
+        }
+        let index = selection
+            .items(&options.iter().map(|p| p.to_string()).collect::<Vec<_>>())
+            .interact()
+            .unwrap();
+
+        &options[index]
+    }
+
     pub mod format {
         use dialoguer::console::style;
         use librad::profile::Profile;

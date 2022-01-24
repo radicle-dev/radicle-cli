@@ -11,26 +11,27 @@ use url::Url;
 const GATEWAY_HOST: &str = "app.radicle.network";
 
 pub struct Options {
-    seed: Url,
+    seed: Option<Url>,
     verbose: bool,
 }
 
 impl Args for Options {
     fn from_env() -> anyhow::Result<Self> {
         use lexopt::prelude::*;
-        use std::str::FromStr;
 
         let mut parser = lexopt::Parser::from_env();
-        let mut seed: Url = Url::from_str("http://localhost:8778")?;
+        let mut seed: Option<Url> = None;
         let mut verbose = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("seed") => {
-                    seed = parser
-                        .value()?
-                        .parse()
-                        .context("invalid URL specified for `--seed`")?;
+                    seed = Some(
+                        parser
+                            .value()?
+                            .parse()
+                            .context("invalid URL specified for `--seed`")?,
+                    );
                 }
                 Long("verbose") | Short('v') => {
                     verbose = true;
@@ -46,7 +47,6 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let seed = &options.seed;
     let profile = Profile::load()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
@@ -63,6 +63,25 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         "Syncing 🌱 project {}",
         term::format::highlight(project_urn)
     ));
+
+    let seed = &if let Some(seed) = options.seed {
+        seed
+    } else if let Ok(seed) = seed::get_seed() {
+        seed
+    } else {
+        term::info("Select a seed node to sync with...");
+
+        let selection = term::select(seed::DEFAULT_SEEDS, &seed::DEFAULT_SEEDS[0]);
+        let url = Url::parse(&format!("https://{}", selection)).unwrap();
+
+        term::success(selection);
+        term::info("Saving seed configuration to git...");
+
+        seed::set_seed(&url)?;
+
+        url
+    };
+
     term::info(&format!("Syncing to {}", term::format::highlight(seed)));
     term::info(&format!("Git version {}", git_version));
 

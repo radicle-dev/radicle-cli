@@ -1,10 +1,40 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use librad::crypto::peer::PeerId;
 use url::Url;
 
 use crate::git;
+
+pub const CONFIG_SEED_KEY: &str = "rad.seed";
+pub const DEFAULT_SEEDS: &[&str] = &[
+    "pine.radicle.garden",
+    "willow.radicle.garden",
+    "maple.radicle.garden",
+];
+
+pub fn get_seed() -> Result<Url, anyhow::Error> {
+    let output = git::git(Path::new("."), ["config", CONFIG_SEED_KEY])
+        .context("failed to lookup seed configuration")?;
+    let url =
+        Url::parse(&output).context(format!("`{}` is not set to a valid URL", CONFIG_SEED_KEY))?;
+
+    Ok(url)
+}
+
+pub fn set_seed(seed: &Url) -> Result<(), anyhow::Error> {
+    git::git(
+        Path::new("."),
+        [
+            "config",
+            "--global",
+            CONFIG_SEED_KEY,
+            seed.to_string().as_str(),
+        ],
+    )
+    .map(|_| ())
+    .context("failed to save seed configuration")
+}
 
 pub fn push_delegate_id(
     repo: &Path,
