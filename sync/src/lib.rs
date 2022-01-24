@@ -93,6 +93,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Err(err) => {
             spinner.failed();
+            term::blank();
             return Err(err);
         }
     }
@@ -108,6 +109,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Err(err) => {
             spinner.failed();
+            term::blank();
             return Err(err);
         }
     }
@@ -123,6 +125,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Err(err) => {
             spinner.failed();
+            term::blank();
             return Err(err);
         }
     }

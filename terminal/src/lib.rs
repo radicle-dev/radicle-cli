@@ -47,7 +47,7 @@ pub mod compoments {
 
         pub fn failed(self) {
             self.progress.finish_and_clear();
-            self::eprintln(style("✗").red(), self.message);
+            self::eprintln(style("--").red(), self.message);
         }
     }
 
@@ -159,9 +159,9 @@ pub mod compoments {
         ColorfulTheme {
             success_prefix: style("OK".to_owned()).for_stderr().green(),
             prompt_prefix: style("::".to_owned()).blue().for_stderr(),
-            active_item_style: Style::new().for_stderr().on_blue(),
-            active_item_prefix: style("->".to_owned()).yellow().for_stderr(),
-            picked_item_prefix: style("->".to_owned()).yellow().for_stderr(),
+            active_item_style: Style::new().for_stderr().magenta().bright(),
+            active_item_prefix: style("->".to_owned()).magenta().bright().for_stderr(),
+            picked_item_prefix: style("->".to_owned()).magenta().bright().for_stderr(),
             inactive_item_prefix: style("  ".to_string()).for_stderr(),
 
             ..ColorfulTheme::default()
@@ -210,7 +210,7 @@ pub mod compoments {
         use super::theme;
 
         pub fn highlight<D: std::fmt::Display>(input: D) -> String {
-            style(input).green().bold().to_string()
+            style(input).green().bright().to_string()
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
