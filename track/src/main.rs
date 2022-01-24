@@ -67,11 +67,7 @@ fn run() -> anyhow::Result<()> {
     )??;
 
     if let Some(peer) = options.peer {
-        log::info!(
-            "Tracking relationship with {} created for {}",
-            peer,
-            options.urn,
-        );
+        log::info!("Tracking relationship {} created for {}", peer, options.urn,);
     } else {
         log::info!("Tracking relationship for {} created", options.urn);
     }

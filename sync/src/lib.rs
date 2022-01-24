@@ -1,4 +1,4 @@
-use librad::git::Urn;
+use librad::git::{tracking, Urn};
 use librad::profile::Profile;
 
 use rad_common::{git, keys, profile, project, seed};
@@ -173,7 +173,43 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             return Err(err);
         }
     }
-    term::success("Project synced");
+
+    {
+        let track_everyone = tracking::default_only(&storage, project_urn)
+            .context("couldn't read tracking graph")?;
+
+        let remotes = if track_everyone {
+            vec![]
+        } else {
+            tracking::tracked_peers(&storage, Some(project_urn))?.collect::<Result<Vec<_>, _>>()?
+        };
+
+        spinner = term::spinner(&format!(
+            "Fetching remotes ({})...",
+            if remotes.is_empty() {
+                "*".to_owned()
+            } else {
+                remotes.len().to_string()
+            }
+        ));
+
+        match seed::fetch_remotes(monorepo, seed, &project_id, &remotes) {
+            Ok(output) => {
+                spinner.finish();
+
+                if options.verbose {
+                    term::blob(output);
+                }
+            }
+            Err(err) => {
+                spinner.failed();
+                term::blank();
+                return Err(err);
+            }
+        }
+    }
+
+    term::success("Project synced.");
     term::blank();
 
     if let Some(host) = seed.host() {

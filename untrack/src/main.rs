@@ -65,11 +65,7 @@ fn run() -> anyhow::Result<()> {
             tracking::policy::Untrack::MustExist,
         )??;
 
-        log::info!(
-            "Tracking relationship with {} removed for {}",
-            peer,
-            options.urn,
-        );
+        log::info!("Tracking relationship {} removed for {}", peer, options.urn,);
     } else {
         tracking::untrack_all(&storage, &options.urn, tracking::policy::UntrackAll::Any)?
             .for_each(drop);

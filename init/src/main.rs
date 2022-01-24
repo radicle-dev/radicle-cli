@@ -1,4 +1,3 @@
-// TODO: Take default branch from current git branch
 use anyhow::bail;
 
 use librad::canonical::Cstring;
