@@ -55,18 +55,30 @@ fn run(options: Options) -> anyhow::Result<()> {
     let path = cwd.as_path();
     let name = path.file_name().unwrap().to_string_lossy().to_string();
 
+    let repo = project::repository()?;
+    if let Ok(remote) = project::remote(&repo) {
+        bail!(
+            "repository is already initialized with remote {}",
+            remote.url
+        );
+    }
+
+    let profile = profile::default()?;
+    let sock = keys::ssh_auth_sock();
+    let (signer, storage) = keys::storage(&profile, sock)?;
+
     term::headline(&format!(
         "Initializing local 🌱 project {}",
         term::format::highlight(&name)
     ));
 
-    let _repo = project::repository()?;
-    let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (signer, storage) = keys::storage(&profile, sock)?;
-
+    let head: String = repo
+        .head()
+        .ok()
+        .and_then(|head| head.shorthand().map(|h| h.to_owned()))
+        .unwrap_or_else(|| String::from("master"));
     let description = term::text_input("Description", None);
-    let branch = term::text_input("Default branch", Some("master".to_string()));
+    let branch = term::text_input("Default branch", Some(head));
 
     let spinner = term::spinner(&format!(
         "Initializing new project in {}...",
