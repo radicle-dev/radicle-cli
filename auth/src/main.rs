@@ -5,11 +5,28 @@ use rad_terminal::compoments as term;
 
 mod args;
 
+const NAME: &str = "rad auth";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DESCRIPTION: &str = "Manage radicle identities and profiles";
+const USAGE: &str = r#"
+USAGE
+    rad auth [--init]
+
+OPTIONS
+    --init    Initialize a new identity
+    --help    Print help
+"#;
+
 fn main() {
     term::run_command::<args::Options>("Authentication", run);
 }
 
 fn run(options: args::Options) -> anyhow::Result<()> {
+    if options.help {
+        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
+        return Ok(());
+    }
+
     let sock = keys::ssh_auth_sock();
 
     let profiles = match rad_profile::list(None) {

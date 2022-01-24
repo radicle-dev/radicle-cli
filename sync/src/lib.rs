@@ -9,10 +9,22 @@ use anyhow::Context as _;
 use url::Url;
 
 const GATEWAY_HOST: &str = "app.radicle.network";
+const NAME: &str = "rad sync";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DESCRIPTION: &str = "Synchronize radicle projects with seeds";
+const USAGE: &str = r#"
+USAGE
+    rad sync [--seed URL]
+
+OPTIONS
+    --seed URL    Use the given seed node for syncing
+    --help        Print help
+"#;
 
 pub struct Options {
-    seed: Option<Url>,
-    verbose: bool,
+    pub seed: Option<Url>,
+    pub verbose: bool,
+    pub help: bool,
 }
 
 impl Args for Options {
@@ -22,6 +34,7 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_env();
         let mut seed: Option<Url> = None;
         let mut verbose = false;
+        let mut help = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -36,17 +49,29 @@ impl Args for Options {
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
+                Long("help") => {
+                    help = true;
+                }
                 _ => {
                     return Err(anyhow::anyhow!(arg.unexpected()));
                 }
             }
         }
 
-        Ok(Options { seed, verbose })
+        Ok(Options {
+            seed,
+            verbose,
+            help,
+        })
     }
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    if options.help {
+        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
+        return Ok(());
+    }
+
     let profile = Profile::load()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;

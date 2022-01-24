@@ -3,6 +3,7 @@ use rad_terminal::compoments::Args;
 #[derive(Debug)]
 pub struct Options {
     pub init: bool,
+    pub help: bool,
 }
 
 impl Args for Options {
@@ -10,6 +11,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut init = false;
+        let mut help = false;
         let mut parser = lexopt::Parser::from_env();
 
         while let Some(arg) = parser.next()? {
@@ -18,13 +20,12 @@ impl Args for Options {
                     init = true;
                 }
                 Long("help") => {
-                    println!("Usage: rad auth [--init]");
-                    std::process::exit(0);
+                    help = true;
                 }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
 
-        Ok(Options { init })
+        Ok(Options { init, help })
     }
 }
