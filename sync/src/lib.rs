@@ -6,7 +6,7 @@ use rad_terminal::components as term;
 use rad_terminal::components::Args;
 
 use anyhow::Context as _;
-use url::Url;
+use url::{Host, Url};
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
 pub const NAME: &str = "sync";
@@ -14,15 +14,16 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Synchronize radicle projects with seeds";
 pub const USAGE: &str = r#"
 USAGE
-    rad sync [--seed URL]
+    rad sync [--seed <host>]
 
 OPTIONS
-    --seed URL    Use the given seed node for syncing
-    --help        Print help
+    --seed <host>    Use the given seed node for syncing
+    --help           Print help
 "#;
 
 pub struct Options {
-    pub seed: Option<Url>,
+    pub seed: Option<Host>,
+    pub tls: bool,
     pub verbose: bool,
     pub help: bool,
 }
@@ -32,22 +33,25 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_env();
-        let mut seed: Option<Url> = None;
+        let mut seed: Option<Host> = None;
         let mut verbose = false;
         let mut help = false;
+        let mut tls = true;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("seed") => {
-                    seed = Some(
-                        parser
-                            .value()?
-                            .parse()
-                            .context("invalid URL specified for `--seed`")?,
-                    );
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+
+                    seed = Some(Host::parse(value).context("invalid host specified for `--seed`")?);
                 }
                 Long("verbose") | Short('v') => {
                     verbose = true;
+                }
+                Long("no-tls") => {
+                    tls = false;
                 }
                 Long("help") => {
                     help = true;
@@ -60,6 +64,7 @@ impl Args for Options {
 
         Ok(Options {
             seed,
+            tls,
             verbose,
             help,
         })
@@ -90,7 +95,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     ));
 
     let seed = &if let Some(seed) = options.seed {
-        seed
+        if options.tls {
+            Url::parse(&format!("https://{}", seed)).unwrap()
+        } else {
+            Url::parse(&format!("http://{}", seed)).unwrap()
+        }
     } else if let Ok(seed) = seed::get_seed() {
         seed
     } else {
