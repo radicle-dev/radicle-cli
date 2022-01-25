@@ -11,3 +11,6 @@ anyhow = { version = "1.0" }
 colored = { version = "1.9" }
 librad = { version = "0" }
 rad-clib = { version = "0" }
+rad-terminal = { path = "../terminal" }
+rad-common = { path = "../common" }
+rad-track = { path = "../track" }

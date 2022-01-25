@@ -4682,6 +4682,9 @@ dependencies = [
  "librad",
  "log",
  "rad-clib",
+ "rad-common",
+ "rad-terminal",
+ "rad-track",
  "radicle-tools",
 ]
 

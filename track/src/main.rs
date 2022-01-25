@@ -1,16 +1,10 @@
 use std::env;
-use std::str::FromStr;
-
-use anyhow::anyhow;
-use anyhow::Context as _;
 
 use librad::git::tracking;
-use librad::git::Urn;
-use librad::PeerId;
 
 use rad_common::{keys, profile};
 use rad_terminal::compoments as term;
-use rad_terminal::compoments::Args;
+use rad_track::options::Options;
 
 const NAME: &str = "rad track";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -23,55 +17,6 @@ OPTIONS
     --peer <peer-id>   Peer ID to track (default: all)
     --help             Print help
 "#;
-
-#[derive(Debug)]
-struct Options {
-    urn: Urn,
-    peer: Option<PeerId>,
-    help: bool,
-}
-
-impl Args for Options {
-    fn from_env() -> anyhow::Result<Options> {
-        use lexopt::prelude::*;
-
-        let mut parser = lexopt::Parser::from_env();
-        let mut urn: Option<Urn> = None;
-        let mut peer: Option<PeerId> = None;
-        let mut help = false;
-
-        while let Some(arg) = parser.next()? {
-            match arg {
-                Long("peer") => {
-                    peer = Some(
-                        parser
-                            .value()?
-                            .parse()
-                            .context("invalid value specified for '--peer'")?,
-                    );
-                }
-                Long("help") => {
-                    help = true;
-                }
-                Value(val) if urn.is_none() => {
-                    let val = val.to_string_lossy();
-                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
-
-                    urn = Some(val);
-                }
-                _ => {
-                    return Err(anyhow!(arg.unexpected()));
-                }
-            }
-        }
-
-        Ok(Options {
-            urn: urn.ok_or_else(|| anyhow!("a URN to track must be specified"))?,
-            peer,
-            help,
-        })
-    }
-}
 
 fn main() {
     term::run_command::<Options>("Tracking", run);
