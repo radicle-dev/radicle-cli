@@ -21,6 +21,7 @@ members = [
   "checkout",
   "auth",
   "help",
+  "rad",
   "init",
   "publish",
   "sync",
@@ -52,6 +53,10 @@ git = "https://github.com/radicle-dev/radicle-link"
 rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
 [patch.crates-io.rad-profile]
+git = "https://github.com/radicle-dev/radicle-link"
+rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
+
+[patch.crates-io.rad-exe]
 git = "https://github.com/radicle-dev/radicle-link"
 rev = "b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
 
