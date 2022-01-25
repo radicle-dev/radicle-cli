@@ -1,4 +1,4 @@
-use librad::git::{tracking, Urn};
+use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 
 use rad_common::{git, keys, profile, project, seed};
@@ -7,6 +7,8 @@ use rad_terminal::components::Args;
 
 use anyhow::Context as _;
 use url::{Host, Url};
+
+use std::str::FromStr;
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
 pub const NAME: &str = "sync";
@@ -21,8 +23,43 @@ OPTIONS
     --help           Print help
 "#;
 
+pub struct Addr {
+    pub host: Host,
+    pub port: Option<u16>,
+}
+
+impl std::fmt::Display for Addr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(port) = self.port {
+            write!(f, "{}:{}", self.host, port)
+        } else {
+            write!(f, "{}", self.host)
+        }
+    }
+}
+
+impl FromStr for Addr {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.split_once(':') {
+            Some((host, port)) => {
+                let host = Host::parse(host)?;
+                let port = Some(port.parse()?);
+
+                Ok(Self { host, port })
+            }
+            None => {
+                let host = Host::parse(s)?;
+
+                Ok(Self { host, port: None })
+            }
+        }
+    }
+}
+
 pub struct Options {
-    pub seed: Option<Host>,
+    pub seed: Option<Addr>,
     pub tls: bool,
     pub verbose: bool,
     pub help: bool,
@@ -33,7 +70,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_env();
-        let mut seed: Option<Host> = None;
+        let mut seed: Option<Addr> = None;
         let mut verbose = false;
         let mut help = false;
         let mut tls = true;
@@ -44,8 +81,10 @@ impl Args for Options {
                     let value = parser.value()?;
                     let value = value.to_string_lossy();
                     let value = value.as_ref();
+                    let addr =
+                        Addr::from_str(value).context("invalid address specified for `--seed`")?;
 
-                    seed = Some(Host::parse(value).context("invalid host specified for `--seed`")?);
+                    seed = Some(addr);
                 }
                 Long("verbose") | Short('v') => {
                     verbose = true;
