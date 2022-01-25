@@ -1,62 +1,97 @@
 use std::env;
-use std::process;
 use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
 
-use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
-use librad::crypto::keystore::pinentry::Prompt;
-use librad::crypto::keystore::Keystore as _;
-use librad::crypto::BoxedSigner;
-use librad::git::storage::Storage;
 use librad::git::tracking;
 use librad::git::Urn;
-use librad::profile::Profile;
 use librad::PeerId;
 
-use radicle_tools::logger;
+use rad_common::{keys, profile};
+use rad_terminal::compoments as term;
+use rad_terminal::compoments::Args;
 
-const USAGE: &str = "rad track <urn> [--peer <peer-id>]";
+const NAME: &str = "rad track";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DESCRIPTION: &str = "Track project peers";
+const USAGE: &str = r#"
+USAGE
+    rad track <urn> [--peer <peer-id>]
+
+OPTIONS
+    --peer <peer-id>   Peer ID to track (default: all)
+    --help             Print help
+"#;
 
 #[derive(Debug)]
 struct Options {
     urn: Urn,
     peer: Option<PeerId>,
+    help: bool,
 }
 
-fn main() {
-    logger::init(env!("CARGO_CRATE_NAME")).unwrap();
-    logger::set_level(log::Level::Info);
+impl Args for Options {
+    fn from_env() -> anyhow::Result<Options> {
+        use lexopt::prelude::*;
 
-    match run() {
-        Err(err) => {
-            log::error!("Error: {}", err);
-            log::info!("Usage: {}", USAGE);
+        let mut parser = lexopt::Parser::from_env();
+        let mut urn: Option<Urn> = None;
+        let mut peer: Option<PeerId> = None;
+        let mut help = false;
 
-            process::exit(1);
+        while let Some(arg) = parser.next()? {
+            match arg {
+                Long("peer") => {
+                    peer = Some(
+                        parser
+                            .value()?
+                            .parse()
+                            .context("invalid value specified for '--peer'")?,
+                    );
+                }
+                Long("help") => {
+                    help = true;
+                }
+                Value(val) if urn.is_none() => {
+                    let val = val.to_string_lossy();
+                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
+
+                    urn = Some(val);
+                }
+                _ => {
+                    return Err(anyhow!(arg.unexpected()));
+                }
+            }
         }
-        Ok(()) => {}
+
+        Ok(Options {
+            urn: urn.ok_or_else(|| anyhow!("a URN to track must be specified"))?,
+            peer,
+            help,
+        })
     }
 }
 
-/// Create a [`Prompt`] for unlocking the key storage.
-pub fn prompt() -> Pwhash<Prompt<'static>> {
-    let prompt = Prompt::new("please enter your passphrase: ");
-    Pwhash::new(prompt, KdfParams::recommended())
+fn main() {
+    term::run_command::<Options>("Tracking", run);
 }
 
-fn run() -> anyhow::Result<()> {
-    let options = parse_options()?;
+fn run(options: Options) -> anyhow::Result<()> {
+    if options.help {
+        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
+        return Ok(());
+    }
+
+    term::info(&format!(
+        "Establishing tracking relationship for {}...",
+        term::format::highlight(&options.urn)
+    ));
 
     let cfg = tracking::config::Config::default();
-    let profile = Profile::load()?;
-    let paths = profile.paths();
-
-    let keyring = rad_clib::keys::file_storage(&profile, prompt());
-    let key = keyring.get_key()?.secret_key;
-    let signer: BoxedSigner = key.into();
-    let storage = Storage::open(paths, signer)?;
+    let profile = profile::default()?;
+    let sock = keys::ssh_auth_sock();
+    let (_, storage) = keys::storage(&profile, sock)?;
 
     tracking::track(
         &storage,
@@ -67,49 +102,16 @@ fn run() -> anyhow::Result<()> {
     )??;
 
     if let Some(peer) = options.peer {
-        log::info!("Tracking relationship {} created for {}", peer, options.urn,);
+        term::success(&format!(
+            "Tracking relationship {} established for {}",
+            peer, options.urn
+        ));
     } else {
-        log::info!("Tracking relationship for {} created", options.urn);
+        term::success(&format!(
+            "Tracking relationship for {} established",
+            options.urn
+        ));
     }
 
     Ok(())
-}
-
-fn parse_options() -> anyhow::Result<Options> {
-    use lexopt::prelude::*;
-
-    let mut parser = lexopt::Parser::from_env();
-    let mut urn: Option<Urn> = None;
-    let mut peer: Option<PeerId> = None;
-
-    while let Some(arg) = parser.next()? {
-        match arg {
-            Long("peer") => {
-                peer = Some(
-                    parser
-                        .value()?
-                        .parse()
-                        .context("invalid value specified for '--peer'")?,
-                );
-            }
-            Long("help") => {
-                log::info!("Usage: {}", USAGE);
-                process::exit(0);
-            }
-            Value(val) if urn.is_none() => {
-                let val = val.to_string_lossy();
-                let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
-
-                urn = Some(val);
-            }
-            _ => {
-                return Err(anyhow!(arg.unexpected()));
-            }
-        }
-    }
-
-    Ok(Options {
-        urn: urn.ok_or_else(|| anyhow!("a URN to track must be specified"))?,
-        peer,
-    })
 }
