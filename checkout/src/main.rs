@@ -4,7 +4,7 @@ use anyhow::Context as _;
 
 use rad_checkout::{Options, DESCRIPTION, NAME, USAGE, VERSION};
 use rad_common::{identities, keys, profile};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 fn main() {
     term::run_command::<Options>(NAME, "Project checkout", run);

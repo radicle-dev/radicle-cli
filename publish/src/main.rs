@@ -2,7 +2,7 @@ use std::path::Path;
 
 use rad_common::git;
 use rad_publish::{DESCRIPTION, NAME, USAGE, VERSION};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 fn main() {
     term::run_command::<rad_sync::Options>(NAME, "Publish", run);

@@ -35,7 +35,7 @@ pub fn add(
 
 pub fn ssh_auth_sock() -> SshAuthSock {
     if std::env::var("SSH_AGENT_PID").is_err() {
-        rad_terminal::compoments::warning("Warning: ssh-agent is not running!");
+        rad_terminal::components::warning("Warning: ssh-agent is not running!");
     }
     SshAuthSock::default()
 }

@@ -2,8 +2,8 @@ use librad::git::{tracking, Urn};
 use librad::profile::Profile;
 
 use rad_common::{git, keys, profile, project, seed};
-use rad_terminal::compoments as term;
-use rad_terminal::compoments::Args;
+use rad_terminal::components as term;
+use rad_terminal::components::Args;
 
 use anyhow::Context as _;
 use url::Url;

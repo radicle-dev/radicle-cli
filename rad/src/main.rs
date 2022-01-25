@@ -13,7 +13,7 @@ fn main() {
         Ok(_) => process::exit(0),
         Err(err) => {
             if let Some(err) = err {
-                rad_terminal::compoments::error(&format!("Error: rad: {}", err));
+                rad_terminal::components::error(&format!("Error: rad: {}", err));
             }
             process::exit(1);
         }

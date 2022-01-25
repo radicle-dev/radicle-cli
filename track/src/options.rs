@@ -6,7 +6,7 @@ use anyhow::Context as _;
 use librad::git::Urn;
 use librad::PeerId;
 
-use rad_terminal::compoments::Args;
+use rad_terminal::components::Args;
 
 /// Tool options.
 /// Nb. These options are also used by the `untrack` tool.

@@ -11,7 +11,7 @@ use librad::identities::payload;
 use librad::profile::Profile;
 
 use rad_identities::{self, local, person};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 pub fn get(storage: &Storage, urn: &Urn) -> Option<Person> {
     match person::get(storage, urn) {

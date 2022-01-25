@@ -19,7 +19,7 @@ pub mod keys {
     }
 }
 
-pub mod compoments {
+pub mod components {
     use std::{fmt, process};
 
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};

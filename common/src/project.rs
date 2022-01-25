@@ -14,7 +14,7 @@ use librad::profile::Profile;
 use librad::reflike;
 
 use rad_identities::{self, project};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 pub fn create(
     storage: &Storage,

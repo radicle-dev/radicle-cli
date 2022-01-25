@@ -1,7 +1,7 @@
 use librad::git::tracking;
 
 use rad_common::{keys, profile};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 use rad_track::options::Options;
 use rad_track::{DESCRIPTION, NAME, USAGE, VERSION};
 

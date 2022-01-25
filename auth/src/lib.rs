@@ -1,4 +1,4 @@
-use rad_terminal::compoments::Args;
+use rad_terminal::components::Args;
 
 pub const NAME: &str = "auth";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

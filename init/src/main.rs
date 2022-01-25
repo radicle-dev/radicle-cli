@@ -5,7 +5,7 @@ use librad::identities::payload::{self};
 
 use rad_common::{keys, profile, project};
 use rad_init::{Options, DESCRIPTION, NAME, USAGE, VERSION};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 fn main() {
     term::run_command::<Options>(NAME, "Project initialization", run);

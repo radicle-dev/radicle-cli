@@ -1,5 +1,5 @@
-use rad_terminal::compoments as term;
-use rad_terminal::compoments::Args;
+use rad_terminal::components as term;
+use rad_terminal::components::Args;
 
 pub const NAME: &str = "help";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

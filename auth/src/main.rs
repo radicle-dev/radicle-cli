@@ -2,7 +2,7 @@ use anyhow::Context as _;
 
 use rad_auth::{Options, DESCRIPTION, NAME, USAGE, VERSION};
 use rad_common::{git, keys, person, profile};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 fn main() {
     term::run_command::<Options>(NAME, "Authentication", run);

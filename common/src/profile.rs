@@ -8,7 +8,7 @@ use librad::git::Urn;
 use librad::profile::{Profile, ProfileId, RadHome};
 
 use rad_profile;
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 
 pub fn default() -> Result<Profile, Error> {
     match rad_profile::get(None, None) {

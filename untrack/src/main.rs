@@ -3,7 +3,7 @@ use librad::crypto::keystore::pinentry::Prompt;
 use librad::git::tracking::git::tracking;
 
 use rad_common::{keys, profile};
-use rad_terminal::compoments as term;
+use rad_terminal::components as term;
 use rad_track::options::Options;
 use rad_untrack::{DESCRIPTION, NAME, USAGE, VERSION};
 
