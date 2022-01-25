@@ -133,6 +133,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         term::format::highlight(project_urn)
     ));
 
+    if identities::project::get(&storage, project_urn)?.is_none() {
+        anyhow::bail!(
+            "this project was not found in your local storage, perhaps it was initialized with another profile?"
+        );
+    }
+
     let seed = &if let Some(seed) = options.seed {
         if options.tls {
             Url::parse(&format!("https://{}", seed)).unwrap()
