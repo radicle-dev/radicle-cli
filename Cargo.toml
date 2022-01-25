@@ -18,6 +18,7 @@ members = [
   "safe-transaction-client",
   "terminal",
   "common",
+  "checkout",
   "auth",
   "init",
   "publish",
