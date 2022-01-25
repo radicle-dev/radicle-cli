@@ -47,7 +47,7 @@ pub mod components {
 
         pub fn failed(self) {
             self.progress.finish_and_clear();
-            self::eprintln(style("--").red(), self.message);
+            self::eprintln(style("><").red(), self.message);
         }
     }
 
@@ -118,7 +118,7 @@ pub mod components {
     }
 
     pub fn success(success: &str) {
-        println!("{} {}", style("OK").green(), success);
+        println!("{} {}", style("ok").green(), success);
     }
 
     pub fn failure(bin: &str, error: &anyhow::Error) {
