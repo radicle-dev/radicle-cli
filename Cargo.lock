@@ -4548,6 +4548,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-help"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt 0.1.0",
+ "librad",
+ "rad-auth",
+ "rad-checkout",
+ "rad-clib",
+ "rad-common",
+ "rad-init",
+ "rad-profile",
+ "rad-publish",
+ "rad-sync",
+ "rad-terminal",
+ "rad-track",
+ "rad-untrack",
+ "radicle-tools",
+]
+
+[[package]]
 name = "rad-identities"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"

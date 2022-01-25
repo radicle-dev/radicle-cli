@@ -20,6 +20,7 @@ members = [
   "common",
   "checkout",
   "auth",
+  "help",
   "init",
   "publish",
   "sync",

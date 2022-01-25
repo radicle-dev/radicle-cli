@@ -1,5 +1,17 @@
 use rad_terminal::compoments::Args;
 
+pub const NAME: &str = "rad auth";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const DESCRIPTION: &str = "Manage radicle identities and profiles";
+pub const USAGE: &str = r#"
+USAGE
+    rad auth [--init]
+
+OPTIONS
+    --init    Initialize a new identity
+    --help    Print help
+"#;
+
 #[derive(Debug)]
 pub struct Options {
     pub init: bool,

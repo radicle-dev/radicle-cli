@@ -4,41 +4,8 @@ use librad::canonical::Cstring;
 use librad::identities::payload::{self};
 
 use rad_common::{keys, profile, project};
+use rad_init::{Options, DESCRIPTION, NAME, USAGE, VERSION};
 use rad_terminal::compoments as term;
-use rad_terminal::compoments::Args;
-
-const NAME: &str = "rad init";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "Initialize radicle projects from git repositories";
-const USAGE: &str = r#"
-USAGE
-    rad init [OPTIONS]
-
-OPTIONS
-    --help    Print help
-"#;
-
-pub struct Options {
-    help: bool,
-}
-
-impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
-        use lexopt::prelude::*;
-
-        let mut parser = lexopt::Parser::from_env();
-        let mut help = false;
-
-        while let Some(arg) = parser.next()? {
-            match arg {
-                Long("help") => help = true,
-                _ => return Err(anyhow::anyhow!(arg.unexpected())),
-            }
-        }
-
-        Ok(Options { help })
-    }
-}
 
 fn main() {
     term::run_command::<Options>("Project initialization", run);

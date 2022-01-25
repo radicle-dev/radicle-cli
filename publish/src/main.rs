@@ -1,19 +1,8 @@
 use std::path::Path;
 
 use rad_common::git;
+use rad_publish::{DESCRIPTION, NAME, USAGE, VERSION};
 use rad_terminal::compoments as term;
-
-const NAME: &str = "rad publish";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "Publish radicle projects to the network";
-const USAGE: &str = r#"
-USAGE
-    rad publish [--seed URL]
-
-OPTIONS
-    --seed URL    Use the given seed node for publishing
-    --help        Print help
-"#;
 
 fn main() {
     term::run_command::<rad_sync::Options>("Publish", run);

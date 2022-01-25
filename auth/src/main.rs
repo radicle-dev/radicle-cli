@@ -1,27 +1,14 @@
 use anyhow::Context as _;
 
+use rad_auth::{Options, DESCRIPTION, NAME, USAGE, VERSION};
 use rad_common::{git, keys, person, profile};
 use rad_terminal::compoments as term;
 
-mod args;
-
-const NAME: &str = "rad auth";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "Manage radicle identities and profiles";
-const USAGE: &str = r#"
-USAGE
-    rad auth [--init]
-
-OPTIONS
-    --init    Initialize a new identity
-    --help    Print help
-"#;
-
 fn main() {
-    term::run_command::<args::Options>("Authentication", run);
+    term::run_command::<Options>("Authentication", run);
 }
 
-fn run(options: args::Options) -> anyhow::Result<()> {
+fn run(options: Options) -> anyhow::Result<()> {
     if options.help {
         term::usage(NAME, VERSION, DESCRIPTION, USAGE);
         return Ok(());

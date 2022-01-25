@@ -8,11 +8,11 @@ use rad_terminal::compoments::Args;
 use anyhow::Context as _;
 use url::Url;
 
-const GATEWAY_HOST: &str = "app.radicle.network";
-const NAME: &str = "rad sync";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "Synchronize radicle projects with seeds";
-const USAGE: &str = r#"
+pub const GATEWAY_HOST: &str = "app.radicle.network";
+pub const NAME: &str = "rad sync";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const DESCRIPTION: &str = "Synchronize radicle projects with seeds";
+pub const USAGE: &str = r#"
 USAGE
     rad sync [--seed URL]
 
