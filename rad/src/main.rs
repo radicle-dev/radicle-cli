@@ -13,7 +13,7 @@ fn main() {
         Ok(_) => process::exit(0),
         Err(err) => {
             if let Some(err) = err {
-                rad_terminal::compoments::failure(&err);
+                rad_terminal::compoments::error(&format!("Error: rad: {}", err));
             }
             process::exit(1);
         }
@@ -90,7 +90,7 @@ fn run(_global: args::Global, command: Command) -> Result<(), Option<anyhow::Err
                         }
                         Err(err) => {
                             if let ErrorKind::NotFound = err.kind() {
-                                return Err(Some(anyhow!("command {} not found", exe)));
+                                return Err(Some(anyhow!("command `{}` not found", exe)));
                             } else {
                                 return Err(Some(err.into()));
                             }

@@ -51,14 +51,14 @@ pub mod compoments {
         }
     }
 
-    pub fn run_command<A>(name: &str, run: fn(A) -> anyhow::Result<()>) -> !
+    pub fn run_command<A>(bin: &str, action: &str, run: fn(A) -> anyhow::Result<()>) -> !
     where
         A: Args,
     {
         let options = match A::from_env() {
             Ok(opts) => opts,
             Err(err) => {
-                self::failure(&err);
+                self::failure(bin, &err);
                 process::exit(1);
             }
         };
@@ -66,7 +66,7 @@ pub mod compoments {
         match run(options) {
             Ok(()) => process::exit(0),
             Err(err) => {
-                self::format::error(&format!("{} failed", name), &err);
+                self::format::error(&format!("{} failed", action), &err);
                 process::exit(1);
             }
         }
@@ -121,11 +121,12 @@ pub mod compoments {
         println!("{} {}", style("OK").green(), success);
     }
 
-    pub fn failure(error: &anyhow::Error) {
+    pub fn failure(bin: &str, error: &anyhow::Error) {
         eprintln!(
-            "{} {} {}",
+            "{} {} {} {}",
             style("==").red(),
             style("Error:").red(),
+            style(format!("rad-{}:", bin)).red(),
             style(error).red()
         );
     }

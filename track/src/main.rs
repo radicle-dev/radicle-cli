@@ -6,7 +6,7 @@ use rad_track::options::Options;
 use rad_track::{DESCRIPTION, NAME, USAGE, VERSION};
 
 fn main() {
-    term::run_command::<Options>("Tracking", run);
+    term::run_command::<Options>(NAME, "Tracking", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {

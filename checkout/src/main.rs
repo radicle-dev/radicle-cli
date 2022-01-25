@@ -7,7 +7,7 @@ use rad_common::{identities, keys, profile};
 use rad_terminal::compoments as term;
 
 fn main() {
-    term::run_command::<Options>("Project checkout", run);
+    term::run_command::<Options>(NAME, "Project checkout", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {

@@ -5,7 +5,7 @@ use rad_common::{git, keys, person, profile};
 use rad_terminal::compoments as term;
 
 fn main() {
-    term::run_command::<Options>("Authentication", run);
+    term::run_command::<Options>(NAME, "Authentication", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {

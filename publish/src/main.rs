@@ -5,7 +5,7 @@ use rad_publish::{DESCRIPTION, NAME, USAGE, VERSION};
 use rad_terminal::compoments as term;
 
 fn main() {
-    term::run_command::<rad_sync::Options>("Publish", run);
+    term::run_command::<rad_sync::Options>(NAME, "Publish", run);
 }
 
 fn run(options: rad_sync::Options) -> anyhow::Result<()> {

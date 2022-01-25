@@ -8,7 +8,7 @@ use rad_init::{Options, DESCRIPTION, NAME, USAGE, VERSION};
 use rad_terminal::compoments as term;
 
 fn main() {
-    term::run_command::<Options>("Project initialization", run);
+    term::run_command::<Options>(NAME, "Project initialization", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {
