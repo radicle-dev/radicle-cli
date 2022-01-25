@@ -5,7 +5,7 @@ use librad::git::Urn;
 
 use rad_terminal::compoments::Args;
 
-pub const NAME: &str = "rad checkout";
+pub const NAME: &str = "checkout";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Checkout a project working copy";
 pub const USAGE: &str = r#"

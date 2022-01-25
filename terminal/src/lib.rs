@@ -94,7 +94,7 @@ pub mod compoments {
     }
 
     pub fn usage(name: &str, version: &str, description: &str, usage: &str) {
-        println!("{} v{}\n{}\n{}", name, version, description, usage);
+        println!("rad-{} v{}\n{}\n{}", name, version, description, usage);
     }
 
     pub fn eprintln(prefix: impl fmt::Display, msg: impl fmt::Display) {
@@ -230,6 +230,14 @@ pub mod compoments {
 
         pub fn highlight<D: std::fmt::Display>(input: D) -> String {
             style(input).green().bright().to_string()
+        }
+
+        pub fn bold<D: std::fmt::Display>(input: D) -> String {
+            style(input).bold().to_string()
+        }
+
+        pub fn dim<D: std::fmt::Display>(input: D) -> String {
+            style(input).dim().to_string()
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {

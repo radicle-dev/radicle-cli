@@ -9,7 +9,7 @@ use anyhow::Context as _;
 use url::Url;
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
-pub const NAME: &str = "rad sync";
+pub const NAME: &str = "sync";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Synchronize radicle projects with seeds";
 pub const USAGE: &str = r#"

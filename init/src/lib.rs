@@ -1,6 +1,6 @@
 use rad_terminal::compoments::Args;
 
-pub const NAME: &str = "rad init";
+pub const NAME: &str = "init";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Initialize radicle projects from git repositories";
 pub const USAGE: &str = r#"

@@ -1,22 +1,9 @@
-use std::env;
-
 use librad::git::tracking;
 
 use rad_common::{keys, profile};
 use rad_terminal::compoments as term;
 use rad_track::options::Options;
-
-const NAME: &str = "rad track";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "Track project peers";
-const USAGE: &str = r#"
-USAGE
-    rad track <urn> [--peer <peer-id>]
-
-OPTIONS
-    --peer <peer-id>   Peer ID to track (default: all)
-    --help             Print help
-"#;
+use rad_track::{DESCRIPTION, NAME, USAGE, VERSION};
 
 fn main() {
     term::run_command::<Options>("Tracking", run);

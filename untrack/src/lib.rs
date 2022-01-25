@@ -1,4 +1,4 @@
-pub const NAME: &str = "rad untrack";
+pub const NAME: &str = "untrack";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Untrack project peers";
 pub const USAGE: &str = r#"

@@ -1,4 +1,4 @@
-pub const NAME: &str = "rad publish";
+pub const NAME: &str = "publish";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Publish radicle projects to the network";
 pub const USAGE: &str = r#"

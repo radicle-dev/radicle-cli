@@ -1,6 +1,6 @@
 use rad_terminal::compoments::Args;
 
-pub const NAME: &str = "rad auth";
+pub const NAME: &str = "auth";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = "Manage radicle identities and profiles";
 pub const USAGE: &str = r#"
