@@ -30,7 +30,11 @@ fn run(options: Options) -> anyhow::Result<()> {
         ));
 
         let selection = if profiles.len() > 1 {
-            term::format::profile_select(&profiles, &profile)
+            if let Some(p) = term::format::profile_select(&profiles, &profile) {
+                p
+            } else {
+                return Ok(());
+            }
         } else {
             &profile
         };

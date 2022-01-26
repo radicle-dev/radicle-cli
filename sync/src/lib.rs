@@ -151,15 +151,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     } else {
         term::info("Select a seed node to sync with...");
 
-        let selection = term::select(seed::DEFAULT_SEEDS, &seed::DEFAULT_SEEDS[0]);
-        let url = Url::parse(&format!("https://{}", selection)).unwrap();
+        if let Some(selection) = term::select(seed::DEFAULT_SEEDS, &seed::DEFAULT_SEEDS[0]) {
+            let url = Url::parse(&format!("https://{}", selection)).unwrap();
 
-        term::success(selection);
-        term::info("Saving seed configuration to git...");
+            term::success(selection);
+            term::info("Saving seed configuration to git...");
 
-        seed::set_seed(&url)?;
+            seed::set_seed(&url)?;
 
-        url
+            url
+        } else {
+            return Ok(());
+        }
     };
 
     term::info(&format!("Syncing to {}", term::format::highlight(seed)));

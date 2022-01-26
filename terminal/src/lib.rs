@@ -169,9 +169,10 @@ pub mod components {
             success_prefix: style("ok".to_owned()).for_stderr().green(),
             prompt_prefix: style("::".to_owned()).blue().for_stderr(),
             active_item_style: Style::new().for_stderr().yellow().reverse(),
-            active_item_prefix: style(" *".to_owned()).yellow().for_stderr(),
-            picked_item_prefix: style(" *".to_owned()).yellow().for_stderr(),
-            inactive_item_prefix: style("  ".to_string()).for_stderr(),
+            active_item_prefix: style("*".to_owned()).yellow().for_stderr(),
+            picked_item_prefix: style("*".to_owned()).yellow().for_stderr(),
+            inactive_item_prefix: style(" ".to_string()).for_stderr(),
+            inactive_item_style: Style::new().yellow().for_stderr(),
 
             ..ColorfulTheme::default()
         }
@@ -212,7 +213,7 @@ pub mod components {
         )
     }
 
-    pub fn select<'a, T>(options: &'a [T], active: &'a T) -> &'a T
+    pub fn select<'a, T>(options: &'a [T], active: &'a T) -> Option<&'a T>
     where
         T: fmt::Display + Eq + PartialEq,
     {
@@ -223,12 +224,12 @@ pub mod components {
         if let Some(active) = active {
             selection.default(active);
         }
-        let index = selection
+        let result = selection
             .items(&options.iter().map(|p| p.to_string()).collect::<Vec<_>>())
-            .interact()
+            .interact_opt()
             .unwrap();
 
-        &options[index]
+        result.map(|i| &options[i])
     }
 
     pub mod format {
@@ -267,15 +268,18 @@ pub mod components {
             );
         }
 
-        pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> &'a Profile {
+        pub fn profile_select<'a>(
+            profiles: &'a [Profile],
+            active: &Profile,
+        ) -> Option<&'a Profile> {
             let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
             let selection = dialoguer::Select::with_theme(&theme())
                 .items(&profiles.iter().map(|p| p.id()).collect::<Vec<_>>())
                 .default(active)
-                .interact()
+                .interact_opt()
                 .unwrap();
 
-            &profiles[selection]
+            selection.map(|i| &profiles[i])
         }
     }
 }
