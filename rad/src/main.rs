@@ -1,4 +1,4 @@
-use std::{io::ErrorKind, process};
+use std::{io::ErrorKind, iter, process};
 
 use rad_exe::cli::args::Command;
 use rad_exe::cli::args::{self, Args};
@@ -47,16 +47,11 @@ fn parse_args() -> anyhow::Result<Args> {
                 global.rad_verbose = true;
             }
             Value(val) if command.is_none() => {
-                let cmd = val.to_string_lossy().into_owned();
-                let mut args = vec![cmd];
+                let args = iter::once(val)
+                    .chain(iter::from_fn(|| parser.value().ok()))
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .collect();
 
-                while let Some(a) = parser.next()? {
-                    match a {
-                        Long(s) => args.push(format!("--{}", s)),
-                        Short(c) => args.push(format!("-{}", c)),
-                        Value(v) => args.push(v.to_string_lossy().into_owned()),
-                    }
-                }
                 command = Some(Command::External(args))
             }
             _ => return Err(anyhow::anyhow!(arg.unexpected())),
