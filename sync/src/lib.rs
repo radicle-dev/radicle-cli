@@ -154,7 +154,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         if let Some(selection) = term::select(seed::DEFAULT_SEEDS, &seed::DEFAULT_SEEDS[0]) {
             let url = Url::parse(&format!("https://{}", selection)).unwrap();
 
-            term::success(selection);
+            term::info(&format!("Selected {}", term::format::highlight(selection)));
             term::info("Saving seed configuration to git...");
 
             seed::set_seed(&url)?;
