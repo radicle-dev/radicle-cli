@@ -101,8 +101,16 @@ pub mod components {
         eprintln!("{} {}", prefix, msg);
     }
 
-    pub fn info(info: &str) {
-        println!("{} {}", style("=>").blue(), info);
+    pub fn info(msg: &str) {
+        println!("{}", msg);
+    }
+
+    pub fn indented(msg: &str) {
+        println!("   {}", msg);
+    }
+
+    pub fn notice(msg: &str) {
+        println!("{} {}", style("=>").blue(), msg);
     }
 
     pub fn subcommand(msg: &str) {

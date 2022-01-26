@@ -128,6 +128,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let project_id = Urn::encode_id(&remote.url.urn);
     let git_version = git::version()?;
 
+    term::info(&format!("Git version {}", git_version));
     term::info(&format!(
         "Syncing 🌱 project {}",
         term::format::highlight(project_urn)
@@ -162,7 +163,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
 
     term::info(&format!("Syncing to {}", term::format::highlight(seed)));
-    term::info(&format!("Git version {}", git_version));
 
     if git_version < git::VERSION_REQUIRED {
         anyhow::bail!(
@@ -275,20 +275,33 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         };
         let git_url = seed.join(&project_id)?;
 
+        term::info("🌱 Your project is synced and available at the following addresses:");
+        term::blank();
+
         if is_routable {
-            term::info(&format!(
-                "Your project is available on the web at https://{}/seeds/{}/projects/{}",
-                GATEWAY_HOST, host, project_urn,
+            term::indented(&format!(
+                "{} {}",
+                term::format::dim("(web)"),
+                term::format::highlight(format!(
+                    "https://{}/seeds/{}/projects/{}",
+                    GATEWAY_HOST, host, project_urn
+                ))
             ));
-            term::info(&format!(
-                "You can view your source tree here https://{}/seeds/{}/projects/{}/remotes/{}",
-                GATEWAY_HOST, host, project_urn, peer_id
+            term::indented(&format!(
+                "{} {}",
+                term::format::dim("(web)"),
+                term::format::highlight(format!(
+                    "https://{}/seeds/{}/projects/{}/remotes/{}",
+                    GATEWAY_HOST, host, project_urn, peer_id
+                ))
             ));
         }
-        term::info(&format!(
-            "Your project repository is available via git at {}",
-            git_url
+        term::indented(&format!(
+            "{} {}",
+            term::format::dim("(git)"),
+            term::format::highlight(git_url)
         ));
+        term::blank();
     }
 
     Ok(())
