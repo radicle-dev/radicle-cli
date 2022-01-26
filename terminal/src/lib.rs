@@ -158,7 +158,7 @@ pub mod components {
 
     pub fn theme() -> ColorfulTheme {
         ColorfulTheme {
-            success_prefix: style("OK".to_owned()).for_stderr().green(),
+            success_prefix: style("ok".to_owned()).for_stderr().green(),
             prompt_prefix: style("::".to_owned()).blue().for_stderr(),
             active_item_style: Style::new().for_stderr().yellow().reverse(),
             active_item_prefix: style(" *".to_owned()).yellow().for_stderr(),
