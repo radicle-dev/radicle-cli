@@ -242,16 +242,20 @@ pub mod components {
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
-            let err = style(error).red().to_string();
+            let err = error.to_string();
             let err = err.trim_end();
-            let separator = if err.len() > 160 { "\n" } else { " " };
+            let separator = if err.len() > 160 || err.contains('\n') {
+                "\n"
+            } else {
+                " "
+            };
 
             eprintln!(
                 "{} {}{}{}",
                 style("==").red(),
                 style(header).on_red(),
                 separator,
-                err
+                style(error).red()
             );
         }
 
