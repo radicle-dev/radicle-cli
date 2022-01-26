@@ -59,7 +59,7 @@ fn run(options: Options) -> anyhow::Result<()> {
         }
         let (signer, _) = keys::storage(&profile, sock)?;
 
-        git::configure_signing_key(profile.paths().git_dir(), &signer.peer_id())?;
+        git::configure_monorepo(profile.paths().git_dir(), &signer.peer_id())?;
         term::success("Signing key configured in git");
     } else {
         term::headline("Initializing your 🌱 profile and identity");
@@ -70,7 +70,8 @@ fn run(options: Options) -> anyhow::Result<()> {
         let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
         let (profile, peer_id) = rad_profile::create(None, pass.clone())?;
         let monorepo = profile.paths().git_dir();
-        let _key = git::configure_signing_key(monorepo, &peer_id)?;
+
+        git::configure_monorepo(monorepo, &peer_id)?;
 
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");

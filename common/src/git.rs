@@ -5,6 +5,8 @@ use std::process::Command;
 use librad::PeerId;
 
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
+pub const CONFIG_GPG_FORMAT: &str = "gpg.format";
+pub const CONFIG_GPG_SSH_PROGRAM: &str = "gpg.ssh.program";
 pub const VERSION_REQUIRED: Version = Version {
     major: 2,
     minor: 34,
@@ -95,14 +97,17 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
     )))
 }
 
-pub fn configure_signing_key(
-    repo: &std::path::Path,
-    peer_id: &PeerId,
-) -> Result<String, anyhow::Error> {
+pub fn configure_monorepo(repo: &std::path::Path, peer_id: &PeerId) -> Result<(), anyhow::Error> {
     let key = crate::keys::to_ssh_key(peer_id)?;
 
-    git(repo, ["config", "--local", CONFIG_SIGNING_KEY, &key])
-        .context("git signing key could not be configured")
+    git(repo, ["config", "--local", CONFIG_SIGNING_KEY, &key])?;
+    git(repo, ["config", "--local", CONFIG_GPG_FORMAT, "ssh"])?;
+    git(
+        repo,
+        ["config", "--local", CONFIG_GPG_SSH_PROGRAM, "ssh-keygen"],
+    )?;
+
+    Ok(())
 }
 
 #[cfg(test)]
