@@ -280,6 +280,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 "Your project is available on the web at https://{}/seeds/{}/projects/{}",
                 GATEWAY_HOST, host, project_urn,
             ));
+            term::info(&format!(
+                "You can view your source tree here https://{}/seeds/{}/projects/{}/remotes/{}",
+                GATEWAY_HOST, host, project_urn, peer_id
+            ));
         }
         term::info(&format!(
             "Your project repository is available via git at {}",
