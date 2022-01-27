@@ -3,7 +3,7 @@ use anyhow::Context as _;
 
 use librad::git::Urn;
 
-use rad_terminal::components::Args;
+use rad_terminal::components::{Args, Error, Help};
 
 pub const NAME: &str = "checkout";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -16,8 +16,14 @@ OPTIONS
     --help    Print help
 "#;
 
+pub const HELP: Help = Help {
+    name: NAME,
+    description: DESCRIPTION,
+    version: VERSION,
+    usage: USAGE,
+};
+
 pub struct Options {
-    pub help: bool,
     pub urn: Urn,
 }
 
@@ -27,12 +33,11 @@ impl Args for Options {
         use std::str::FromStr;
 
         let mut parser = lexopt::Parser::from_env();
-        let mut help = false;
         let mut urn = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("help") => help = true,
+                Long("help") => return Err(Error::Help.into()),
                 Value(val) if urn.is_none() => {
                     let val = val.to_string_lossy();
                     let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
@@ -44,7 +49,6 @@ impl Args for Options {
         }
 
         Ok(Options {
-            help,
             urn: urn.ok_or_else(|| anyhow!("a project URN to checkout must be provided"))?,
         })
     }

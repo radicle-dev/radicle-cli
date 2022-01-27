@@ -1,3 +1,5 @@
+use rad_terminal::components::Help;
+
 pub mod options;
 
 pub const NAME: &str = "track";
@@ -11,3 +13,10 @@ OPTIONS
     --peer <peer-id>   Peer ID to track (default: all)
     --help             Print help
 "#;
+
+pub const HELP: Help = Help {
+    name: NAME,
+    description: DESCRIPTION,
+    version: VERSION,
+    usage: USAGE,
+};

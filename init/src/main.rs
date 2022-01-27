@@ -4,19 +4,14 @@ use librad::canonical::Cstring;
 use librad::identities::payload::{self};
 
 use rad_common::{keys, profile, project};
-use rad_init::{Options, DESCRIPTION, NAME, USAGE, VERSION};
+use rad_init::{Options, HELP};
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options>(NAME, "Project initialization", run);
+    term::run_command::<Options>(HELP, "Project initialization", run);
 }
 
-fn run(options: Options) -> anyhow::Result<()> {
-    if options.help {
-        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
-        return Ok(());
-    }
-
+fn run(_options: Options) -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
     let path = cwd.as_path();
     let name = path.file_name().unwrap().to_string_lossy().to_string();

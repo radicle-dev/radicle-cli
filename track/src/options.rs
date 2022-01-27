@@ -6,7 +6,7 @@ use anyhow::Context as _;
 use librad::git::Urn;
 use librad::PeerId;
 
-use rad_terminal::components::Args;
+use rad_terminal::components::{Args, Error};
 
 /// Tool options.
 /// Nb. These options are also used by the `untrack` tool.
@@ -14,7 +14,6 @@ use rad_terminal::components::Args;
 pub struct Options {
     pub urn: Urn,
     pub peer: Option<PeerId>,
-    pub help: bool,
 }
 
 impl Args for Options {
@@ -24,7 +23,6 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_env();
         let mut urn: Option<Urn> = None;
         let mut peer: Option<PeerId> = None;
-        let mut help = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -37,7 +35,7 @@ impl Args for Options {
                     );
                 }
                 Long("help") => {
-                    help = true;
+                    return Err(Error::Help.into());
                 }
                 Value(val) if urn.is_none() => {
                     let val = val.to_string_lossy();
@@ -54,7 +52,6 @@ impl Args for Options {
         Ok(Options {
             urn: urn.ok_or_else(|| anyhow!("a tracking URN must be specified"))?,
             peer,
-            help,
         })
     }
 }

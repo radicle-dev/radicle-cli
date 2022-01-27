@@ -1,18 +1,14 @@
 use std::path::Path;
 
 use rad_common::git;
-use rad_publish::{DESCRIPTION, NAME, USAGE, VERSION};
+use rad_publish::HELP;
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<rad_sync::Options>(NAME, "Publish", run);
+    term::run_command::<rad_sync::Options>(HELP, "Publish", run);
 }
 
 fn run(options: rad_sync::Options) -> anyhow::Result<()> {
-    if options.help {
-        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
-        return Ok(());
-    }
     term::info("Pushing 🌱 to remote `rad`");
     term::subcommand("git push rad");
 

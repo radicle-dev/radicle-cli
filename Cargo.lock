@@ -4706,6 +4706,7 @@ dependencies = [
  "librad",
  "rad-clib",
  "rad-profile",
+ "thiserror",
 ]
 
 [[package]]

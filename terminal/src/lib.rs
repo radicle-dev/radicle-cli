@@ -30,8 +30,22 @@ pub mod components {
 
     use super::keys;
 
+    pub struct Help {
+        pub name: &'static str,
+        pub description: &'static str,
+        pub version: &'static str,
+        pub usage: &'static str,
+    }
+
     pub trait Args: Sized {
         fn from_env() -> anyhow::Result<Self>;
+    }
+
+    #[derive(thiserror::Error, Debug)]
+    pub enum Error {
+        /// If this error is returned from argument parsing, help is displayed.
+        #[error("help invoked")]
+        Help,
     }
 
     pub struct Spinner {
@@ -51,14 +65,18 @@ pub mod components {
         }
     }
 
-    pub fn run_command<A>(bin: &str, action: &str, run: fn(A) -> anyhow::Result<()>) -> !
+    pub fn run_command<A>(help: Help, action: &str, run: fn(A) -> anyhow::Result<()>) -> !
     where
         A: Args,
     {
         let options = match A::from_env() {
             Ok(opts) => opts,
             Err(err) => {
-                self::failure(bin, &err);
+                if let Some(Error::Help) = err.downcast_ref::<Error>() {
+                    self::usage(help.name, help.version, help.description, help.usage);
+                    process::exit(0);
+                }
+                self::failure(help.name, &err);
                 process::exit(1);
             }
         };

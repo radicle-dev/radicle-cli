@@ -2,20 +2,15 @@ use std::path::PathBuf;
 
 use anyhow::Context as _;
 
-use rad_checkout::{Options, DESCRIPTION, NAME, USAGE, VERSION};
+use rad_checkout::{Options, HELP};
 use rad_common::{identities, keys, profile};
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options>(NAME, "Project checkout", run);
+    term::run_command::<Options>(HELP, "Project checkout", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {
-    if options.help {
-        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
-        return Ok(());
-    }
-
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (signer, storage) = keys::storage(&profile, sock)?;

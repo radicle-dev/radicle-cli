@@ -1,4 +1,4 @@
-use rad_terminal::components::Args;
+use rad_terminal::components::{Args, Error, Help};
 
 pub const NAME: &str = "init";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -11,24 +11,30 @@ OPTIONS
     --help    Print help
 "#;
 
-pub struct Options {
-    pub help: bool,
-}
+pub const HELP: Help = Help {
+    name: NAME,
+    description: DESCRIPTION,
+    version: VERSION,
+    usage: USAGE,
+};
+
+pub struct Options {}
 
 impl Args for Options {
     fn from_env() -> anyhow::Result<Self> {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_env();
-        let mut help = false;
 
-        while let Some(arg) = parser.next()? {
+        if let Some(arg) = parser.next()? {
             match arg {
-                Long("help") => help = true,
+                Long("help") => {
+                    return Err(Error::Help.into());
+                }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
 
-        Ok(Options { help })
+        Ok(Options {})
     }
 }

@@ -5,10 +5,10 @@ use librad::git::tracking::git::tracking;
 use rad_common::{keys, profile};
 use rad_terminal::components as term;
 use rad_track::options::Options;
-use rad_untrack::{DESCRIPTION, NAME, USAGE, VERSION};
+use rad_untrack::HELP;
 
 fn main() {
-    term::run_command::<Options>(NAME, "Untracking", run);
+    term::run_command::<Options>(HELP, "Untracking", run);
 }
 
 /// Create a [`Prompt`] for unlocking the key storage.
@@ -18,11 +18,6 @@ pub fn prompt() -> Pwhash<Prompt<'static>> {
 }
 
 fn run(options: Options) -> anyhow::Result<()> {
-    if options.help {
-        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
-        return Ok(());
-    }
-
     term::info(&format!(
         "Removing tracking relationship for {}...",
         term::format::highlight(&options.urn)

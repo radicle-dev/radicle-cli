@@ -3,7 +3,7 @@ use librad::profile::Profile;
 
 use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::components as term;
-use rad_terminal::components::Args;
+use rad_terminal::components::{Args, Error, Help};
 
 use anyhow::Context as _;
 use url::{Host, Url};
@@ -22,6 +22,13 @@ OPTIONS
     --seed <host>    Use the given seed node for syncing
     --help           Print help
 "#;
+
+pub const HELP: Help = Help {
+    name: NAME,
+    description: DESCRIPTION,
+    version: VERSION,
+    usage: USAGE,
+};
 
 pub struct Addr {
     pub host: Host,
@@ -62,7 +69,6 @@ pub struct Options {
     pub seed: Option<Addr>,
     pub tls: bool,
     pub verbose: bool,
-    pub help: bool,
 }
 
 impl Args for Options {
@@ -72,7 +78,6 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_env();
         let mut seed: Option<Addr> = None;
         let mut verbose = false;
-        let mut help = false;
         let mut tls = true;
 
         while let Some(arg) = parser.next()? {
@@ -93,7 +98,7 @@ impl Args for Options {
                     tls = false;
                 }
                 Long("help") => {
-                    help = true;
+                    return Err(Error::Help.into());
                 }
                 _ => {
                     return Err(anyhow::anyhow!(arg.unexpected()));
@@ -101,21 +106,11 @@ impl Args for Options {
             }
         }
 
-        Ok(Options {
-            seed,
-            tls,
-            verbose,
-            help,
-        })
+        Ok(Options { seed, tls, verbose })
     }
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    if options.help {
-        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
-        return Ok(());
-    }
-
     let profile = Profile::load()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;

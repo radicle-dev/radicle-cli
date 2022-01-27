@@ -10,3 +10,4 @@ indicatif = "0.16.2"
 librad = { version = "0" }
 rad-clib = { version = "0" }
 rad-profile = { version = "0" }
+thiserror = "1.0"

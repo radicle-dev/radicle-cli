@@ -1,4 +1,4 @@
-use rad_terminal::components::Args;
+use rad_terminal::components::{Args, Error, Help};
 
 pub const NAME: &str = "auth";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -12,10 +12,16 @@ OPTIONS
     --help    Print help
 "#;
 
+pub const HELP: Help = Help {
+    name: NAME,
+    description: DESCRIPTION,
+    version: VERSION,
+    usage: USAGE,
+};
+
 #[derive(Debug)]
 pub struct Options {
     pub init: bool,
-    pub help: bool,
 }
 
 impl Args for Options {
@@ -23,7 +29,6 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut init = false;
-        let mut help = false;
         let mut parser = lexopt::Parser::from_env();
 
         while let Some(arg) = parser.next()? {
@@ -32,12 +37,12 @@ impl Args for Options {
                     init = true;
                 }
                 Long("help") => {
-                    help = true;
+                    return Err(Error::Help.into());
                 }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
 
-        Ok(Options { init, help })
+        Ok(Options { init })
     }
 }

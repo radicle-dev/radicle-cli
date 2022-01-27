@@ -1,19 +1,14 @@
 use anyhow::Context as _;
 
-use rad_auth::{Options, DESCRIPTION, NAME, USAGE, VERSION};
+use rad_auth::{Options, HELP};
 use rad_common::{git, keys, person, profile};
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options>(NAME, "Authentication", run);
+    term::run_command::<Options>(HELP, "Authentication", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {
-    if options.help {
-        term::usage(NAME, VERSION, DESCRIPTION, USAGE);
-        return Ok(());
-    }
-
     let sock = keys::ssh_auth_sock();
 
     let profiles = match rad_profile::list(None) {
