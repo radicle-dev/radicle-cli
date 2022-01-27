@@ -5,22 +5,17 @@ use librad::git::Urn;
 
 use rad_terminal::components::{Args, Error, Help};
 
-pub const NAME: &str = "checkout";
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const DESCRIPTION: &str = "Checkout a project working copy";
-pub const USAGE: &str = r#"
+pub const HELP: Help = Help {
+    name: "checkout",
+    description: env!("CARGO_PKG_DESCRIPTION"),
+    version: env!("CARGO_PKG_VERSION"),
+    usage: r#"
 USAGE
     rad checkout <urn> [<option>...]
 
 OPTIONS
     --help    Print help
-"#;
-
-pub const HELP: Help = Help {
-    name: NAME,
-    description: DESCRIPTION,
-    version: VERSION,
-    usage: USAGE,
+"#,
 };
 
 pub struct Options {

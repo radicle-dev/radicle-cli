@@ -2,7 +2,7 @@ use rad_terminal::components::{Args, Error, Help};
 
 pub const NAME: &str = "init";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const DESCRIPTION: &str = "Initialize radicle projects from git repositories";
+pub const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 pub const USAGE: &str = r#"
 USAGE
     rad init [OPTIONS]

@@ -1,25 +1,22 @@
 use rad_terminal::components as term;
 use rad_terminal::components::{Args, Error, Help};
 
-pub const NAME: &str = "help";
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const DESCRIPTION: &str = "Radicle tools help";
 pub const HELP: Help = Help {
-    name: NAME,
-    description: DESCRIPTION,
-    version: VERSION,
+    name: "help",
+    description: env!("CARGO_PKG_DESCRIPTION"),
+    version: env!("CARGO_PKG_VERSION"),
     usage: "Usage: rad help [--help]",
 };
 
-const COMMANDS: &[(&str, &str)] = &[
-    (rad_auth::NAME, rad_auth::DESCRIPTION),
-    (rad_init::NAME, rad_init::DESCRIPTION),
-    (rad_publish::NAME, rad_publish::DESCRIPTION),
-    (rad_checkout::NAME, rad_checkout::DESCRIPTION),
-    (rad_track::NAME, rad_track::DESCRIPTION),
-    (rad_untrack::NAME, rad_untrack::DESCRIPTION),
-    (rad_sync::NAME, rad_sync::DESCRIPTION),
-    (crate::NAME, crate::DESCRIPTION),
+const COMMANDS: &[Help] = &[
+    rad_auth::HELP,
+    rad_init::HELP,
+    rad_publish::HELP,
+    rad_checkout::HELP,
+    rad_track::HELP,
+    rad_untrack::HELP,
+    rad_sync::HELP,
+    crate::HELP,
 ];
 
 #[derive(Default)]
@@ -62,11 +59,11 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
     println!("Common `rad` commands used in various situations:");
     println!();
 
-    for (name, description) in COMMANDS {
+    for help in COMMANDS {
         println!(
             "\t{} {}",
-            term::format::bold(format!("{:-12}", name)),
-            term::format::dim(description)
+            term::format::bold(format!("{:-12}", help.name)),
+            term::format::dim(help.description)
         );
     }
     println!();

@@ -11,23 +11,18 @@ use url::{Host, Url};
 use std::str::FromStr;
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
-pub const NAME: &str = "sync";
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const DESCRIPTION: &str = "Synchronize radicle projects with seeds";
-pub const USAGE: &str = r#"
+pub const HELP: Help = Help {
+    name: "sync",
+    description: env!("CARGO_PKG_DESCRIPTION"),
+    version: env!("CARGO_PKG_VERSION"),
+    usage: r#"
 USAGE
     rad sync [--seed <host>]
 
 OPTIONS
     --seed <host>    Use the given seed node for syncing
     --help           Print help
-"#;
-
-pub const HELP: Help = Help {
-    name: NAME,
-    description: DESCRIPTION,
-    version: VERSION,
-    usage: USAGE,
+"#,
 };
 
 pub struct Addr {
