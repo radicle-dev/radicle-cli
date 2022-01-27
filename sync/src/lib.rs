@@ -176,6 +176,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             term::format::highlight(project_urn),
             term::format::highlight(seed)
         ));
+        term::blank();
 
         let track_everyone = tracking::default_only(&storage, project_urn)
             .context("couldn't read tracking graph")?;
@@ -227,6 +228,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         term::format::highlight(project_urn),
         term::format::highlight(seed)
     ));
+    term::blank();
 
     let mut spinner = term::spinner(&format!("Syncing delegate identity {}...", &self_id));
     match seed::push_delegate_id(monorepo, seed, &self_id, peer_id) {
@@ -288,7 +290,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         };
         let git_url = seed.join(&project_id)?;
 
-        term::info("🌱 Your project is synced and available at the following addresses:");
+        term::info("🌱 Your project is synced and available at:");
         term::blank();
 
         if is_routable {
