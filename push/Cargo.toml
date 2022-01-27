@@ -1,5 +1,5 @@
 [package]
-name = "rad-publish"
+name = "rad-push"
 version = "0.1.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"

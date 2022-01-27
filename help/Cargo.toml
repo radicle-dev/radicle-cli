@@ -20,5 +20,5 @@ rad-untrack = { path = "../untrack" }
 rad-init = { path = "../init" }
 rad-auth = { path = "../auth" }
 rad-checkout = { path = "../checkout" }
-rad-publish = { path = "../publish" }
+rad-push = { path = "../push" }
 rad-sync = { path = "../sync" }

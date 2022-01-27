@@ -4609,7 +4609,7 @@ dependencies = [
  "rad-common",
  "rad-init",
  "rad-profile",
- "rad-publish",
+ "rad-push",
  "rad-sync",
  "rad-terminal",
  "rad-track",
@@ -4673,7 +4673,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rad-publish"
+name = "rad-push"
 version = "0.1.0"
 dependencies = [
  "anyhow",

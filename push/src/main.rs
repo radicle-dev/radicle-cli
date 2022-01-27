@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use rad_common::git;
-use rad_publish::HELP;
+use rad_push::HELP;
 use rad_terminal::components as term;
 
 fn main() {
