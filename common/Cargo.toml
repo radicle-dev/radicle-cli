@@ -17,3 +17,4 @@ rad-identities = { version = "0" }
 rad-terminal = { path = "../terminal" }
 radicle-git-ext = { version = "0" }
 url = { version = "*" }
+sha2 = { version = "*" }

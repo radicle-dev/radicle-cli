@@ -15,6 +15,8 @@ fn run(mut options: Options) -> anyhow::Result<()> {
         options.show_proj_id = true;
         options.show_peer_id = true;
         options.show_self = true;
+        options.show_profile_id = true;
+        options.show_ssh_key = true;
     }
 
     if options.show_proj_id {
@@ -33,6 +35,17 @@ fn run(mut options: Options) -> anyhow::Result<()> {
     if options.show_self {
         let id = person::local(&storage)?;
         term::info(&format!("self: {}", term::format::highlight(id.urn())));
+    }
+    if options.show_profile_id {
+        term::info(&format!(
+            "profile: {}",
+            term::format::highlight(profile.id())
+        ));
+    }
+    if options.show_ssh_key {
+        let peer_id = storage.peer_id();
+        let ssh = keys::to_ssh_fingerprint(peer_id)?;
+        term::info(&format!("ssh: {}", term::format::highlight(ssh)));
     }
     Ok(())
 }

@@ -9,9 +9,11 @@ USAGE
     rad show [OPTIONS]
 
 OPTIONS
-    --peer-id      Show device peer ID
-    --project-id   Show current project ID
-    --self         Show local user ID
+    --peer-id      Show device peer
+    --project-id   Show current project
+    --profile-id   Show current radicle profile
+    --self         Show local user
+    --ssh-key      Show current SSH key fingerprint
     --help         Print help
 "#,
 };
@@ -21,6 +23,8 @@ pub struct Options {
     pub show_peer_id: bool,
     pub show_self: bool,
     pub show_proj_id: bool,
+    pub show_ssh_key: bool,
+    pub show_profile_id: bool,
 }
 
 impl Args for Options {
@@ -31,6 +35,8 @@ impl Args for Options {
         let mut show_peer_id = false;
         let mut show_self = false;
         let mut show_proj_id = false;
+        let mut show_profile_id = false;
+        let mut show_ssh_key = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -43,6 +49,12 @@ impl Args for Options {
                 Long("project-id") => {
                     show_proj_id = true;
                 }
+                Long("profile-id") => {
+                    show_profile_id = true;
+                }
+                Long("ssh-key") => {
+                    show_ssh_key = true;
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -54,6 +66,8 @@ impl Args for Options {
             show_self,
             show_peer_id,
             show_proj_id,
+            show_ssh_key,
+            show_profile_id,
         })
     }
 }

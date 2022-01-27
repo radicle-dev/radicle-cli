@@ -4579,6 +4579,7 @@ dependencies = [
  "rad-profile",
  "rad-terminal",
  "radicle-git-ext",
+ "sha2 0.8.2",
  "url",
 ]
 
