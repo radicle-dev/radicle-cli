@@ -297,7 +297,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         term::indented(&format!(
             "{} {}",
             term::format::dim("(git)"),
-            term::format::highlight(git_url)
+            term::format::highlight(format!("{}.git", git_url)),
         ));
         term::blank();
     }
