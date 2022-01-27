@@ -1,10 +1,10 @@
 [package]
-name = "rad-help"
+name = "rad-show"
 version = "0.1.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-description = "Radicle tools help"
+description = "Show contextual information pertaining to radicle"
 
 [dependencies]
 anyhow = "1.0"
@@ -15,11 +15,3 @@ rad-profile = "0"
 radicle-tools = { path = "../" }
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
-rad-show = { path = "../show" }
-rad-track = { path = "../track" }
-rad-untrack = { path = "../untrack" }
-rad-init = { path = "../init" }
-rad-auth = { path = "../auth" }
-rad-checkout = { path = "../checkout" }
-rad-push = { path = "../push" }
-rad-sync = { path = "../sync" }

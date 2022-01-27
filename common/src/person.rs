@@ -1,6 +1,6 @@
 use anyhow::{Error, Result};
 
-use librad::canonical::Cstring;
+use librad::{canonical::Cstring, git::identities::local::LocalIdentity};
 
 use librad::git::identities::Person;
 use librad::git::storage::Storage;
@@ -65,4 +65,8 @@ pub fn set_local(storage: &Storage, person: &Person) -> Option<Person> {
             None
         }
     }
+}
+
+pub fn local(storage: &Storage) -> Result<LocalIdentity, local::Error> {
+    local::default(storage)
 }

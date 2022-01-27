@@ -25,6 +25,7 @@ members = [
   "init",
   "push",
   "sync",
+  "show",
   "track",
   "untrack",
   "proof-generator",

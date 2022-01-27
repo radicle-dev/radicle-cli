@@ -4610,6 +4610,7 @@ dependencies = [
  "rad-init",
  "rad-profile",
  "rad-push",
+ "rad-show",
  "rad-sync",
  "rad-terminal",
  "rad-track",
@@ -4681,6 +4682,20 @@ dependencies = [
  "rad-common",
  "rad-sync",
  "rad-terminal",
+]
+
+[[package]]
+name = "rad-show"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt 0.1.0",
+ "librad",
+ "rad-clib",
+ "rad-common",
+ "rad-profile",
+ "rad-terminal",
+ "radicle-tools",
 ]
 
 [[package]]
