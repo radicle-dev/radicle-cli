@@ -6,10 +6,11 @@ pub const HELP: Help = Help {
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
 USAGE
-    rad push [--seed URL]
+    rad push [--seed <host>] [--http]
 
 OPTIONS
-    --seed URL    Use the given seed node for syncing
-    --help        Print help
+    --seed <host>    Use the given seed node for syncing
+    --http           Use HTTP instead of HTTPS for publishing (default: false)
+    --help           Print help
 "#,
 };

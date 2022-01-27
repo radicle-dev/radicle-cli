@@ -17,11 +17,12 @@ pub const HELP: Help = Help {
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
 USAGE
-    rad sync [--seed <host>] [--fetch]
+    rad sync [--seed <host>] [--fetch] [--http]
 
 OPTIONS
     --seed <host>    Use the given seed node for syncing
     --fetch          Fetch updates (default: false)
+    --http           Use HTTP instead of HTTPS for syncing (default: false)
     --help           Print help
 "#,
 };
@@ -63,7 +64,7 @@ impl FromStr for Addr {
 
 pub struct Options {
     pub seed: Option<Addr>,
-    pub tls: bool,
+    pub http: bool,
     pub verbose: bool,
     pub fetch: bool,
 }
@@ -76,7 +77,7 @@ impl Args for Options {
         let mut seed: Option<Addr> = None;
         let mut verbose = false;
         let mut fetch = false;
-        let mut tls = true;
+        let mut http = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -92,8 +93,8 @@ impl Args for Options {
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
-                Long("no-tls") => {
-                    tls = false;
+                Long("http") => {
+                    http = true;
                 }
                 Long("fetch") => {
                     fetch = true;
@@ -109,7 +110,7 @@ impl Args for Options {
 
         Ok(Options {
             seed,
-            tls,
+            http,
             fetch,
             verbose,
         })
@@ -144,10 +145,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
 
     let seed = &if let Some(seed) = options.seed {
-        if options.tls {
-            Url::parse(&format!("https://{}", seed)).unwrap()
-        } else {
+        if options.http {
             Url::parse(&format!("http://{}", seed)).unwrap()
+        } else {
+            Url::parse(&format!("https://{}", seed)).unwrap()
         }
     } else if let Ok(seed) = seed::get_seed() {
         seed
