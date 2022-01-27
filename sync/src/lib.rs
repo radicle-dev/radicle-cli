@@ -120,8 +120,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
 
-    term::info("Reading local git config...");
-
     let repo = project::repository()?;
     let remote = project::remote(&repo)?;
     let project_urn = &remote.url.urn;
@@ -129,10 +127,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let git_version = git::version()?;
 
     term::info(&format!("Git version {}", git_version));
-    term::info(&format!(
-        "Syncing 🌱 project {}",
-        term::format::highlight(project_urn)
-    ));
+
+    if git_version < git::VERSION_REQUIRED {
+        anyhow::bail!(
+            "a minimum git version of {} is required, please update your installation",
+            git::VERSION_REQUIRED
+        );
+    }
 
     if identities::project::get(&storage, project_urn)?.is_none() {
         anyhow::bail!(
@@ -165,15 +166,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     };
 
-    term::info(&format!("Syncing to {}", term::format::highlight(seed)));
-
-    if git_version < git::VERSION_REQUIRED {
-        anyhow::bail!(
-            "a minimum git version of {} is required, please update your installation",
-            git::VERSION_REQUIRED
-        );
-    }
-
     let peer_id = profile::peer_id(&storage)?;
     let user_urn = profile::user(&storage)?;
     let monorepo = profile.paths().git_dir();
@@ -181,7 +173,15 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
         .context("git signing key is not properly configured")?;
 
-    term::info(&format!("Git signing key {}", signing_key));
+    term::info(&format!(
+        "Git signing key {}",
+        term::format::dim(signing_key)
+    ));
+    term::info(&format!(
+        "Syncing 🌱 project {} to {}",
+        term::format::highlight(project_urn),
+        term::format::highlight(seed)
+    ));
 
     let mut spinner = term::spinner(&format!("Syncing delegate identity {}...", &self_id));
     match seed::push_delegate_id(monorepo, seed, &self_id, peer_id) {
