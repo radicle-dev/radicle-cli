@@ -1,16 +1,21 @@
 [package]
-name = "rad-remote-helper"
+name = "git-remote-rad"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
 version = "0.1.0"
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Git remote helper for radicle"
 
 [dependencies]
 radicle-tools = { path = "../" }
 async-trait = { version = "0.1" }
 log = { version = "0.4" }
 lexopt = { version = "0.1" }
+futures = { version = "0.3" }
 ethers = { version = "0.6" }
 link-identities = { version = "0" }
 radicle-git-helpers = { version = "0" }
+rad-common = { path = "../common" }
 librad = { version = "0" }
 url = { version = "*" }
 tokio = { version = "1.10", features = ["rt", "macros"] }

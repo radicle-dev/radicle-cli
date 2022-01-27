@@ -28,7 +28,7 @@ members = [
   "track",
   "untrack",
   "proof-generator",
-  "remote-helper",
+  "git-remote-rad",
   "authorized-keys"
 ]
 

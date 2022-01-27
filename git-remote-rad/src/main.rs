@@ -3,11 +3,10 @@ use ethers::contract::abigen;
 use ethers::prelude::*;
 use ethers::types::{Address, NameOrAddress};
 
-use librad::crypto::{BoxedSigner, SomeSigner};
 use link_identities::git::Urn;
 use radicle_git_helpers::remote_helper;
 
-use rad_remote_helper::signer::Signer;
+use rad_common::{keys, profile};
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -15,7 +14,6 @@ use anyhow::Context as _;
 
 use std::convert::TryFrom;
 use std::env;
-use std::fs::File;
 use std::future;
 use std::process;
 use std::process::Command;
@@ -31,7 +29,7 @@ enum Remote {
 /// Text record key that holds the Git server address.
 const ENS_SEED_HOST: &str = "eth.radicle.seed.host";
 /// URL scheme supported.
-const URL_SCHEME: &str = "radicle";
+const URL_SCHEME: &str = "rad";
 /// Ethereum TLD.
 const ETH_TLD: &str = ".eth";
 /// Failure exit code.
@@ -55,26 +53,31 @@ impl FromStr for Remote {
                 bail!("Invalid URL {:?}", input);
             }
 
-            let host = url
+            let base = url
                 .host_str()
                 .map(|h| h.trim_end_matches(".git"))
-                .ok_or_else(|| anyhow!("Invalid URL host {:?}", input))?;
+                .ok_or_else(|| anyhow!("Invalid URL base {:?}", input))?;
+
+            if let Ok(urn) = Urn::try_from_id(base) {
+                return Ok(Self::Project { urn });
+            }
+
+            let org = if let Ok(addr) = base.parse::<Address>() {
+                NameOrAddress::Address(addr)
+            } else if base.contains('.') {
+                NameOrAddress::Name(base.to_owned())
+            } else {
+                bail!(
+                    "Invalid URL base {:?}: expected a project id, domain name or ethereum address",
+                    base
+                );
+            };
+
             let path = url
                 .path()
                 .strip_prefix('/')
                 .ok_or_else(|| anyhow!("Missing URL path: {:?}", input))?;
-
-            let org = if let Ok(addr) = host.parse::<Address>() {
-                NameOrAddress::Address(addr)
-            } else if host.contains('.') {
-                NameOrAddress::Name(host.to_owned())
-            } else {
-                bail!(
-                    "Invalid URL host {:?}: expected a domain name or Ethereum address",
-                    host
-                );
-            };
-            let urn = Urn::from_str(&format!("rad:git:{}", path))
+            let urn = Urn::try_from_id(path)
                 .with_context(|| format!("Invalid project identifier {:?}", path))?;
 
             Ok(Self::Org { org, urn })
@@ -91,8 +94,7 @@ fn fatal(err: anyhow::Error) -> ! {
     process::exit(EXIT_FAILURE);
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let mut args = env::args().skip(2);
 
     let url = if let Some(arg) = args.next() {
@@ -103,7 +105,7 @@ async fn main() {
 
     match Remote::from_str(&url) {
         Ok(url) => {
-            if let Err(err) = run(url).await {
+            if let Err(err) = run(url) {
                 fatal(err);
             }
         }
@@ -113,10 +115,10 @@ async fn main() {
     }
 }
 
-async fn run(remote: Remote) -> anyhow::Result<()> {
+fn run(remote: Remote) -> anyhow::Result<()> {
     match remote {
         Remote::Org { org, urn } => {
-            let domain = resolve(org).await?;
+            let domain = futures::executor::block_on(resolve(org))?;
             let http_url = format!("https://{}/{}", domain, urn.encode_id());
 
             // TODO: Use `exec` here.
@@ -133,18 +135,11 @@ async fn run(remote: Remote) -> anyhow::Result<()> {
             process::exit(status.code().unwrap_or(EXIT_FAILURE))
         }
         Remote::Project { urn: _urn } => {
-            let config = if let Ok(identity_path) = env::var("RAD_IDENTITY") {
-                let identity = File::open(&identity_path)
-                    .with_context(|| format!("unable to open {:?}", &identity_path))?;
-                let signer = Signer::new(identity)
-                    .with_context(|| format!("unable to load identity {:?}", &identity_path))?;
-                let boxed_signer = BoxedSigner::from(SomeSigner { signer });
-
-                remote_helper::Config {
-                    signer: Some(boxed_signer),
-                }
-            } else {
-                remote_helper::Config::default()
+            let sock = keys::ssh_auth_sock();
+            let profile = profile::default()?;
+            let (signer, _) = keys::storage(&profile, sock)?;
+            let config = remote_helper::Config {
+                signer: Some(signer),
             };
             remote_helper::run(config)
         }
