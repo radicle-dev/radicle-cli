@@ -30,6 +30,15 @@ pub mod components {
 
     use super::keys;
 
+    #[macro_export]
+    macro_rules! info {
+        ($($arg:tt)*) => ({
+            println!("{}", format_args!($($arg)*));
+        })
+    }
+
+    pub use info;
+
     pub struct Help {
         pub name: &'static str,
         pub description: &'static str,
@@ -117,10 +126,6 @@ pub mod components {
 
     pub fn eprintln(prefix: impl fmt::Display, msg: impl fmt::Display) {
         eprintln!("{} {}", prefix, msg);
-    }
-
-    pub fn info(msg: &str) {
-        println!("{}", msg);
     }
 
     pub fn indented(msg: &str) {
@@ -248,6 +253,10 @@ pub mod components {
             .unwrap();
 
         result.map(|i| &options[i])
+    }
+
+    fn _info(args: std::fmt::Arguments) {
+        println!("{}", args);
     }
 
     pub mod format {

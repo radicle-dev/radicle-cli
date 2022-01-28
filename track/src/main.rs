@@ -10,10 +10,10 @@ fn main() {
 }
 
 fn run(options: Options) -> anyhow::Result<()> {
-    term::info(&format!(
+    term::info!(
         "Establishing tracking relationship for {}...",
         term::format::highlight(&options.urn)
-    ));
+    );
 
     let cfg = tracking::config::Config::default();
     let profile = profile::default()?;

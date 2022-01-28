@@ -24,28 +24,22 @@ fn run(mut options: Options) -> anyhow::Result<()> {
         let remote = project::remote(&repo)?;
         let urn = remote.url.urn;
 
-        term::info(&format!("project: {}", term::format::highlight(urn)));
+        term::info!("project: {}", term::format::highlight(urn));
     }
     if options.show_peer_id {
-        term::info(&format!(
-            "peer: {}",
-            term::format::highlight(storage.peer_id())
-        ));
+        term::info!("peer: {}", term::format::highlight(storage.peer_id()));
     }
     if options.show_self {
         let id = person::local(&storage)?;
-        term::info(&format!("self: {}", term::format::highlight(id.urn())));
+        term::info!("self: {}", term::format::highlight(id.urn()));
     }
     if options.show_profile_id {
-        term::info(&format!(
-            "profile: {}",
-            term::format::highlight(profile.id())
-        ));
+        term::info!("profile: {}", term::format::highlight(profile.id()));
     }
     if options.show_ssh_key {
         let peer_id = storage.peer_id();
         let ssh = keys::to_ssh_fingerprint(peer_id)?;
-        term::info(&format!("ssh: {}", term::format::highlight(ssh)));
+        term::info!("ssh: {}", term::format::highlight(ssh));
     }
     Ok(())
 }

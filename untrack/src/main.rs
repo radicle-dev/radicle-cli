@@ -18,10 +18,10 @@ pub fn prompt() -> Pwhash<Prompt<'static>> {
 }
 
 fn run(options: Options) -> anyhow::Result<()> {
-    term::info(&format!(
+    term::info!(
         "Removing tracking relationship for {}...",
         term::format::highlight(&options.urn)
-    ));
+    );
 
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();

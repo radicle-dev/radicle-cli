@@ -129,7 +129,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let project_id = Urn::encode_id(&remote.url.urn);
     let git_version = git::version()?;
 
-    term::info(&format!("Git version {}", git_version));
+    term::info!("Git version {}", git_version);
 
     if git_version < git::VERSION_REQUIRED {
         anyhow::bail!(
@@ -153,13 +153,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     } else if let Ok(seed) = seed::get_seed() {
         seed
     } else {
-        term::info("Select a seed node to sync with...");
+        term::info!("Select a seed node to sync with...");
 
         if let Some(selection) = term::select(seed::DEFAULT_SEEDS, &seed::DEFAULT_SEEDS[0]) {
             let url = Url::parse(&format!("https://{}", selection)).unwrap();
 
-            term::info(&format!("Selected {}", term::format::highlight(selection)));
-            term::info("Saving seed configuration to git...");
+            term::info!("Selected {}", term::format::highlight(selection));
+            term::info!("Saving seed configuration to git...");
 
             seed::set_seed(&url)?;
 
@@ -171,11 +171,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if options.fetch {
         term::blank();
-        term::info(&format!(
+        term::info!(
             "Syncing 🌱 project {} from {}",
             term::format::highlight(project_urn),
             term::format::highlight(seed)
-        ));
+        );
         term::blank();
 
         let track_everyone = tracking::default_only(&storage, project_urn)
@@ -219,15 +219,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
         .context("git signing key is not properly configured")?;
 
-    term::info(&format!(
-        "Git signing key {}",
-        term::format::dim(signing_key)
-    ));
-    term::info(&format!(
+    term::info!("Git signing key {}", term::format::dim(signing_key));
+    term::info!(
         "Syncing 🌱 project {} to {}",
         term::format::highlight(project_urn),
         term::format::highlight(seed)
-    ));
+    );
     term::blank();
 
     let mut spinner = term::spinner(&format!("Syncing delegate identity {}...", &self_id));
@@ -290,7 +287,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         };
         let git_url = seed.join(&project_id)?;
 
-        term::info("🌱 Your project is synced and available at:");
+        term::info!("🌱 Your project is synced and available at:");
         term::blank();
 
         if is_routable {

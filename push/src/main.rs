@@ -12,7 +12,7 @@ fn run(options: rad_sync::Options) -> anyhow::Result<()> {
     if options.fetch {
         anyhow::bail!("option `--fetch` cannot be used when pushing");
     }
-    term::info("Pushing 🌱 to remote `rad`");
+    term::info!("Pushing 🌱 to remote `rad`");
     term::subcommand("git push rad");
 
     // Push to monorepo.

@@ -19,10 +19,10 @@ fn run(options: Options) -> anyhow::Result<()> {
     if let Some(profiles) = profiles {
         let profile = profile::default()?;
 
-        term::info(&format!(
+        term::info!(
             "Your active profile is {}",
-            term::format::highlight(&profile.id().to_string())
-        ));
+            term::format::highlight(&profile.id().to_string()),
+        );
 
         let selection = if profiles.len() > 1 {
             if let Some(p) = term::format::profile_select(&profiles, &profile) {
@@ -89,14 +89,14 @@ fn run(options: Options) -> anyhow::Result<()> {
         ));
 
         term::blank();
-        term::info(&format!(
+        term::info!(
             "Your radicle Peer ID is {}. This identifies your device.",
             term::format::highlight(&peer_id.to_string())
-        ));
-        term::info(&format!(
+        );
+        term::info!(
             "Your personal 🌱 URN is {}. This identifies you across devices.",
             term::format::highlight(&person.urn().to_string())
-        ));
+        );
 
         term::blank();
         term::tip("To create a radicle project, run `rad init` from a git repository.");
