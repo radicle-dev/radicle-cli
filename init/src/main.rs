@@ -8,7 +8,7 @@ use rad_init::{Options, HELP};
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options>(HELP, "Project initialization", run);
+    term::run_command::<Options>(HELP, "Initialization", run);
 }
 
 fn run(_options: Options) -> anyhow::Result<()> {
@@ -66,7 +66,8 @@ fn run(_options: Options) -> anyhow::Result<()> {
             term::tip("To publish, run `rad push`.");
         }
         Err(err) => {
-            spinner.finish();
+            spinner.failed();
+            term::blank();
 
             use rad_common::identities::git::existing::Error;
             use rad_common::identities::git::validation;
