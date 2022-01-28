@@ -63,10 +63,7 @@ fn run(_options: Options) -> anyhow::Result<()> {
                 term::format::highlight(&urn.to_string())
             ));
             term::blank();
-            term::info(&format!(
-                "To publish, run `rad publish` or `git push rad {}`",
-                branch
-            ));
+            term::tip("To publish, run `rad push`.");
         }
         Err(err) => {
             spinner.finish();

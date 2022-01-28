@@ -97,6 +97,9 @@ fn run(options: Options) -> anyhow::Result<()> {
             "Your personal 🌱 URN is {}. This identifies you across devices.",
             term::format::highlight(&person.urn().to_string())
         ));
+
+        term::blank();
+        term::tip("To create a radicle project, run `rad init` from a git repository.");
     }
     Ok(())
 }

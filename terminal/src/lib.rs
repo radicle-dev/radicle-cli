@@ -127,7 +127,7 @@ pub mod components {
         println!("   {}", msg);
     }
 
-    pub fn notice(msg: &str) {
+    pub fn tip(msg: &str) {
         println!("{} {}", style("=>").blue(), msg);
     }
 

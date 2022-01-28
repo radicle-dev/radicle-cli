@@ -14,7 +14,6 @@ use librad::profile::Profile;
 use librad::reflike;
 
 use rad_identities::{self, project};
-use rad_terminal::components as term;
 
 pub fn create(
     storage: &Storage,
@@ -44,10 +43,7 @@ pub fn create(
 pub fn repository() -> Result<Repository, Error> {
     match Repository::open(".") {
         Ok(repo) => Ok(repo),
-        Err(err) => {
-            term::error("This is not a git repository.");
-            Err(anyhow::Error::new(err))
-        }
+        Err(err) => Err(err).context("the current working directory is not a git repository"),
     }
 }
 
