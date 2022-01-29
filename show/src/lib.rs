@@ -9,12 +9,12 @@ USAGE
     rad show [OPTIONS]
 
 OPTIONS
-    --peer-id      Show device peer
-    --project-id   Show current project
-    --profile-id   Show current radicle profile
-    --self         Show local user
-    --ssh-key      Show current SSH key fingerprint
-    --help         Print help
+    --peer      Show device peer
+    --project   Show current project
+    --profile   Show current radicle profile
+    --self      Show local user
+    --ssh-key   Show current SSH key fingerprint
+    --help      Print help
 "#,
 };
 
@@ -40,16 +40,16 @@ impl Args for Options {
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("peer-id") => {
+                Long("peer") | Long("peer-id") => {
                     show_peer_id = true;
                 }
-                Long("self") => {
+                Long("self") | Long("self-id") => {
                     show_self = true;
                 }
-                Long("project-id") => {
+                Long("project") | Long("project-id") => {
                     show_proj_id = true;
                 }
-                Long("profile-id") => {
+                Long("profile") | Long("profile-id") => {
                     show_profile_id = true;
                 }
                 Long("ssh-key") => {

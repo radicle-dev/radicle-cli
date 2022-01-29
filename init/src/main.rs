@@ -38,13 +38,9 @@ fn run(_options: Options) -> anyhow::Result<()> {
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .unwrap_or_else(|| String::from("master"));
-    let description = term::text_input("Description", None);
-    let branch = term::text_input("Default branch", Some(head));
-
-    let spinner = term::spinner(&format!(
-        "Initializing new project in {}...",
-        path.display()
-    ));
+    let description: String = term::text_input("Description", None)?;
+    let branch = term::text_input("Default branch", Some(head))?;
+    let spinner = term::spinner("Initializing...");
 
     let payload = payload::Project {
         name: Cstring::from(name),
@@ -58,12 +54,16 @@ fn run(_options: Options) -> anyhow::Result<()> {
 
             spinner.finish();
 
-            term::success(&format!(
-                "Project initialized: {}",
+            term::blank();
+            term::tip(&format!(
+                "Your project id is {}. You can show it any time by running:",
                 term::format::highlight(&urn.to_string())
             ));
+            term::indented(&term::format::secondary("rad show --project"));
+
             term::blank();
-            term::tip("To publish, run `rad push`.");
+            term::tip("To publish your project to the network, run:");
+            term::indented(&term::format::secondary("rad push"));
         }
         Err(err) => {
             spinner.failed();

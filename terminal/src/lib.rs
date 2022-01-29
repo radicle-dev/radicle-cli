@@ -72,6 +72,10 @@ pub mod components {
             self.progress.finish_and_clear();
             self::eprintln(style("><").red(), self.message);
         }
+
+        pub fn clear(self) {
+            self.progress.finish_and_clear();
+        }
     }
 
     pub fn run_command<A>(help: Help, action: &str, run: fn(A) -> anyhow::Result<()>) -> !
@@ -149,7 +153,7 @@ pub mod components {
     }
 
     pub fn success(success: &str) {
-        println!("{} {}", style("ok").green(), success);
+        println!("{} {}", style("ok").green().reverse(), success);
     }
 
     pub fn failure(bin: &str, error: &anyhow::Error) {
@@ -189,32 +193,38 @@ pub mod components {
 
     pub fn theme() -> ColorfulTheme {
         ColorfulTheme {
-            success_prefix: style("ok".to_owned()).for_stderr().green(),
-            prompt_prefix: style("::".to_owned()).blue().for_stderr(),
+            success_prefix: style("ok".to_owned()).for_stderr().green().reverse(),
+            prompt_prefix: style("░░".to_owned()).cyan().dim().for_stderr(),
+            prompt_suffix: style("·".to_owned()).cyan().for_stderr(),
+            prompt_style: Style::new().cyan().bold().for_stderr(),
             active_item_style: Style::new().for_stderr().yellow().reverse(),
             active_item_prefix: style("*".to_owned()).yellow().for_stderr(),
             picked_item_prefix: style("*".to_owned()).yellow().for_stderr(),
             inactive_item_prefix: style(" ".to_string()).for_stderr(),
             inactive_item_style: Style::new().yellow().for_stderr(),
+            error_prefix: style("░░ Error:".to_owned()).red().for_stderr(),
+            success_suffix: style("·".to_owned()).cyan().for_stderr(),
 
             ..ColorfulTheme::default()
         }
     }
 
-    pub fn text_input(message: &str, default: Option<String>) -> String {
+    pub fn text_input<S, E>(message: &str, default: Option<S>) -> anyhow::Result<S>
+    where
+        S: fmt::Display + std::str::FromStr<Err = E> + Clone,
+        E: fmt::Debug + fmt::Display,
+    {
         let theme = theme();
+        let mut input: Input<S> = Input::with_theme(&theme);
 
-        match default {
-            Some(default) => Input::with_theme(&theme)
+        let value = match default {
+            Some(default) => input
                 .with_prompt(message)
                 .default(default)
-                .interact_text()
-                .unwrap(),
-            None => Input::with_theme(&theme)
-                .with_prompt(message)
-                .interact_text()
-                .unwrap(),
-        }
+                .interact_text()?,
+            None => input.with_prompt(message).interact_text()?,
+        };
+        Ok(value)
     }
 
     pub fn secret_input() -> SecUtf8 {
@@ -264,6 +274,10 @@ pub mod components {
         use librad::profile::Profile;
 
         use super::theme;
+
+        pub fn secondary(msg: &str) -> String {
+            style(msg).blue().to_string()
+        }
 
         pub fn highlight<D: std::fmt::Display>(input: D) -> String {
             style(input).green().bright().to_string()

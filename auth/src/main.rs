@@ -63,7 +63,7 @@ fn run(options: Options) -> anyhow::Result<()> {
     } else {
         term::headline("Initializing your 🌱 profile and identity");
 
-        let username = term::text_input("Username", None);
+        let username: String = term::text_input("Username", None)?;
         let pass = term::pwhash(term::secret_input_with_confirmation());
 
         let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
