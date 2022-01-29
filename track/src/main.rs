@@ -29,15 +29,13 @@ fn run(options: Options) -> anyhow::Result<()> {
     )??;
 
     if let Some(peer) = options.peer {
-        term::success(&format!(
+        term::success!(
             "Tracking relationship {} established for {}",
-            peer, options.urn
-        ));
-    } else {
-        term::success(&format!(
-            "Tracking relationship for {} established",
+            peer,
             options.urn
-        ));
+        );
+    } else {
+        term::success!("Tracking relationship for {} established", options.urn);
     }
 
     Ok(())

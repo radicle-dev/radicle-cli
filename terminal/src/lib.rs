@@ -37,7 +37,19 @@ pub mod components {
         })
     }
 
+    #[macro_export]
+    macro_rules! success {
+        ($($arg:tt)*) => ({
+            $crate::components::success_args(format_args!($($arg)*));
+        })
+    }
+
+    pub fn success_args(args: fmt::Arguments) {
+        println!("{} {}", style("ok").green().reverse(), args);
+    }
+
     pub use info;
+    pub use success;
 
     pub struct Help {
         pub name: &'static str,
@@ -65,7 +77,7 @@ pub mod components {
     impl Spinner {
         pub fn finish(self) {
             self.progress.finish_and_clear();
-            self::success(&self.message);
+            self::success!("{}", &self.message);
         }
 
         pub fn failed(self) {
@@ -150,10 +162,6 @@ pub mod components {
 
     pub fn error(error: &str) {
         eprintln!("{} {}", style("==").red(), style(error).red());
-    }
-
-    pub fn success(success: &str) {
-        println!("{} {}", style("ok").green().reverse(), success);
     }
 
     pub fn failure(bin: &str, error: &anyhow::Error) {

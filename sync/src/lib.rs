@@ -275,7 +275,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     }
 
-    term::success("Project synced.");
+    term::success!("Project synced.");
     term::blank();
 
     if let Some(host) = seed.host() {

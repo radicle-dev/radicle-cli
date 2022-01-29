@@ -43,10 +43,10 @@ fn run(options: Options) -> anyhow::Result<()> {
     }
     spinner.finish();
 
-    term::success(&format!(
+    term::success!(
         "Project checkout successful under ./{}",
         term::format::highlight(name)
-    ));
+    );
 
     Ok(())
 }

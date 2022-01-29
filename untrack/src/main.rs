@@ -35,18 +35,12 @@ fn run(options: Options) -> anyhow::Result<()> {
             tracking::policy::Untrack::MustExist,
         )??;
 
-        term::success(&format!(
-            "Tracking relationship {} removed for {}",
-            peer, options.urn
-        ));
+        term::success!("Tracking relationship {} removed for {}", peer, options.urn);
     } else {
         tracking::untrack_all(&storage, &options.urn, tracking::policy::UntrackAll::Any)?
             .for_each(drop);
 
-        term::success(&format!(
-            "Tracking relationships for {} removed",
-            options.urn
-        ));
+        term::success!("Tracking relationships for {} removed", options.urn);
     }
 
     Ok(())

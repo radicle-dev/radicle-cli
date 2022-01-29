@@ -45,21 +45,21 @@ fn run(options: Options) -> anyhow::Result<()> {
             keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
             spinner.finish();
 
-            term::success("Radicle key added to ssh-agent");
+            term::success!("Radicle key added to ssh-agent");
         } else {
-            term::success("Signing key already in ssh-agent");
+            term::success!("Signing key already in ssh-agent");
         }
 
         if selection.id() != profile.id() {
             let id = selection.id();
             profile::set(id)?;
 
-            term::success(&format!("Profile {} activated", id));
+            term::success!("Profile {} activated", id);
         }
         let (signer, _) = keys::storage(&profile, sock)?;
 
         git::configure_monorepo(profile.paths().git_dir(), &signer.peer_id())?;
-        term::success("Signing key configured in git");
+        term::success!("Signing key configured in git");
     } else {
         term::headline("Initializing your 🌱 profile and identity");
 
@@ -83,10 +83,10 @@ fn run(options: Options) -> anyhow::Result<()> {
         let person = person::create(&profile, &username, signer, &storage)?;
         person::set_local(&storage, &person);
 
-        term::success(&format!(
+        term::success!(
             "Profile {} created.",
             term::format::highlight(&profile_id.to_string())
-        ));
+        );
 
         term::blank();
         term::info!(
