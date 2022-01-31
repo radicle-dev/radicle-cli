@@ -22,7 +22,7 @@ USAGE
     rad ens <operation> [<option>...] [--rpc-url <url>] --keystore <file>
 
 OPERATIONS
-    --init [<name>]              Associate your local radicle id with an ENS name
+    --setup [<name>]             Associate your local radicle id with an ENS name
 
 OPTIONS
     --help                       Print help
@@ -41,7 +41,7 @@ ENVIRONMENT VARIABLES
 
 #[derive(Debug)]
 pub enum Operation {
-    Init(Option<String>),
+    Setup(Option<String>),
 }
 
 #[derive(Debug)]
@@ -62,7 +62,7 @@ impl Args for Options {
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("init") => {
+                Long("setup") => {
                     let val = parser.value().ok();
                     let name = if let Some(val) = val {
                         Some(
@@ -72,7 +72,7 @@ impl Args for Options {
                     } else {
                         None
                     };
-                    operation = Some(Operation::Init(name));
+                    operation = Some(Operation::Setup(name));
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
@@ -136,19 +136,19 @@ async fn transaction(
     );
 
     match operation {
-        Operation::Init(name) => {
+        Operation::Setup(name) => {
             term::headline(&format!(
                 "Associating local 🌱 identity {} with ENS",
                 term::format::highlight(&id.urn()),
             ));
             let name = term::text_input("ENS name", name)?;
 
-            init(&name, id, provider, signer).await
+            setup(&name, id, provider, signer).await
         }
     }
 }
 
-async fn init(
+async fn setup(
     name: &str,
     id: LocalIdentity,
     provider: Provider<Http>,
