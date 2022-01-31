@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use ethers::contract::ContractError;
 use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
 use ethers::types::{Address, Bytes};
 use ethers::{
@@ -25,11 +26,13 @@ pub struct PublicResolver<M> {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum Error<M: Middleware> {
     #[error("ENS name '{name}' not found")]
     NameNotFound { name: String },
     #[error(transparent)]
     Provider(#[from] ProviderError),
+    #[error(transparent)]
+    Contract(#[from] ContractError<M>),
     #[error(transparent)]
     Abi(#[from] ethers::abi::Error),
     #[error(transparent)]
@@ -39,7 +42,7 @@ pub enum Error {
 impl<M> PublicResolver<M>
 where
     M: Middleware,
-    Error: From<<M as Middleware>::Error>,
+    Error<M>: From<<M as Middleware>::Error>,
 {
     pub fn new(addr: Address, client: impl Into<Arc<M>>) -> Self {
         let abi: Abi = serde_json::from_str(PUBLIC_RESOLVER_ABI).expect("The ABI is valid");
@@ -48,7 +51,7 @@ where
         Self { contract }
     }
 
-    pub async fn get(name: &str, client: impl Into<Arc<M>>) -> Result<Self, Error> {
+    pub async fn get(name: &str, client: impl Into<Arc<M>>) -> Result<Self, Error<M>> {
         let client = client.into();
         let bytes = client
             .call(
@@ -71,16 +74,34 @@ where
         self.contract.method("multicall", calls)
     }
 
-    pub fn text(&self, name: &str, key: &str) -> Result<ContractCall<M, String>, AbiError> {
+    pub async fn text(&self, name: &str, key: &str) -> Result<Option<String>, Error<M>> {
         let node = ethers::providers::ens::namehash(name);
+        let value: String = self
+            .contract
+            .method("text", (node, key.to_owned()))
+            .map_err(ContractError::from)?
+            .call()
+            .await?;
 
-        self.contract.method("text", (node, key.to_owned()))
+        if value.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(value))
     }
 
-    pub fn address(&self, name: &str) -> Result<ContractCall<M, Address>, AbiError> {
+    pub async fn address(&self, name: &str) -> Result<Option<Address>, Error<M>> {
         let node = ethers::providers::ens::namehash(name);
+        let addr: Address = self
+            .contract
+            .method("addr", node)
+            .map_err(ContractError::from)?
+            .call()
+            .await?;
 
-        self.contract.method("addr", node)
+        if addr.is_zero() {
+            return Ok(None);
+        }
+        Ok(Some(addr))
     }
 
     pub fn set_address(&self, name: &str, addr: Address) -> Result<ContractCall<M, ()>, AbiError> {

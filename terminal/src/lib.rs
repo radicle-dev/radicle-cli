@@ -217,7 +217,7 @@ pub mod components {
             picked_item_prefix: style("*".to_owned()).yellow().for_stderr(),
             inactive_item_prefix: style(" ".to_string()).for_stderr(),
             inactive_item_style: Style::new().yellow().for_stderr(),
-            error_prefix: style(" ⤹ Error:".to_owned()).red().for_stderr(),
+            error_prefix: style("⤹  Error:".to_owned()).red().for_stderr(),
             success_suffix: style("·".to_owned()).cyan().for_stderr(),
 
             ..ColorfulTheme::default()
@@ -270,13 +270,20 @@ pub mod components {
         }
     }
 
-    pub fn text_input_optional<S, E>(message: &str) -> anyhow::Result<Option<S>>
+    pub fn text_input_optional<S, E>(
+        message: &str,
+        initial: Option<String>,
+    ) -> anyhow::Result<Option<S>>
     where
         S: fmt::Display + fmt::Debug + FromStr<Err = E> + Clone,
         E: fmt::Debug + fmt::Display,
     {
         let theme = theme();
         let mut input: Input<Optional<S>> = Input::with_theme(&theme);
+
+        if let Some(init) = initial {
+            input.with_initial_text(init);
+        }
         let value = input
             .with_prompt(message)
             .allow_empty(true)

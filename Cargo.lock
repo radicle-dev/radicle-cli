@@ -4575,6 +4575,7 @@ dependencies = [
  "dialoguer",
  "ethers",
  "git2",
+ "hex",
  "indicatif",
  "lexopt 0.2.0",
  "librad",

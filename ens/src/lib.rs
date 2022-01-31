@@ -190,9 +190,17 @@ async fn setup(
             return Err(anyhow!("error fetching peer id from seed: {}", err));
         }
     };
-    let address: Option<Address> = term::text_input_optional("Address")?;
-    let github: Option<String> = term::text_input_optional("GitHub handle")?;
-    let twitter: Option<String> = term::text_input_optional("Twitter handle")?;
+    let address_current = resolver.address(name).await?;
+    let address: Option<Address> =
+        term::text_input_optional("Address", address_current.map(ethereum::encode_address))?;
+
+    let github_current = resolver.text(name, "com.github").await?;
+    let github: Option<String> =
+        term::text_input_optional("GitHub handle", github_current.clone())?;
+
+    let twitter_current = resolver.text(name, "com.twitter").await?;
+    let twitter: Option<String> =
+        term::text_input_optional("Twitter handle", twitter_current.clone())?;
 
     let mut calls = vec![
         resolver
@@ -214,23 +222,29 @@ async fn setup(
     ];
 
     if let Some(address) = address {
-        calls.push(resolver.set_address(name, address)?.calldata().unwrap());
+        if address_current.map_or(true, |a| a != address) {
+            calls.push(resolver.set_address(name, address)?.calldata().unwrap());
+        }
     }
     if let Some(github) = github {
-        calls.push(
-            resolver
-                .set_text(name, "com.github", &github)?
-                .calldata()
-                .unwrap(),
-        );
+        if github_current.map_or(true, |g| g != github) {
+            calls.push(
+                resolver
+                    .set_text(name, "com.github", &github)?
+                    .calldata()
+                    .unwrap(),
+            );
+        }
     }
     if let Some(twitter) = twitter {
-        calls.push(
-            resolver
-                .set_text(name, "com.twitter", &twitter)?
-                .calldata()
-                .unwrap(),
-        );
+        if twitter_current.map_or(true, |t| t != twitter) {
+            calls.push(
+                resolver
+                    .set_text(name, "com.twitter", &twitter)?
+                    .calldata()
+                    .unwrap(),
+            );
+        }
     }
 
     let call = resolver.multicall(calls)?;

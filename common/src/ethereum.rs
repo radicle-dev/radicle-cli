@@ -267,3 +267,7 @@ pub fn chain_from_id(id: u64) -> Option<Chain> {
         _ => None,
     }
 }
+
+pub fn encode_address(addr: Address) -> String {
+    format!("0x{}", hex::encode(addr))
+}
