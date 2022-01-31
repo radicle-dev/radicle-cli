@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{Context as _, Result};
+use anyhow::{anyhow, Context as _, Result};
 use librad::crypto::peer::PeerId;
 use url::Url;
 
@@ -12,6 +12,7 @@ pub const DEFAULT_SEEDS: &[&str] = &[
     "willow.radicle.garden",
     "maple.radicle.garden",
 ];
+pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 
 pub fn get_seed() -> Result<Url, anyhow::Error> {
     let output = git::git(Path::new("."), ["config", CONFIG_SEED_KEY])
@@ -34,6 +35,22 @@ pub fn set_seed(seed: &Url) -> Result<(), anyhow::Error> {
     )
     .map(|_| ())
     .context("failed to save seed configuration")
+}
+
+pub fn get_seed_id(host: &str) -> Result<PeerId, anyhow::Error> {
+    let seed = format!("https://{}:{}/v1/peer", host, DEFAULT_SEED_API_PORT);
+
+    let agent = ureq::Agent::new();
+    let obj: serde_json::Value = agent.get(seed.as_str()).call()?.into_json()?;
+
+    let id = obj
+        .get("id")
+        .ok_or(anyhow!("missing 'id' in seed API response"))?
+        .as_str()
+        .ok_or(anyhow!("'id' is not a string"))?;
+    let id = PeerId::from_default_encoding(id)?;
+
+    Ok(id)
 }
 
 pub fn push_delegate_id(

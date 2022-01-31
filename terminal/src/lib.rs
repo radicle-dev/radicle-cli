@@ -67,6 +67,12 @@ pub mod components {
         /// If this error is returned from argument parsing, help is displayed.
         #[error("help invoked")]
         Help,
+        /// An error with a hint.
+        #[error("{err}")]
+        WithHint {
+            err: anyhow::Error,
+            hint: &'static str,
+        },
     }
 
     pub struct Spinner {
@@ -235,6 +241,25 @@ pub mod components {
         Ok(value)
     }
 
+    pub fn text_input_optional<S, E>(message: &str) -> anyhow::Result<Option<S>>
+    where
+        S: fmt::Display + std::str::FromStr<Err = E> + Clone,
+        E: fmt::Debug + fmt::Display,
+    {
+        let theme = theme();
+        let mut input: Input<S> = Input::with_theme(&theme);
+        let value = input
+            .with_prompt(message)
+            .allow_empty(true)
+            .interact_text()?;
+
+        if value.to_string().is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(value))
+        }
+    }
+
     pub fn secret_input() -> SecUtf8 {
         SecUtf8::from(
             Password::with_theme(&theme())
@@ -300,6 +325,8 @@ pub mod components {
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
+            use super::Error;
+
             let err = error.to_string();
             let err = err.trim_end();
             let separator = if err.len() > 160 || err.contains('\n') {
@@ -313,8 +340,23 @@ pub mod components {
                 style("==").red(),
                 style(header).on_red(),
                 separator,
-                style(error).red()
+                style(error).red().bold(),
             );
+
+            let cause = error.root_cause();
+            if cause.to_string() != error.to_string() {
+                eprintln!(
+                    "{} {}",
+                    style("==").red().dim(),
+                    style(error.root_cause()).red().dim()
+                );
+                super::blank();
+            }
+
+            if let Some(Error::WithHint { hint, .. }) = error.downcast_ref::<Error>() {
+                eprintln!("{}", &style(hint).red().to_string());
+                super::blank();
+            }
         }
 
         pub fn profile_select<'a>(

@@ -4568,18 +4568,25 @@ name = "rad-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.13.0",
  "byteorder",
+ "coins-bip32 0.3.0",
  "dialoguer",
+ "ethers",
  "git2",
  "indicatif",
+ "lexopt 0.2.0",
  "librad",
  "rad-clib",
  "rad-identities",
  "rad-profile",
  "rad-terminal",
  "radicle-git-ext",
+ "serde_json",
  "sha2 0.8.2",
+ "thiserror",
+ "ureq",
  "url",
 ]
 
