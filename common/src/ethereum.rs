@@ -238,7 +238,10 @@ where
                 return Err(err.into());
             }
         };
-        term::success!("Transaction {:?} submitted to the network.", *tx);
+        term::success!(
+            "Transaction {} submitted to the network.",
+            term::format::highlight(self::hex(*tx))
+        );
 
         let spinner = term::spinner("Waiting for transaction to be processed...");
         if let Some(receipt) = tx.await? {
@@ -249,9 +252,10 @@ where
         }
     };
 
-    term::success!(
+    term::blank();
+    term::info!(
         "Transaction included in block #{} ({}).",
-        receipt.block_number.unwrap(),
+        term::format::highlight(receipt.block_number.unwrap()),
         receipt.block_hash.unwrap(),
     );
 
@@ -268,6 +272,6 @@ pub fn chain_from_id(id: u64) -> Option<Chain> {
     }
 }
 
-pub fn encode_address(addr: Address) -> String {
-    format!("0x{}", hex::encode(addr))
+pub fn hex(bytes: impl AsRef<[u8]>) -> String {
+    format!("0x{}", hex::encode(bytes))
 }

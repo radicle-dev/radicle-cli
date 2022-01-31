@@ -235,7 +235,7 @@ pub mod components {
         let value = match default {
             Some(default) => input
                 .with_prompt(message)
-                .default(default)
+                .with_initial_text(default.to_string())
                 .interact_text()?,
             None => input.with_prompt(message).interact_text()?,
         };

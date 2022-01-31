@@ -192,7 +192,7 @@ async fn setup(
     };
     let address_current = resolver.address(name).await?;
     let address: Option<Address> =
-        term::text_input_optional("Address", address_current.map(ethereum::encode_address))?;
+        term::text_input_optional("Address", address_current.map(ethereum::hex))?;
 
     let github_current = resolver.text(name, "com.github").await?;
     let github: Option<String> =
@@ -250,8 +250,8 @@ async fn setup(
     let call = resolver.multicall(calls)?;
     ethereum::transaction(call).await?;
 
-    term::success!(
-        "Successfully associated local identity with {}",
+    term::info!(
+        "Successfully associated local 🌱 identity with {}",
         term::format::highlight(name)
     );
 
