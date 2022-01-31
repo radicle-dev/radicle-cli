@@ -111,6 +111,7 @@ async fn transaction(
 ) -> anyhow::Result<()> {
     use ethereum::WalletError;
 
+    term::tip("Accessing your wallet...");
     let signer = match ethereum::signer(signer_opts, provider.clone()).await {
         Ok(signer) => signer,
         Err(err) => {
@@ -125,6 +126,7 @@ async fn transaction(
             }
         }
     };
+
     let chain = ethereum::chain_from_id(signer.chain_id());
     term::success!(
         "Using {} network",

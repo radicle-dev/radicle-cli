@@ -199,7 +199,7 @@ where
     let chain_id = provider.get_chainid().await?.as_u64();
 
     if let Some(keypath) = &options.keystore {
-        let password = term::secret_input();
+        let password = term::secret_input_with_prompt("Keystore password");
         let spinner = term::spinner("Decrypting keystore...");
         let signer = LocalWallet::decrypt_keystore(keypath, password.unsecure())
             // Nb. Can fail if the file isn't found.

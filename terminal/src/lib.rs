@@ -209,7 +209,7 @@ pub mod components {
     pub fn theme() -> ColorfulTheme {
         ColorfulTheme {
             success_prefix: style("ok".to_owned()).for_stderr().green().reverse(),
-            prompt_prefix: style("░░".to_owned()).cyan().dim().for_stderr(),
+            prompt_prefix: style(" ⤷".to_owned()).cyan().dim().for_stderr(),
             prompt_suffix: style("·".to_owned()).cyan().for_stderr(),
             prompt_style: Style::new().cyan().bold().for_stderr(),
             active_item_style: Style::new().for_stderr().yellow().reverse(),
@@ -293,9 +293,16 @@ pub mod components {
     }
 
     pub fn secret_input() -> SecUtf8 {
+        secret_input_with_prompt("Passphrase")
+    }
+
+    // TODO: This prompt shows success just for entering a password,
+    // even if the password is later found out to be wrong.
+    // We should handle this differently.
+    pub fn secret_input_with_prompt(prompt: &str) -> SecUtf8 {
         SecUtf8::from(
             Password::with_theme(&theme())
-                .with_prompt("Passphrase")
+                .with_prompt(prompt)
                 .interact()
                 .unwrap(),
         )
