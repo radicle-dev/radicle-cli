@@ -23,3 +23,4 @@ rad-auth = { path = "../auth" }
 rad-checkout = { path = "../checkout" }
 rad-push = { path = "../push" }
 rad-sync = { path = "../sync" }
+rad-ens = { path = "../ens" }

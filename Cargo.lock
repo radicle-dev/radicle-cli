@@ -4591,6 +4591,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-ens"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethers",
+ "futures",
+ "lexopt 0.2.0",
+ "librad",
+ "rad-clib",
+ "rad-common",
+ "rad-profile",
+ "rad-terminal",
+ "radicle-tools",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "rad-exe"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
@@ -4615,6 +4634,7 @@ dependencies = [
  "rad-checkout",
  "rad-clib",
  "rad-common",
+ "rad-ens",
  "rad-init",
  "rad-profile",
  "rad-push",

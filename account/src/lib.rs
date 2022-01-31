@@ -1,3 +1,5 @@
+use anyhow::Context as _;
+
 use colored::*;
 
 use ethers::signers::{HDPath, Ledger};
@@ -13,7 +15,9 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
     log::debug!("Chain ID {}", chain_id);
     log::info!("Reading Ledger accounts..");
 
-    let ledger = Ledger::new(HDPath::LedgerLive(0), chain_id).await?;
+    let ledger = Ledger::new(HDPath::LedgerLive(0), chain_id)
+        .await
+        .context("couldn't connect to Ledger device")?;
 
     for i in 0..=8 {
         let path = HDPath::LedgerLive(i);

@@ -19,6 +19,7 @@ members = [
   "terminal",
   "common",
   "checkout",
+  "ens",
   "auth",
   "help",
   "rad",
