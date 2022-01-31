@@ -20,6 +20,7 @@ pub mod keys {
 }
 
 pub mod components {
+    use std::str::FromStr;
     use std::{fmt, process};
 
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
@@ -216,7 +217,7 @@ pub mod components {
             picked_item_prefix: style("*".to_owned()).yellow().for_stderr(),
             inactive_item_prefix: style(" ".to_string()).for_stderr(),
             inactive_item_style: Style::new().yellow().for_stderr(),
-            error_prefix: style("░░ Error:".to_owned()).red().for_stderr(),
+            error_prefix: style(" ⤹ Error:".to_owned()).red().for_stderr(),
             success_suffix: style("·".to_owned()).cyan().for_stderr(),
 
             ..ColorfulTheme::default()
@@ -241,23 +242,47 @@ pub mod components {
         Ok(value)
     }
 
+    #[derive(Debug, Default, Clone)]
+    pub struct Optional<T> {
+        option: Option<T>,
+    }
+
+    impl<T: fmt::Display> fmt::Display for Optional<T> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            if let Some(val) = &self.option {
+                write!(f, "{}", val)
+            } else {
+                write!(f, "")
+            }
+        }
+    }
+
+    impl<T: FromStr> FromStr for Optional<T> {
+        type Err = <T as FromStr>::Err;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            if s.is_empty() {
+                return Ok(Optional { option: None });
+            }
+            let val: T = s.parse()?;
+
+            Ok(Self { option: Some(val) })
+        }
+    }
+
     pub fn text_input_optional<S, E>(message: &str) -> anyhow::Result<Option<S>>
     where
-        S: fmt::Display + std::str::FromStr<Err = E> + Clone,
+        S: fmt::Display + fmt::Debug + FromStr<Err = E> + Clone,
         E: fmt::Debug + fmt::Display,
     {
         let theme = theme();
-        let mut input: Input<S> = Input::with_theme(&theme);
+        let mut input: Input<Optional<S>> = Input::with_theme(&theme);
         let value = input
             .with_prompt(message)
             .allow_empty(true)
             .interact_text()?;
 
-        if value.to_string().is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(value))
-        }
+        Ok(value.option)
     }
 
     pub fn secret_input() -> SecUtf8 {
@@ -354,7 +379,7 @@ pub mod components {
             }
 
             if let Some(Error::WithHint { hint, .. }) = error.downcast_ref::<Error>() {
-                eprintln!("{}", &style(hint).red().to_string());
+                eprintln!("{}", &style(hint).yellow().to_string());
                 super::blank();
             }
         }

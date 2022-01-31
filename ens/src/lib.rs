@@ -117,7 +117,7 @@ async fn transaction(
             if let Some(WalletError::NoWallet) = err.downcast_ref::<WalletError>() {
                 return Err(Error::WithHint {
                     err,
-                    hint: "Use `--ledger-hdpath` or `--keystore` to specify a wallet",
+                    hint: "Use `--ledger-hdpath` or `--keystore` to specify a wallet.",
                 }
                 .into());
             } else {
@@ -126,15 +126,17 @@ async fn transaction(
         }
     };
     let chain = ethereum::chain_from_id(signer.chain_id());
+    term::success!(
+        "Using {} network",
+        term::format::highlight(
+            chain
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| String::from("unknown"))
+        )
+    );
 
     match operation {
         Operation::Init(name) => {
-            term::info!(
-                "Using {} network",
-                chain
-                    .map(|c| c.to_string())
-                    .unwrap_or_else(|| String::from("unknown"))
-            );
             term::headline(&format!(
                 "Associating local 🌱 identity {} with ENS",
                 term::format::highlight(&id.urn()),
@@ -154,14 +156,28 @@ async fn init(
 ) -> anyhow::Result<()> {
     let urn = id.urn();
     let signer = SignerMiddleware::new(provider, signer);
-    let resolver = PublicResolver::get(name, signer).await?;
+    let radicle_name = name.ends_with(ethereum::RADICLE_DOMAIN);
+    let resolver = match PublicResolver::get(name, signer).await {
+        Ok(resolver) => resolver,
+        Err(err) => {
+            if let resolver::Error::NameNotFound { .. } = err {
+                return Err(Error::WithHint {
+                    err: err.into(),
+                    hint: if radicle_name {
+                        "The name must be registered with ENS to continue. Go to https://app.radicle.network/register to register."
+                    } else {
+                        "The name must be registered with ENS to continue. Go to https://app.ens.domains to register."
+                    }
+                }
+                .into());
+            } else {
+                return Err(err.into());
+            }
+        }
+    };
     let seed_url = seed::get_seed().ok();
     let seed_host = seed_url.and_then(|url| url.host_str().map(|s| s.to_owned()));
     let seed_host = term::text_input("Seed host", seed_host)?;
-
-    let address: Option<Address> = term::text_input_optional("Address")?;
-    let github: Option<String> = term::text_input_optional("GitHub handle")?;
-    let twitter: Option<String> = term::text_input_optional("Twitter handle")?;
 
     let spinner = term::spinner("Seed ID...");
     let seed_id = match seed::get_seed_id(&seed_host) {
@@ -174,6 +190,10 @@ async fn init(
             return Err(anyhow!("error fetching peer id from seed: {}", err));
         }
     };
+    let address: Option<Address> = term::text_input_optional("Address")?;
+    let github: Option<String> = term::text_input_optional("GitHub handle")?;
+    let twitter: Option<String> = term::text_input_optional("Twitter handle")?;
+
     let mut calls = vec![
         resolver
             .set_text(
@@ -216,7 +236,12 @@ async fn init(
     let call = resolver.multicall(calls)?;
     ethereum::transaction(call).await?;
 
-    term::success!("Successfully associated local identity with {}", name);
+    term::success!(
+        "Successfully associated local identity with {}",
+        term::format::highlight(name)
+    );
+
+    // TODO: Link to radicle interface.
 
     Ok(())
 }

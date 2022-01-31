@@ -18,6 +18,8 @@ use rad_terminal::components as term;
 
 use crate::args;
 
+pub const RADICLE_DOMAIN: &str = ".radicle.eth";
+
 pub const SIGNER_OPTIONS: &str = r#"
     --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware device
     --keystore <file>            Keystore file containing encrypted private key (default: none)
@@ -197,10 +199,14 @@ where
     let chain_id = provider.get_chainid().await?.as_u64();
 
     if let Some(keypath) = &options.keystore {
-        let password = term::secret_input().to_string();
-        let signer = LocalWallet::decrypt_keystore(keypath, password)
+        let password = term::secret_input();
+        let spinner = term::spinner("Decrypting keystore...");
+        let signer = LocalWallet::decrypt_keystore(keypath, password.unsecure())
+            // Nb. Can fail if the file isn't found.
             .map_err(|e| anyhow!("keystore decryption failed: {}", e))?
             .with_chain_id(chain_id);
+
+        spinner.finish();
 
         Ok(Wallet::Local(signer))
     } else if let Some(path) = &options.ledger_hdpath {
@@ -232,7 +238,7 @@ where
                 return Err(err.into());
             }
         };
-        term::success!("Transaction {} submitted to the network", *tx);
+        term::success!("Transaction {:?} submitted to the network.", *tx);
 
         let spinner = term::spinner("Waiting for transaction to be processed...");
         if let Some(receipt) = tx.await? {
@@ -244,7 +250,7 @@ where
     };
 
     term::success!(
-        "Transaction included in block #{} ({})",
+        "Transaction included in block #{} ({}).",
         receipt.block_number.unwrap(),
         receipt.block_hash.unwrap(),
     );

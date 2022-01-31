@@ -26,7 +26,7 @@ pub struct PublicResolver<M> {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("ENS name {name} not found")]
+    #[error("ENS name '{name}' not found")]
     NameNotFound { name: String },
     #[error(transparent)]
     Provider(#[from] ProviderError),
