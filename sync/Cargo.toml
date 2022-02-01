@@ -14,5 +14,4 @@ rad-clib = "0"
 rad-profile = "0"
 rad-common = { path = "../common" }
 rad-terminal = { path = "../terminal" }
-radicle-tools = { path = "../" }
 url = { version = "*" }

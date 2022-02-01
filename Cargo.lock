@@ -2610,25 +2610,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "git-remote-rad"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "ethers",
- "futures",
- "lexopt",
- "librad",
- "link-identities",
- "log",
- "rad-common",
- "radicle-git-helpers",
- "radicle-tools",
- "tokio",
- "url",
-]
-
-[[package]]
 name = "git-repository"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4882,7 +4863,6 @@ dependencies = [
  "rad-terminal",
  "rad-track",
  "rad-untrack",
- "radicle-tools",
 ]
 
 [[package]]
@@ -4983,7 +4963,6 @@ dependencies = [
  "rad-common",
  "rad-profile",
  "rad-terminal",
- "radicle-tools",
  "url",
 ]
 
@@ -5121,9 +5100,28 @@ dependencies = [
  "anyhow",
  "atty",
  "colored 1.9.3",
+ "ethers",
+ "futures",
+ "lexopt",
  "librad",
+ "link-identities",
  "log",
+ "rad-auth",
+ "rad-checkout",
+ "rad-common",
+ "rad-exe",
+ "rad-help",
+ "rad-init",
+ "rad-ls",
  "rad-profile",
+ "rad-push",
+ "rad-show",
+ "rad-sync",
+ "rad-terminal",
+ "rad-track",
+ "rad-untrack",
+ "radicle-git-helpers",
+ "url",
 ]
 
 [[package]]

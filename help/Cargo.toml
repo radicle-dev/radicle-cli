@@ -12,7 +12,6 @@ librad = "0"
 lexopt = "0.2"
 rad-clib = "0"
 rad-profile = "0"
-radicle-tools = { path = "../" }
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
 rad-show = { path = "../show" }
