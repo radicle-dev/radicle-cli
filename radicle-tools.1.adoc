@@ -1,0 +1,93 @@
+= radicle-tools(1)
+The Radicle Team <dev@radicle.xyz>
+:doctype: manpage
+:revnumber: 0.1.0
+:revdate: 2022-02-01
+:mansource: radicle-tools {revnumber}
+:manmanual: radicle-tools
+
+== Name
+
+radicle-tools - command-line tooling for Radicle.
+
+== Synopsis
+
+*rad* *
+
+== Description
+
+The radicle client tools are a set of command-line interfaces (CLIs) designed
+for users of the radicle peer-to-peer code collaboration stack. The tools
+provide the ability to manage radicle identities and publish projects to the
+radicle network.
+
+== Requirements
+
+There are a few important requirements for running the radicle tools: first, a
+recent version of *git* (*2.34.0* or later) must be installed. You can check
+your installation by running *git --version*. Second, *ssh-agent* must be
+installed and running.
+
+== Getting started
+
+Let's see how we can setup a new radicle identity and publish a project to the
+network.
+
+Once the radicle tools are installed, users can create a new radicle identity
+and key pair. This is usually the first step, and is done via the *rad-auth*
+command:
+
+  $ rad auth
+
+Follow the instructions by entering a username and password to protect your
+key pair. You may then proceed to creating your first radicle project.
+
+Radicle is built around *git*, and thus radicle projects must be initialized
+from *git* repositories. Navigate to a repository of your choosing and run
+the following command from within the repository:
+
+  $ rad init
+
+You will be asked to enter some basic information about the project. Note that
+the project name will be determined by the directory name. The newly created
+project id will be displayed, which is a *URN* starting with *'rad:git:'*. To
+show it at any time, run *rad show --project* from within a radicle project.
+You may also list all projects on your device with `rad ls`.
+
+Besides registering the project in your local radicle state, a new *remote*
+named *rad* is added to the repository. This remote points to the project's
+location in your local state.
+
+It's now time to publish your project to the network. To accomplish this,
+you can use the *rad-push* command. The first time you run this command,
+it may ask you where you want your project published, ie. to which *seed*.
+
+Radicle seeds are peer-to-peer nodes that are accessible on the public internet.
+They function as replicas for radicle project data.
+
+Once set, future projects will always be pushed to the same seed. Radicle
+stores your chosen seed in *git*, under the *'rad.seed'* key. You can view it
+or edit it with *git config rad.seed*, or by editing your git configuration
+file, eg. *~/.gitconfig*. See *git config --help* for more information.
+
+With that said, we can run the *push* command:
+
+  $ rad push
+
+This is equivalent to calling *git push rad*, which pushes your project refs
+to your local radicle state and then running *rad sync*, which synchronizes
+project data between your local state and the configured seed.
+
+Once the command returns, your project source code and metadata should be fully
+synchronized with your seed.
+
+You may run *rad* with no arguments to see what additional commands are
+available.
+
+== See also
+
+*rad(1)*
+
+== Copyright
+
+Copyright The Radicle Team <dev@radicle.xyz> and contributors.
