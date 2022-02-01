@@ -4819,6 +4819,7 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
+ "rad-account",
  "rad-auth",
  "rad-checkout",
  "rad-clib",

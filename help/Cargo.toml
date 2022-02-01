@@ -20,6 +20,7 @@ rad-track = { path = "../track" }
 rad-untrack = { path = "../untrack" }
 rad-init = { path = "../init" }
 rad-auth = { path = "../auth" }
+rad-account = { path = "../account" }
 rad-checkout = { path = "../checkout" }
 rad-push = { path = "../push" }
 rad-sync = { path = "../sync" }
