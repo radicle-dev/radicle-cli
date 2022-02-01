@@ -1,19 +1,60 @@
 use anyhow::Context as _;
 
-use colored::*;
-
+use ethers::prelude::Chain;
 use ethers::signers::{HDPath, Ledger};
 
+use rad_terminal::components as term;
+use rad_terminal::components::{Args, Error, Help};
+
+pub const HELP: Help = Help {
+    name: "account",
+    description: env!("CARGO_PKG_DESCRIPTION"),
+    version: env!("CARGO_PKG_VERSION"),
+    usage: r#"
+USAGE
+    rad account [--testnet]
+
+OPTIONS
+    --testnet  Use the Ethereum "Rinkeby" testnet (default: false)
+"#,
+};
+
+/// Work with Ethereum accounts.
+#[derive(Debug, Default)]
 pub struct Options {
-    pub rpc_url: Option<String>,
+    /// Use the Ethereum "Rinkeby" testnet (default: false)
     pub testnet: bool,
 }
 
-pub async fn run(opts: Options) -> anyhow::Result<()> {
-    let chain_id: u64 = if opts.testnet { 4 } else { 1 };
+impl Args for Options {
+    fn from_env() -> anyhow::Result<Self> {
+        use lexopt::prelude::*;
 
-    log::debug!("Chain ID {}", chain_id);
-    log::info!("Reading Ledger accounts..");
+        let mut parser = lexopt::Parser::from_env();
+        let mut testnet = false;
+
+        while let Some(arg) = parser.next()? {
+            match arg {
+                Long("testnet") => {
+                    testnet = true;
+                }
+                Long("help") => {
+                    return Err(Error::Help.into());
+                }
+                _ => return Err(anyhow::anyhow!(arg.unexpected())),
+            }
+        }
+
+        Ok(Options { testnet })
+    }
+}
+
+pub async fn run(opts: Options) -> anyhow::Result<()> {
+    let chain_id: u64 = if opts.testnet {
+        Chain::Rinkeby.into()
+    } else {
+        Chain::Mainnet.into()
+    };
 
     let ledger = Ledger::new(HDPath::LedgerLive(0), chain_id)
         .await
@@ -24,7 +65,7 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
 
         println!(
             "{} {:?}",
-            path.to_string().dimmed(),
+            term::format::dim(path.to_string()),
             ledger.get_address_with_path(&path).await?
         );
     }

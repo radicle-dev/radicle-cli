@@ -3,7 +3,7 @@ use rad_show::{Options, HELP};
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options>(HELP, "Show", run);
+    term::run_command::<Options, _>(HELP, "Show", run);
 }
 
 fn run(mut options: Options) -> anyhow::Result<()> {

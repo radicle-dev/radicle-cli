@@ -8,7 +8,7 @@ use rad_init::{Options, HELP};
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options>(HELP, "Initialization", run);
+    term::run_command::<Options, _>(HELP, "Initialization", run);
 }
 
 fn run(_options: Options) -> anyhow::Result<()> {

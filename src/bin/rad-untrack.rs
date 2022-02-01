@@ -8,7 +8,7 @@ use rad_track::options::Options;
 use rad_untrack::HELP;
 
 fn main() {
-    term::run_command::<Options>(HELP, "Untracking", run);
+    term::run_command::<Options, _>(HELP, "Untracking", run);
 }
 
 /// Create a [`Prompt`] for unlocking the key storage.

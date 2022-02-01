@@ -6,11 +6,14 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+lexopt = "0.2"
 colored = { version = "1.9" }
 atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
+rad-exe = { version = "0" }
 rad-profile = { version = "0" }
+rad-account = { path = "./account" }
 rad-auth = { path = "./auth" }
 rad-common = { path = "./common" }
 rad-terminal = { path = "./terminal" }
@@ -27,9 +30,8 @@ ethers = { version = "0.6.2" }
 link-identities = { version = "0" }
 radicle-git-helpers = { version = "0" }
 url = { version = "*" }
+tokio = { version = "1.10", features = ["rt"] }
 futures = { version = "0.3" }
-rad-exe = "0"
-lexopt = "0.2"
 
 [workspace]
 members = [

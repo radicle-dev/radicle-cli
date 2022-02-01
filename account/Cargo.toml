@@ -1,13 +1,15 @@
 [package]
 name = "rad-account"
 version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Manage radicle ethereum accounts"
 
 [dependencies]
-radicle-tools = { path = "../" }
-log = { version = "0.4" }
-argh = { version = "0.1.5" }
-ethers = { version = "0", features = ["ledger"] }
+ethers = { version = "0.6.2", features = ["ledger"] }
 tokio = { version = "1.10", features = ["rt", "macros"] }
-anyhow = { version = "*" }
-colored = { version = "1.9" }
+anyhow = { version = "1.0" }
+lexopt = "0.2"
+rad-terminal = { path = "../terminal" }
+rad-common = { path = "../common" }

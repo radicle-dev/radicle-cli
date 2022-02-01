@@ -131,9 +131,10 @@ pub mod components {
         }
     }
 
-    pub fn run_command<A>(help: Help, action: &str, run: fn(A) -> anyhow::Result<()>) -> !
+    pub fn run_command<A, F>(help: Help, action: &str, run: F) -> !
     where
         A: Args,
+        F: FnOnce(A) -> anyhow::Result<()>,
     {
         let options = match A::from_env() {
             Ok(opts) => opts,
