@@ -9,6 +9,6 @@ description = "List radicle projects and other objects"
 [dependencies]
 anyhow = "1.0"
 librad = "0"
-lexopt = "0.1"
+lexopt = "0.2"
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }

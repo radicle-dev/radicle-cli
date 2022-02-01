@@ -10,7 +10,7 @@ description = "Git remote helper for radicle"
 radicle-tools = { path = "../" }
 async-trait = { version = "0.1" }
 log = { version = "0.4" }
-lexopt = { version = "0.1" }
+lexopt = { version = "0.2" }
 futures = { version = "0.3" }
 ethers = { version = "0.6" }
 link-identities = { version = "0" }

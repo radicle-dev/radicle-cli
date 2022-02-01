@@ -8,7 +8,7 @@ description = "Publish radicle projects to the network"
 
 [dependencies]
 anyhow = "1.0"
-lexopt = { version = "0.1" }
+lexopt = { version = "0.2" }
 rad-common = { path = "../common" }
 rad-terminal = { path = "../terminal" }
 rad-sync = { path = "../sync" }

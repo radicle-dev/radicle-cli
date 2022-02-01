@@ -2617,7 +2617,7 @@ dependencies = [
  "async-trait",
  "ethers",
  "futures",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "link-identities",
  "log",
@@ -3344,12 +3344,6 @@ dependencies = [
  "ryu",
  "static_assertions",
 ]
-
-[[package]]
-name = "lexopt"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c5d9b5843e8c9311ff602e6bd50855015e99e75159c2c54fe104cfac241f552"
 
 [[package]]
 name = "lexopt"
@@ -4647,7 +4641,7 @@ dependencies = [
  "coins-bip32 0.6.0",
  "colored 1.9.3",
  "ethers",
- "lexopt 0.1.0",
+ "lexopt",
  "log",
  "radicle-tools",
  "rpassword 5.0.1",
@@ -4724,7 +4718,7 @@ name = "rad"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-common",
@@ -4757,7 +4751,7 @@ dependencies = [
  "colored 1.9.3",
  "ethers",
  "futures",
- "lexopt 0.1.0",
+ "lexopt",
  "link-identities",
  "log",
  "multihash 0.14.0",
@@ -4774,7 +4768,7 @@ name = "rad-auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.2.0",
+ "lexopt",
  "rad-clib",
  "rad-common",
  "rad-profile",
@@ -4787,7 +4781,7 @@ name = "rad-checkout"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-common",
@@ -4829,7 +4823,7 @@ dependencies = [
  "git2",
  "hex",
  "indicatif",
- "lexopt 0.2.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-identities",
@@ -4850,7 +4844,7 @@ dependencies = [
  "anyhow",
  "ethers",
  "futures",
- "lexopt 0.2.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-common",
@@ -4881,7 +4875,7 @@ name = "rad-help"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-auth",
  "rad-checkout",
@@ -4931,7 +4925,7 @@ name = "rad-init"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-common",
@@ -4945,7 +4939,7 @@ name = "rad-ls"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-common",
  "rad-terminal",
@@ -4971,7 +4965,7 @@ name = "rad-push"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "rad-common",
  "rad-sync",
  "rad-terminal",
@@ -4982,7 +4976,7 @@ name = "rad-show"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-common",
@@ -4996,7 +4990,7 @@ name = "rad-sync"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "rad-clib",
  "rad-common",
@@ -5026,7 +5020,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "colored 1.9.3",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "log",
  "rad-clib",
@@ -5041,7 +5035,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "colored 1.9.3",
- "lexopt 0.1.0",
+ "lexopt",
  "librad",
  "log",
  "rad-clib",

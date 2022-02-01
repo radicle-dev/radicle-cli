@@ -9,7 +9,7 @@ description = "Initialize radicle projects from git repositories"
 [dependencies]
 anyhow = "1.0"
 librad = "0"
-lexopt = "0.1"
+lexopt = "0.2"
 rad-clib = "0"
 rad-profile = "0"
 radicle-tools = { path = "../" }

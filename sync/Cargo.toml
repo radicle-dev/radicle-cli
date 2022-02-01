@@ -8,7 +8,7 @@ description = "Synchronize radicle projects with seeds"
 
 [dependencies]
 anyhow = "1.0"
-lexopt = { version = "0.1" }
+lexopt = { version = "0.2" }
 librad = "0"
 rad-clib = "0"
 rad-profile = "0"

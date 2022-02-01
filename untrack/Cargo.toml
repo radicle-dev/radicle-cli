@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "Untrack radicle project peers"
 
 [dependencies]
-lexopt = { version = "0.1" }
+lexopt = { version = "0.2" }
 log = { version = "0.4" }
 radicle-tools = { path = "../" }
 anyhow = { version = "1.0" }
