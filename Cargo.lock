@@ -4720,13 +4720,11 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "rad-clib",
  "rad-common",
  "rad-exe",
  "rad-help",
  "rad-profile",
  "rad-terminal",
- "radicle-tools",
 ]
 
 [[package]]
@@ -4769,11 +4767,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "rad-clib",
  "rad-common",
  "rad-profile",
  "rad-terminal",
- "radicle-tools",
 ]
 
 [[package]]
@@ -4783,11 +4779,9 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "rad-clib",
  "rad-common",
  "rad-profile",
  "rad-terminal",
- "radicle-tools",
 ]
 
 [[package]]
@@ -4846,11 +4840,8 @@ dependencies = [
  "futures",
  "lexopt",
  "librad",
- "rad-clib",
  "rad-common",
- "rad-profile",
  "rad-terminal",
- "radicle-tools",
  "serde_json",
  "thiserror",
  "tokio",
@@ -4927,11 +4918,9 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "rad-clib",
  "rad-common",
  "rad-profile",
  "rad-terminal",
- "radicle-tools",
 ]
 
 [[package]]
@@ -4978,11 +4967,9 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "rad-clib",
  "rad-common",
  "rad-profile",
  "rad-terminal",
- "radicle-tools",
 ]
 
 [[package]]
@@ -5009,7 +4996,6 @@ dependencies = [
  "dialoguer",
  "indicatif",
  "librad",
- "rad-clib",
  "rad-profile",
  "thiserror",
 ]
@@ -5019,14 +5005,10 @@ name = "rad-track"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "colored 1.9.3",
  "lexopt",
  "librad",
- "log",
- "rad-clib",
  "rad-common",
  "rad-terminal",
- "radicle-tools",
 ]
 
 [[package]]
@@ -5034,15 +5016,11 @@ name = "rad-untrack"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "colored 1.9.3",
  "lexopt",
  "librad",
- "log",
- "rad-clib",
  "rad-common",
  "rad-terminal",
  "rad-track",
- "radicle-tools",
 ]
 
 [[package]]

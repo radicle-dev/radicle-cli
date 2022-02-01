@@ -9,8 +9,6 @@ description = "Manage radicle identities and profiles"
 [dependencies]
 anyhow = "1.0"
 lexopt = "0.2.0"
-rad-clib = "0"
 rad-profile = "0"
-radicle-tools = { path = "../" }
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }

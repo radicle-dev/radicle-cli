@@ -10,10 +10,8 @@ description = "Radicle top-level command"
 anyhow = "1.0"
 librad = "0"
 lexopt = "0.2"
-rad-clib = "0"
 rad-exe = "0"
 rad-profile = "0"
-radicle-tools = { path = "../" }
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
 rad-help = { path = "../help" }
