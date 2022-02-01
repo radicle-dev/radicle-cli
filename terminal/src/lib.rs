@@ -76,6 +76,40 @@ pub mod components {
         },
     }
 
+    #[derive(Debug)]
+    pub struct Table<const W: usize> {
+        rows: Vec<[String; W]>,
+        widths: [usize; W],
+    }
+
+    impl<const W: usize> Table<W> {
+        pub fn default() -> Self {
+            Self {
+                rows: Vec::new(),
+                widths: [0; W],
+            }
+        }
+
+        pub fn push(&mut self, row: [String; W]) {
+            for (i, cell) in row.iter().enumerate() {
+                self.widths[i] = self.widths[i].max(console::measure_text_width(cell));
+            }
+            self.rows.push(row);
+        }
+
+        pub fn render(self) {
+            for row in &self.rows {
+                for (i, cell) in row.iter().enumerate() {
+                    print!(
+                        "{} ",
+                        console::pad_str(cell, self.widths[i], console::Alignment::Left, None)
+                    );
+                }
+                println!();
+            }
+        }
+    }
+
     pub struct Spinner {
         progress: ProgressBar,
         message: String,
@@ -347,8 +381,12 @@ pub mod components {
 
         use super::theme;
 
-        pub fn secondary(msg: &str) -> String {
+        pub fn secondary<D: std::fmt::Display>(msg: D) -> String {
             style(msg).blue().to_string()
+        }
+
+        pub fn tertiary<D: std::fmt::Display>(msg: D) -> String {
+            style(msg).cyan().to_string()
         }
 
         pub fn highlight<D: std::fmt::Display>(input: D) -> String {
@@ -361,6 +399,10 @@ pub mod components {
 
         pub fn dim<D: std::fmt::Display>(input: D) -> String {
             style(input).dim().to_string()
+        }
+
+        pub fn italic<D: std::fmt::Display>(input: D) -> String {
+            style(input).italic().dim().to_string()
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {

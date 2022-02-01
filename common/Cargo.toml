@@ -12,6 +12,8 @@ coins-bip32 = "*"
 byteorder = "1.4"
 dialoguer = "0.9.0"
 ethers = { version = "0.6.2", features = ["ledger"] }
+either = { version = "1.6" }
+git-repository = "0.14"
 indicatif = "0.16.2"
 git2 = "0.13"
 serde_json = "1.0"

@@ -24,6 +24,7 @@ members = [
   "help",
   "rad",
   "init",
+  "ls",
   "push",
   "sync",
   "show",

@@ -5,7 +5,8 @@ use anyhow::{anyhow, Context as _, Error, Result};
 use librad::crypto::peer::PeerId;
 use librad::git::storage::Storage;
 use librad::git::Urn;
-use librad::profile::{Profile, ProfileId, RadHome};
+
+pub use librad::profile::{Profile, ProfileId, RadHome};
 
 use rad_profile;
 use rad_terminal::components as term;
