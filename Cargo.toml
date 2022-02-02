@@ -21,6 +21,7 @@ rad-init = { path = "./init" }
 rad-show = { path = "./show" }
 rad-push = { path = "./push" }
 rad-sync = { path = "./sync" }
+rad-ens = { path = "./ens" }
 rad-checkout = { path = "./checkout" }
 rad-track = { path = "./track" }
 rad-untrack = { path = "./untrack" }

@@ -18,8 +18,9 @@ pub const HELP: Help = Help {
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
 USAGE
-    rad ens <operation> [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
-    rad ens <operation> [<option>...] [--rpc-url <url>] --keystore <file>
+    rad ens --setup     [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
+    rad ens --setup     [<option>...] [--rpc-url <url>] --keystore <file>
+    rad ens <operation> [<option>...]
 
 OPERATIONS
     --setup [<name>]             Associate your local radicle id with an ENS name
@@ -82,7 +83,8 @@ impl Args for Options {
         }
 
         Ok(Options {
-            operation: operation.ok_or_else(|| anyhow!("an operation must be specified"))?,
+            operation: operation
+                .ok_or_else(|| anyhow!("an operation must be specified, see 'rad ens --help'"))?,
             provider,
             signer,
         })
