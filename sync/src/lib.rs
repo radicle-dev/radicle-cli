@@ -86,7 +86,7 @@ impl Args for Options {
                     let value = value.to_string_lossy();
                     let value = value.as_ref();
                     let addr =
-                        Addr::from_str(value).context("invalid address specified for `--seed`")?;
+                        Addr::from_str(value).context("invalid host specified for `--seed`")?;
 
                     seed = Some(addr);
                 }
