@@ -123,7 +123,7 @@ pub mod components {
 
         pub fn failed(self) {
             self.progress.finish_and_clear();
-            self::eprintln(style("><").red(), self.message);
+            self::eprintln(style("!!").red().reverse(), self.message);
         }
 
         pub fn clear(self) {
@@ -420,7 +420,7 @@ pub mod components {
             eprintln!(
                 "{} {}{}{}",
                 style("==").red(),
-                style(header).on_red(),
+                style(header).red().reverse(),
                 separator,
                 style(error).red().bold(),
             );
