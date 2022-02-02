@@ -1,0 +1,30 @@
+name: Package
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deb:
+    name: Create a .deb package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure build cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+      - run: cargo install cargo-deb
+      - run: cargo deb
+      - uses: actions/upload-artifact@v2
+        with:
+          name: radicle-tools
+          path: target/debian/*.deb
