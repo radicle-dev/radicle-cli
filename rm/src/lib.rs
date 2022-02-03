@@ -1,0 +1,88 @@
+use std::fs;
+use std::str::FromStr;
+
+use anyhow::anyhow;
+use anyhow::Context as _;
+use librad::git::Urn;
+
+use rad_common::{keys, profile, project};
+use rad_terminal::components as term;
+use rad_terminal::components::{Args, Error, Help};
+
+pub const HELP: Help = Help {
+    name: "rm",
+    description: env!("CARGO_PKG_DESCRIPTION"),
+    version: env!("CARGO_PKG_VERSION"),
+    usage: r#"
+USAGE
+    rad rm <urn> [<option>...]
+
+OPTIONS
+    --help    Print help
+"#,
+};
+
+pub struct Options {
+    urn: Urn,
+}
+
+impl Args for Options {
+    fn from_env() -> anyhow::Result<Self> {
+        use lexopt::prelude::*;
+
+        let mut parser = lexopt::Parser::from_env();
+        let mut urn: Option<Urn> = None;
+
+        if let Some(arg) = parser.next()? {
+            match arg {
+                Long("help") => {
+                    return Err(Error::Help.into());
+                }
+                Value(val) if urn.is_none() => {
+                    let val = val.to_string_lossy();
+                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
+
+                    urn = Some(val);
+                }
+                _ => return Err(anyhow::anyhow!(arg.unexpected())),
+            }
+        }
+
+        Ok(Options {
+            urn: urn
+                .ok_or_else(|| anyhow!("a URN to remove must be provided; see `rad rm --help`"))?,
+        })
+    }
+}
+
+pub fn run(options: Options) -> anyhow::Result<()> {
+    let profile = profile::Profile::load()?;
+    let sock = keys::ssh_auth_sock();
+    let (_, storage) = keys::storage(&profile, sock)?;
+
+    if project::get(&storage, &options.urn)?.is_none() {
+        anyhow::bail!("project {} does not exist", options.urn);
+    }
+    term::warning("Warning: experimental tool; use at your own risk!");
+
+    rad_untrack::run(rad_untrack::Options {
+        urn: options.urn.clone(),
+        peer: None,
+    })?;
+
+    let monorepo = profile.paths().git_dir();
+    let namespace = monorepo
+        .join("refs")
+        .join("namespaces")
+        .join(options.urn.encode_id());
+
+    if term::confirm(format!(
+        "Are you sure you would like to delete {}?",
+        term::format::dim(namespace.display())
+    )) {
+        fs::remove_dir_all(namespace)?;
+        term::success!("Successfully removed project {}", options.urn);
+    }
+
+    Ok(())
+}

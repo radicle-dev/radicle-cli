@@ -4912,6 +4912,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-rm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-common",
+ "rad-terminal",
+ "rad-untrack",
+]
+
+[[package]]
 name = "rad-show"
 version = "0.1.0"
 dependencies = [
@@ -5088,6 +5100,7 @@ dependencies = [
  "rad-ls",
  "rad-profile",
  "rad-push",
+ "rad-rm",
  "rad-show",
  "rad-sync",
  "rad-terminal",

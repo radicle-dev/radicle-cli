@@ -236,6 +236,15 @@ pub mod components {
         Spinner { message, progress }
     }
 
+    pub fn confirm<D: fmt::Display>(prompt: D) -> bool {
+        dialoguer::Confirm::new()
+            .with_prompt(format!("{} {}", style(" ⤷".to_owned()).cyan(), prompt))
+            .wait_for_newline(true)
+            .default(false)
+            .interact()
+            .unwrap_or_default()
+    }
+
     pub fn pwhash(secret: SecUtf8) -> Pwhash<keys::CachedPrompt> {
         let prompt = keys::CachedPrompt::new(secret);
         Pwhash::new(prompt, KdfParams::recommended())

@@ -121,6 +121,13 @@ pub fn get_head<'r>(
     Ok(oid)
 }
 
+pub fn get(storage: &Storage, urn: &Urn) -> Result<Option<Metadata>, Error> {
+    let proj = project::get(storage, urn)?;
+    let meta = proj.map(|p| p.try_into()).transpose()?;
+
+    Ok(meta)
+}
+
 pub fn repository() -> Result<Repository, Error> {
     match Repository::open(".") {
         Ok(repo) => Ok(repo),

@@ -27,6 +27,7 @@ rad-track = { path = "./track" }
 rad-untrack = { path = "./untrack" }
 rad-help = { path = "./help" }
 rad-ls = { path = "./ls" }
+rad-rm = { path = "./rm" }
 ethers = { version = "0.6.2" }
 link-identities = { version = "0" }
 radicle-git-helpers = { version = "0" }
@@ -48,6 +49,7 @@ members = [
   "rad",
   "init",
   "ls",
+  "rm",
   "push",
   "sync",
   "show",
