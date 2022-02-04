@@ -4,6 +4,25 @@ version = "0.0.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 
+[package.metadata.deb]
+assets = [
+    ["target/release/rad-show", "usr/bin/rad-show", "755"],
+    ["target/release/rad-account", "usr/bin/rad-account", "755"],
+    ["target/release/rad-sync", "usr/bin/rad-sync", "755"],
+    ["target/release/rad-help", "usr/bin/rad-help", "755"],
+    ["target/release/rad-ens", "usr/bin/rad-ens", "755"],
+    ["target/release/rad-push", "usr/bin/rad-push", "755"],
+    ["target/release/rad", "usr/bin/rad", "755"],
+    ["target/release/rad-auth", "usr/bin/rad-auth", "755"],
+    ["target/release/rad-track", "usr/bin/rad-track", "755"],
+    ["target/release/rad-ls", "usr/bin/rad-ls", "755"],
+    ["target/release/rad-init", "usr/bin/rad-init", "755"],
+    ["target/release/rad-checkout", "usr/bin/rad-checkout", "755"],
+    ["target/release/rad-untrack", "usr/bin/rad-untrack", "755"],
+    ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
+    ["radicle-tools.1.gz", "usr/share/man/man1/radicle-tools.1.gz", "644"],
+]
+
 [dependencies]
 anyhow = "1.0"
 lexopt = "0.2"
