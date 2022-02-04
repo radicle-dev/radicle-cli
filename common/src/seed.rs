@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, Context as _, Result};
 use librad::crypto::peer::PeerId;
+use librad::git::Urn;
 use url::Url;
 
 use crate::git;
@@ -54,13 +55,14 @@ pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
     Ok(id)
 }
 
-pub fn push_delegate_id(
+pub fn push_delegate(
     repo: &Path,
     seed: &Url,
-    self_id: &str,
+    delegate: &Urn,
     peer_id: PeerId,
 ) -> Result<String, anyhow::Error> {
-    let url = seed.join(self_id)?;
+    let delegate_id = delegate.encode_id();
+    let url = seed.join(&delegate_id)?;
 
     git::git(
         repo,
@@ -70,19 +72,21 @@ pub fn push_delegate_id(
             url.as_str(),
             &format!(
                 "refs/namespaces/{}/refs/rad/*:refs/remotes/{}/rad/*",
-                self_id, peer_id
+                delegate_id,
+                peer_id.default_encoding()
             ),
         ],
     )
 }
 
-pub fn push_project_id(
+pub fn push_project(
     repo: &Path,
     seed: &Url,
-    project_id: &str,
+    project: &Urn,
     peer_id: PeerId,
 ) -> Result<String, anyhow::Error> {
-    let url = seed.join(project_id)?;
+    let project_id = project.encode_id();
+    let url = seed.join(&project_id)?;
 
     git::git(
         repo,
@@ -93,7 +97,8 @@ pub fn push_project_id(
             url.as_str(),
             &format!(
                 "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
-                project_id, peer_id
+                project_id,
+                peer_id.default_encoding()
             ),
         ],
     )
@@ -102,10 +107,11 @@ pub fn push_project_id(
 pub fn push_refs(
     repo: &Path,
     seed: &Url,
-    project_id: &str,
+    project: &Urn,
     peer_id: PeerId,
 ) -> Result<String, anyhow::Error> {
-    let url = seed.join(project_id)?;
+    let project_id = project.encode_id();
+    let url = seed.join(&project_id)?;
 
     git::git(
         repo,
@@ -138,9 +144,10 @@ pub fn fetch_project(
     repo: &Path,
     seed: &Url,
     seed_id: &PeerId,
-    project_id: &str,
+    project: &Urn,
 ) -> Result<String, anyhow::Error> {
-    let url = seed.join(project_id)?;
+    let project_id = project.encode_id();
+    let url = seed.join(&project_id)?;
 
     git::git(
         repo,
@@ -161,10 +168,11 @@ pub fn fetch_project(
 pub fn fetch_remotes(
     repo: &Path,
     seed: &Url,
-    project_id: &str,
+    project: &Urn,
     remotes: &[PeerId],
 ) -> Result<String, anyhow::Error> {
-    let url = seed.join(project_id)?;
+    let project_id = project.encode_id();
+    let url = seed.join(&project_id)?;
     let mut args = Vec::new();
 
     args.extend(["fetch", "--verbose", "--force", "--atomic", url.as_str()].map(|s| s.to_string()));

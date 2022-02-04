@@ -151,12 +151,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    if options.urn.is_none() && project::get(&storage, &project_urn)?.is_none() {
-        anyhow::bail!(
-            "this project was not found in your local storage, perhaps it was initialized with another profile?"
-        );
-    }
-
     let seed = &if let Some(seed) = options.seed {
         if options.http {
             Url::parse(&format!("http://{}", seed)).unwrap()
@@ -204,7 +198,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         };
 
         let spinner = term::spinner("Fetching project identity...");
-        match seed::fetch_project(monorepo, seed, &seed_id, &project_id) {
+        match seed::fetch_project(monorepo, seed, &seed_id, &project_urn) {
             Ok(output) => {
                 spinner.finish();
 
@@ -244,7 +238,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 remotes.len().to_string()
             }
         ));
-        match seed::fetch_remotes(monorepo, seed, &project_id, &remotes) {
+        match seed::fetch_remotes(monorepo, seed, &project_urn, &remotes) {
             Ok(output) => {
                 spinner.finish();
 
@@ -262,10 +256,15 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
 
     let peer_id = profile::peer_id(&storage)?;
-    let user_urn = profile::user(&storage)?;
-    let self_id = Urn::encode_id(&user_urn);
     let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
         .context("git signing key is not properly configured")?;
+    let proj = project::get(&storage, &project_urn)?.ok_or_else(|| {
+        anyhow!(
+            "project {} was not found in local storage under profile {}",
+            project_urn,
+            profile.id()
+        )
+    })?;
 
     term::info!("Git signing key {}", term::format::dim(signing_key));
     term::info!(
@@ -275,8 +274,27 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     );
     term::blank();
 
-    let mut spinner = term::spinner(&format!("Syncing delegate identity {}...", &self_id));
-    match seed::push_delegate_id(monorepo, seed, &self_id, peer_id) {
+    // Sync project delegates to seed.
+    for delegate in proj.delegates.iter() {
+        let spinner = term::spinner(&format!("Syncing delegate {}...", &delegate.encode_id()));
+        match seed::push_delegate(monorepo, seed, delegate, peer_id) {
+            Ok(output) => {
+                spinner.finish();
+
+                if options.verbose {
+                    term::blob(output);
+                }
+            }
+            Err(err) => {
+                spinner.failed();
+                term::blank();
+                return Err(err);
+            }
+        }
+    }
+
+    let spinner = term::spinner("Syncing project identity...");
+    match seed::push_project(monorepo, seed, &project_urn, peer_id) {
         Ok(output) => {
             spinner.finish();
 
@@ -291,24 +309,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     }
 
-    spinner = term::spinner("Syncing project identity...");
-    match seed::push_project_id(monorepo, seed, &project_id, peer_id) {
-        Ok(output) => {
-            spinner.finish();
-
-            if options.verbose {
-                term::blob(output);
-            }
-        }
-        Err(err) => {
-            spinner.failed();
-            term::blank();
-            return Err(err);
-        }
-    }
-
-    spinner = term::spinner("Syncing project refs...");
-    match seed::push_refs(monorepo, seed, &project_id, peer_id) {
+    let spinner = term::spinner("Syncing project refs...");
+    match seed::push_refs(monorepo, seed, &project_urn, peer_id) {
         Ok(output) => {
             spinner.finish();
 
