@@ -9,7 +9,6 @@ use librad::git::Urn;
 pub use librad::profile::{Profile, ProfileId, RadHome};
 
 use rad_profile;
-use rad_terminal::components as term;
 
 pub fn default() -> Result<Profile, Error> {
     match rad_profile::get(None, None) {
@@ -44,10 +43,7 @@ pub fn user(storage: &Storage) -> Result<Urn, Error> {
     match storage.config_readonly() {
         Ok(config) => match config.user() {
             Ok(urn) => Ok(urn.unwrap()),
-            Err(err) => {
-                term::error(&format!("Could not read user. {:?}", err));
-                Err(anyhow::Error::new(err))
-            }
+            Err(err) => Err(err).context("could not read user"),
         },
         Err(err) => Err(anyhow::Error::new(err)),
     }
@@ -57,10 +53,7 @@ pub fn peer_id(storage: &Storage) -> Result<PeerId, Error> {
     match storage.config_readonly() {
         Ok(config) => match config.peer_id() {
             Ok(peer_id) => Ok(peer_id),
-            Err(err) => {
-                term::error(&format!("Could not read peer id. {:?}", err));
-                Err(anyhow::Error::new(err))
-            }
+            Err(err) => Err(err).context("could not read peer id"),
         },
         Err(err) => Err(anyhow::Error::new(err)),
     }
