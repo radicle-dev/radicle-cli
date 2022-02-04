@@ -5,6 +5,7 @@ use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::components as term;
 use rad_terminal::components::{Args, Error, Help};
 
+use anyhow::anyhow;
 use anyhow::Context as _;
 use url::{Host, Url};
 
@@ -17,7 +18,7 @@ pub const HELP: Help = Help {
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
 USAGE
-    rad sync [--seed <host>] [--fetch] [--http]
+    rad sync [<urn>] [--seed <host>] [--fetch] [--http]
 
 OPTIONS
     --seed <host>    Use the given seed node for syncing
@@ -64,6 +65,7 @@ impl FromStr for Addr {
 
 pub struct Options {
     pub seed: Option<Addr>,
+    pub urn: Option<Urn>,
     pub http: bool,
     pub verbose: bool,
     pub fetch: bool,
@@ -78,6 +80,7 @@ impl Args for Options {
         let mut verbose = false;
         let mut fetch = false;
         let mut http = false;
+        let mut urn: Option<Urn> = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -102,6 +105,12 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
+                Value(val) if urn.is_none() => {
+                    let val = val.to_string_lossy();
+                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
+
+                    urn = Some(val);
+                }
                 _ => {
                     return Err(anyhow::anyhow!(arg.unexpected()));
                 }
@@ -112,6 +121,7 @@ impl Args for Options {
             seed,
             http,
             fetch,
+            urn,
             verbose,
         })
     }
@@ -123,10 +133,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let (_, storage) = keys::storage(&profile, sock)?;
     let monorepo = profile.paths().git_dir();
 
-    let repo = project::repository()?;
-    let remote = project::remote(&repo)?;
-    let project_urn = &remote.url.urn;
-    let project_id = Urn::encode_id(&remote.url.urn);
+    let project_urn = if let Some(urn) = &options.urn {
+        urn.clone()
+    } else {
+        let repo = project::repository()?;
+        project::remote(&repo)?.url.urn
+    };
+    let project_id = project_urn.encode_id();
     let git_version = git::version()?;
 
     term::info!("Git version {}", git_version);
@@ -138,7 +151,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    if identities::project::get(&storage, project_urn)?.is_none() {
+    if options.urn.is_none() && project::get(&storage, &project_urn)?.is_none() {
         anyhow::bail!(
             "this project was not found in your local storage, perhaps it was initialized with another profile?"
         );
@@ -173,19 +186,55 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         term::blank();
         term::info!(
             "Syncing 🌱 project {} from {}",
-            term::format::highlight(project_urn),
+            term::format::highlight(&project_urn),
             term::format::highlight(seed)
         );
         term::blank();
 
-        let track_everyone = tracking::default_only(&storage, project_urn)
+        let seed_id = seed::get_seed_id(seed.clone())?;
+        term::info!("Seed ID is {}", term::format::highlight(seed_id));
+
+        let track_everyone = tracking::default_only(&storage, &project_urn)
             .context("couldn't read tracking graph")?;
 
         let remotes = if track_everyone {
             vec![]
         } else {
-            tracking::tracked_peers(&storage, Some(project_urn))?.collect::<Result<Vec<_>, _>>()?
+            tracking::tracked_peers(&storage, Some(&project_urn))?.collect::<Result<Vec<_>, _>>()?
         };
+
+        let spinner = term::spinner("Fetching project identity...");
+        match seed::fetch_project(monorepo, seed, &seed_id, &project_id) {
+            Ok(output) => {
+                spinner.finish();
+
+                if options.verbose {
+                    term::blob(output);
+                }
+            }
+            Err(err) => {
+                spinner.failed();
+                term::blank();
+                return Err(err);
+            }
+        }
+
+        let spinner = term::spinner("Verifying...");
+        match identities::project::verify(&storage, &project_urn) {
+            Ok(Some(_)) => {
+                spinner.finish();
+            }
+            Ok(None) => {
+                spinner.failed();
+                term::blank();
+                return Err(anyhow!("project is inaccessible"));
+            }
+            Err(err) => {
+                spinner.failed();
+                term::blank();
+                return Err(err.into());
+            }
+        }
 
         let spinner = term::spinner(&format!(
             "Fetching {} remotes...",
@@ -195,7 +244,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 remotes.len().to_string()
             }
         ));
-
         match seed::fetch_remotes(monorepo, seed, &project_id, &remotes) {
             Ok(output) => {
                 spinner.finish();
@@ -222,7 +270,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     term::info!("Git signing key {}", term::format::dim(signing_key));
     term::info!(
         "Syncing 🌱 project {} to {}",
-        term::format::highlight(project_urn),
+        term::format::highlight(&project_urn),
         term::format::highlight(seed)
     );
     term::blank();

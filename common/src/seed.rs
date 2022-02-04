@@ -37,8 +37,9 @@ pub fn set_seed(seed: &Url) -> Result<(), anyhow::Error> {
     .context("failed to save seed configuration")
 }
 
-pub fn get_seed_id(host: &str) -> Result<PeerId, anyhow::Error> {
-    let seed = format!("https://{}:{}/v1/peer", host, DEFAULT_SEED_API_PORT);
+pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
+    seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
+    seed = seed.join("/v1/peer")?;
 
     let agent = ureq::Agent::new();
     let obj: serde_json::Value = agent.get(seed.as_str()).call()?.into_json()?;
@@ -68,7 +69,7 @@ pub fn push_delegate_id(
             "--signed",
             url.as_str(),
             &format!(
-                "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
+                "refs/namespaces/{}/refs/rad/*:refs/remotes/{}/rad/*",
                 self_id, peer_id
             ),
         ],
@@ -118,12 +119,40 @@ pub fn push_refs(
                 project_id, peer_id
             ),
             &format!(
+                "refs/namespaces/{}/refs/rad/self:refs/remotes/{}/rad/self",
+                project_id, peer_id
+            ),
+            &format!(
                 "refs/namespaces/{}/refs/rad/signed_refs:refs/remotes/{}/rad/signed_refs",
                 project_id, peer_id
             ),
             &format!(
                 "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
                 project_id, peer_id
+            ),
+        ],
+    )
+}
+
+pub fn fetch_project(
+    repo: &Path,
+    seed: &Url,
+    seed_id: &PeerId,
+    project_id: &str,
+) -> Result<String, anyhow::Error> {
+    let url = seed.join(project_id)?;
+
+    git::git(
+        repo,
+        [
+            "fetch",
+            "--verbose",
+            "--atomic",
+            url.as_str(),
+            &format!(
+                "refs/rad/*:refs/namespaces/{}/refs/remotes/{}/rad/*",
+                seed_id.default_encoding(),
+                project_id
             ),
         ],
     )

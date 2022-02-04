@@ -179,19 +179,24 @@ async fn setup(
             }
         }
     };
-    let seed_url = seed::get_seed().ok();
-    let seed_host = seed_url.and_then(|url| url.host_str().map(|s| s.to_owned()));
-    let seed_host = term::text_input("Seed host", seed_host)?;
 
-    let spinner = term::spinner("Seed ID...");
-    let seed_id = match seed::get_seed_id(&seed_host) {
+    let seed_host = if let Ok(seed_url) = seed::get_seed() {
+        seed_url.host_str().map(|s| s.to_owned())
+    } else {
+        None
+    };
+    let seed_host = term::text_input("Seed host", seed_host)?;
+    let seed_url = url::Url::parse(&format!("https://{}", seed_host))?;
+
+    let spinner = term::spinner("Querying seed...");
+    let seed_id = match seed::get_seed_id(seed_url) {
         Ok(id) => {
             spinner.clear();
             term::text_input("Seed ID", Some(id))?
         }
         Err(err) => {
             spinner.failed();
-            return Err(anyhow!("error fetching peer id from seed: {}", err));
+            return Err(anyhow!("error querying seed: {}", err));
         }
     };
     let address_current = resolver.address(name).await?;
