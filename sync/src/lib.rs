@@ -69,6 +69,7 @@ pub struct Options {
     pub http: bool,
     pub verbose: bool,
     pub fetch: bool,
+    pub force: bool,
 }
 
 impl Args for Options {
@@ -81,6 +82,7 @@ impl Args for Options {
         let mut fetch = false;
         let mut http = false;
         let mut urn: Option<Urn> = None;
+        let mut force = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -105,6 +107,9 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
+                Long("force") | Short('f') => {
+                    force = true;
+                }
                 Value(val) if urn.is_none() => {
                     let val = val.to_string_lossy();
                     let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
@@ -121,6 +126,7 @@ impl Args for Options {
             seed,
             http,
             fetch,
+            force,
             urn,
             verbose,
         })

@@ -13,10 +13,17 @@ fn run(options: rad_sync::Options) -> anyhow::Result<()> {
         anyhow::bail!("option `--fetch` cannot be used when pushing");
     }
     term::info!("Pushing 🌱 to remote `rad`");
-    term::subcommand("git push rad");
+
+    let args = if options.force {
+        term::subcommand("git push --force rad");
+        vec!["push", "--force", "rad"]
+    } else {
+        term::subcommand("git push rad");
+        vec!["push", "rad"]
+    };
 
     // Push to monorepo.
-    match git::git(Path::new("."), ["push", "rad"]) {
+    match git::git(Path::new("."), args) {
         Ok(output) => term::blob(output),
         Err(err) => return Err(err),
     }
