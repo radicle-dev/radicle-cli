@@ -26,7 +26,9 @@ radicle network.
 There are a few important requirements for running the radicle tools: first, a
 recent version of *git* (*2.34.0* or later) must be installed. You can check
 your installation by running *git --version*. Second, *ssh-agent* must be
-installed and running.
+installed and running. Finally, a recent version of *OpenSSH* (*8.0* or later)
+should be installed. This is to allow for SSH signing functionality which
+radicle uses to authenticate the user.
 
 == Getting started
 
