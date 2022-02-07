@@ -212,7 +212,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         };
 
         let spinner = term::spinner("Fetching project identity...");
-        match seed::fetch_project(monorepo, seed, &seed_id, &project_urn) {
+        match seed::fetch_identity(monorepo, seed, &project_urn) {
             Ok(output) => {
                 spinner.finish();
 
@@ -224,6 +224,30 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 spinner.failed();
                 term::blank();
                 return Err(err);
+            }
+        }
+
+        let proj =
+            project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
+
+        for delegate in proj.delegates {
+            let spinner = term::spinner(&format!(
+                "Fetching project delegate {}...",
+                delegate.encode_id()
+            ));
+            match seed::fetch_identity(monorepo, seed, &delegate) {
+                Ok(output) => {
+                    spinner.finish();
+
+                    if options.verbose {
+                        term::blob(output);
+                    }
+                }
+                Err(err) => {
+                    spinner.failed();
+                    term::blank();
+                    return Err(err);
+                }
             }
         }
 
@@ -241,6 +265,22 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 spinner.failed();
                 term::blank();
                 return Err(err.into());
+            }
+        }
+
+        let spinner = term::spinner("Fetching project heads...");
+        match seed::fetch_heads(monorepo, seed, &project_urn) {
+            Ok(output) => {
+                spinner.finish();
+
+                if options.verbose {
+                    term::blob(output);
+                }
+            }
+            Err(err) => {
+                spinner.failed();
+                term::blank();
+                return Err(err);
             }
         }
 

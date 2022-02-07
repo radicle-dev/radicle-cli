@@ -140,14 +140,9 @@ pub fn push_refs(
     )
 }
 
-pub fn fetch_project(
-    repo: &Path,
-    seed: &Url,
-    seed_id: &PeerId,
-    project: &Urn,
-) -> Result<String, anyhow::Error> {
-    let project_id = project.encode_id();
-    let url = seed.join(&project_id)?;
+pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyhow::Error> {
+    let id = urn.encode_id();
+    let url = seed.join(&id)?;
 
     git::git(
         repo,
@@ -156,11 +151,23 @@ pub fn fetch_project(
             "--verbose",
             "--atomic",
             url.as_str(),
-            &format!(
-                "refs/rad/*:refs/namespaces/{}/refs/remotes/{}/rad/*",
-                seed_id.default_encoding(),
-                project_id
-            ),
+            &format!("refs/rad/*:refs/namespaces/{}/refs/rad/*", id),
+        ],
+    )
+}
+
+pub fn fetch_heads(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyhow::Error> {
+    let id = urn.encode_id();
+    let url = seed.join(&id)?;
+
+    git::git(
+        repo,
+        [
+            "fetch",
+            "--verbose",
+            "--atomic",
+            url.as_str(),
+            &format!("refs/heads/*:refs/namespaces/{}/refs/heads/*", id,),
         ],
     )
 }
