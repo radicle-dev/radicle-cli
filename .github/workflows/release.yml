@@ -1,0 +1,100 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        build:
+          - linux-latest-stable-rust
+          - macos-latest-stable-rust
+        include:
+          - build: linux-latest-stable-rust
+            os: ubuntu-latest
+            rust: stable
+          - build: macos-latest-stable-rust
+            os: macos-latest
+            rust: stable
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Update dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y pkg-config libudev-dev asciidoctor
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-latest'
+        run: brew install asciidoctor
+      - uses: actions/checkout@v2
+      - name: Configure build cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+      - name: Build
+        run: cargo build --release
+        env:
+          RUSTFLAGS: -D warnings
+      - name: script
+        run: .github/build-man-page.bash radicle-tools.1.adoc >radicle-tools.1.gz
+        shell: bash
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+      - run: cargo install cargo-deb
+        if: matrix.os == 'ubuntu-latest'
+      - run: cargo deb
+        if: matrix.os == 'ubuntu-latest'
+      - name: Release (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          fail_on_unmatched_files: true
+          files: |
+            target/release/rad-show
+            target/release/rad-account
+            target/release/rad-sync
+            target/release/rad-help
+            target/release/rad-ens
+            target/release/rad-push
+            target/release/rad
+            target/release/rad-auth
+            target/release/rad-track
+            target/release/rad-ls
+            target/release/rad-init
+            target/release/rad-checkout
+            target/release/rad-untrack
+            target/release/git-remote-rad
+            radicle-tools.1.gz
+            target/debian/*.deb
+      - name: Release (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          fail_on_unmatched_files: true
+          files: |
+            target/release/rad-show
+            target/release/rad-account
+            target/release/rad-sync
+            target/release/rad-help
+            target/release/rad-ens
+            target/release/rad-push
+            target/release/rad
+            target/release/rad-auth
+            target/release/rad-track
+            target/release/rad-ls
+            target/release/rad-init
+            target/release/rad-checkout
+            target/release/rad-untrack
+            target/release/git-remote-rad
+            radicle-tools.1.gz
