@@ -1,6 +1,6 @@
 use rad_rm::{run, Options, HELP};
-use rad_terminal::components as term;
+use rad_terminal::args;
 
 fn main() {
-    term::run_command::<Options, _>(HELP, "Removing", run);
+    args::run_command::<Options, _>(HELP, "Removing", run);
 }

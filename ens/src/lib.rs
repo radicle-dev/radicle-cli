@@ -1,3 +1,5 @@
+use std::ffi::OsString;
+
 use anyhow::anyhow;
 
 use ethers::prelude::{Address, Http, Provider, Signer, SignerMiddleware};
@@ -5,8 +7,8 @@ use librad::git::identities::local::LocalIdentity;
 
 use rad_common::ethereum::{ProviderOptions, SignerOptions};
 use rad_common::{ethereum, keys, person, profile, seed};
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-use rad_terminal::components::{Args, Error, Help};
 
 use crate::resolver::PublicResolver;
 
@@ -17,23 +19,27 @@ pub const HELP: Help = Help {
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
+Usage
+
     rad ens --setup     [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
     rad ens --setup     [<option>...] [--rpc-url <url>] --keystore <file>
     rad ens <operation> [<option>...]
 
-OPERATIONS
+Operations
+
     --setup [<name>]             Associate your local radicle id with an ENS name
 
-OPTIONS
+Options
+
     --help                       Print help
 
-WALLET OPTIONS
+Wallet options
+
     --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
     --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware device
     --keystore <file>            Keystore file containing encrypted private key (default: none)
 
-ENVIRONMENT VARIABLES
+Environment variables
 
     ETH_RPC_URL  Ethereum JSON-RPC URL (overwrite with '--rpc-url')
     ETH_HDPATH   Hardware wallet derivation path (overwrite with '--ledger-hdpath')
@@ -53,10 +59,10 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let parser = lexopt::Parser::from_env();
+        let parser = lexopt::Parser::from_args(args);
         let (provider, parser) = ProviderOptions::from(parser)?;
         let (signer, mut parser) = SignerOptions::from(parser)?;
         let mut operation = None;
@@ -82,12 +88,16 @@ impl Args for Options {
             }
         }
 
-        Ok(Options {
-            operation: operation
-                .ok_or_else(|| anyhow!("an operation must be specified, see 'rad ens --help'"))?,
-            provider,
-            signer,
-        })
+        Ok((
+            Options {
+                operation: operation.ok_or_else(|| {
+                    anyhow!("an operation must be specified, see 'rad ens --help'")
+                })?,
+                provider,
+                signer,
+            },
+            vec![],
+        ))
     }
 }
 

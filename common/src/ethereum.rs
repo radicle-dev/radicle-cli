@@ -14,9 +14,8 @@ use ethers::prelude::*;
 use ethers::types::transaction::eip712::Eip712;
 use ethers::types::Chain;
 
+use rad_terminal::args;
 use rad_terminal::components as term;
-
-use crate::args;
 
 pub const RADICLE_DOMAIN: &str = ".radicle.eth";
 

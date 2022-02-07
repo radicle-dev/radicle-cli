@@ -1,3 +1,5 @@
+pub mod args;
+
 pub mod keys {
     use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
 
@@ -20,8 +22,8 @@ pub mod keys {
 }
 
 pub mod components {
+    use std::fmt;
     use std::str::FromStr;
-    use std::{fmt, process};
 
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
     use librad::crypto::keystore::pinentry::SecUtf8;
@@ -51,30 +53,6 @@ pub mod components {
 
     pub use info;
     pub use success;
-
-    pub struct Help {
-        pub name: &'static str,
-        pub description: &'static str,
-        pub version: &'static str,
-        pub usage: &'static str,
-    }
-
-    pub trait Args: Sized {
-        fn from_env() -> anyhow::Result<Self>;
-    }
-
-    #[derive(thiserror::Error, Debug)]
-    pub enum Error {
-        /// If this error is returned from argument parsing, help is displayed.
-        #[error("help invoked")]
-        Help,
-        /// An error with a hint.
-        #[error("{err}")]
-        WithHint {
-            err: anyhow::Error,
-            hint: &'static str,
-        },
-    }
 
     #[derive(Debug)]
     pub struct Table<const W: usize> {
@@ -128,32 +106,6 @@ pub mod components {
 
         pub fn clear(self) {
             self.progress.finish_and_clear();
-        }
-    }
-
-    pub fn run_command<A, F>(help: Help, action: &str, run: F) -> !
-    where
-        A: Args,
-        F: FnOnce(A) -> anyhow::Result<()>,
-    {
-        let options = match A::from_env() {
-            Ok(opts) => opts,
-            Err(err) => {
-                if let Some(Error::Help) = err.downcast_ref::<Error>() {
-                    self::usage(help.name, help.version, help.description, help.usage);
-                    process::exit(0);
-                }
-                self::failure(help.name, &err);
-                process::exit(1);
-            }
-        };
-
-        match run(options) {
-            Ok(()) => process::exit(0),
-            Err(err) => {
-                self::format::error(&format!("{} failed", action), &err);
-                process::exit(1);
-            }
         }
     }
 
@@ -416,7 +368,7 @@ pub mod components {
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
-            use super::Error;
+            use crate::args::Error;
 
             let err = error.to_string();
             let err = err.trim_end();

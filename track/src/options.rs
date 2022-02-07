@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -6,7 +7,7 @@ use anyhow::Context as _;
 use librad::git::Urn;
 use librad::PeerId;
 
-use rad_terminal::components::{Args, Error};
+use rad_terminal::args::{Args, Error};
 
 /// Tool options.
 /// Nb. These options are also used by the `untrack` tool.
@@ -17,10 +18,10 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Options> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
         let mut urn: Option<Urn> = None;
         let mut peer: Option<PeerId> = None;
 
@@ -49,9 +50,12 @@ impl Args for Options {
             }
         }
 
-        Ok(Options {
-            urn: urn.ok_or_else(|| anyhow!("a tracking URN must be specified"))?,
-            peer,
-        })
+        Ok((
+            Options {
+                urn: urn.ok_or_else(|| anyhow!("a tracking URN must be specified"))?,
+                peer,
+            },
+            vec![],
+        ))
     }
 }

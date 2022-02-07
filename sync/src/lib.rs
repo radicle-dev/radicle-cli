@@ -2,13 +2,16 @@ use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 
 use rad_common::{git, keys, profile, project, seed};
+use rad_terminal::args;
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-use rad_terminal::components::{Args, Error, Help};
 
 use anyhow::anyhow;
 use anyhow::Context as _;
 use url::{Host, Url};
 
+use std::ffi::OsString;
+use std::iter;
 use std::str::FromStr;
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
@@ -17,10 +20,12 @@ pub const HELP: Help = Help {
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
+Usage
+
     rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch]
 
-OPTIONS
+Options
+
     --seed <host>       Use the given seed node for syncing
     --seed-url <url>    Use the given seed node URL for syncing
     --fetch             Fetch updates (default: false)
@@ -28,6 +33,7 @@ OPTIONS
 "#,
 };
 
+#[derive(Debug)]
 pub struct Addr {
     pub host: Host,
     pub port: Option<u16>,
@@ -63,6 +69,7 @@ impl FromStr for Addr {
     }
 }
 
+#[derive(Default, Debug)]
 pub struct Options {
     pub seed: Option<Addr>,
     pub seed_url: Option<Url>,
@@ -73,16 +80,17 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
         let mut seed: Option<Addr> = None;
         let mut seed_url: Option<Url> = None;
         let mut verbose = false;
         let mut fetch = false;
         let mut urn: Option<Urn> = None;
         let mut force = false;
+        let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -122,20 +130,41 @@ impl Args for Options {
 
                     urn = Some(val);
                 }
-                _ => {
-                    return Err(anyhow::anyhow!(arg.unexpected()));
+                arg => {
+                    unparsed = iter::once(args::format(arg))
+                        .chain(iter::from_fn(|| parser.value().ok()))
+                        .collect();
+
+                    break;
                 }
             }
         }
 
-        Ok(Options {
-            seed,
-            seed_url,
-            fetch,
-            force,
-            urn,
-            verbose,
-        })
+        Ok((
+            Options {
+                seed,
+                seed_url,
+                fetch,
+                force,
+                urn,
+                verbose,
+            },
+            unparsed,
+        ))
+    }
+
+    fn from_env() -> anyhow::Result<Self> {
+        let mut parser = lexopt::Parser::from_env();
+        let args = iter::from_fn(|| parser.value().ok()).collect();
+
+        match Self::from_args(args) {
+            Ok((opts, unparsed)) => {
+                args::finish(unparsed)?;
+
+                Ok(opts)
+            }
+            Err(err) => Err(err),
+        }
     }
 }
 

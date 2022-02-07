@@ -1,5 +1,5 @@
-use rad_terminal::components as term;
+use rad_terminal::args;
 
 fn main() {
-    term::run_command::<rad_help::Options, _>(rad_help::HELP, "Help", rad_help::run);
+    args::run_command::<rad_help::Options, _>(rad_help::HELP, "Help", rad_help::run);
 }

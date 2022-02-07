@@ -32,6 +32,7 @@ log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
 rad-exe = { version = "0" }
 rad-profile = { version = "0" }
+rad-clone = { path = "./clone" }
 rad-account = { path = "./account" }
 rad-auth = { path = "./auth" }
 rad-common = { path = "./common" }

@@ -1,20 +1,24 @@
+use std::ffi::OsString;
+
 use anyhow::Context as _;
 
 use ethers::prelude::Chain;
 use ethers::signers::{HDPath, Ledger};
 
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-use rad_terminal::components::{Args, Error, Help};
 
 pub const HELP: Help = Help {
     name: "account",
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
+Usage
+
     rad account [--testnet]
 
-OPTIONS
+Options
+
     --testnet  Use the Ethereum "Rinkeby" testnet (default: false)
 "#,
 };
@@ -27,10 +31,10 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
         let mut testnet = false;
 
         while let Some(arg) = parser.next()? {
@@ -45,7 +49,7 @@ impl Args for Options {
             }
         }
 
-        Ok(Options { testnet })
+        Ok((Options { testnet }, vec![]))
     }
 }
 

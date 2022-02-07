@@ -1,14 +1,18 @@
-use rad_terminal::components::{Args, Error, Help};
+use std::ffi::OsString;
+
+use rad_terminal::args::{Args, Error, Help};
 
 pub const HELP: Help = Help {
     name: "show",
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
-    rad show [OPTIONS]
+Usage
 
-OPTIONS
+    rad show [<option>...]
+
+Options
+
     --peer      Show device peer
     --project   Show current project
     --profile   Show current radicle profile
@@ -28,10 +32,10 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
         let mut show_peer_id = false;
         let mut show_self = false;
         let mut show_proj_id = false;
@@ -62,12 +66,15 @@ impl Args for Options {
             }
         }
 
-        Ok(Options {
-            show_self,
-            show_peer_id,
-            show_proj_id,
-            show_ssh_key,
-            show_profile_id,
-        })
+        Ok((
+            Options {
+                show_self,
+                show_peer_id,
+                show_proj_id,
+                show_ssh_key,
+                show_profile_id,
+            },
+            vec![],
+        ))
     }
 }

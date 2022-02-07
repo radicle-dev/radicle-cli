@@ -1,20 +1,22 @@
 use librad::git::tracking::git::tracking;
-use rad_terminal::components::Help;
+use rad_terminal::args::Help;
 
 use rad_common::{keys, profile};
 use rad_terminal::components as term;
 
-pub use rad_track::options::Options;
+pub use rad_track::Options;
 
 pub const HELP: Help = Help {
     name: "untrack",
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
+Usage
+
     rad untrack <urn> [--peer <peer-id>]
 
-OPTIONS
+Options
+
     --peer <peer-id>   Peer ID to track (default: all)
     --help             Print help
 "#,

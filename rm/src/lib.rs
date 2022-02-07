@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::fs;
 use std::str::FromStr;
 
@@ -6,18 +7,20 @@ use anyhow::Context as _;
 use librad::git::Urn;
 
 use rad_common::{keys, profile, project};
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-use rad_terminal::components::{Args, Error, Help};
 
 pub const HELP: Help = Help {
     name: "rm",
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
+Usage
+
     rad rm <urn> [<option>...]
 
-OPTIONS
+Options
+
     --help    Print help
 "#,
 };
@@ -27,10 +30,10 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
         let mut urn: Option<Urn> = None;
 
         if let Some(arg) = parser.next()? {
@@ -48,10 +51,14 @@ impl Args for Options {
             }
         }
 
-        Ok(Options {
-            urn: urn
-                .ok_or_else(|| anyhow!("a URN to remove must be provided; see `rad rm --help`"))?,
-        })
+        Ok((
+            Options {
+                urn: urn.ok_or_else(|| {
+                    anyhow!("a URN to remove must be provided; see `rad rm --help`")
+                })?,
+            },
+            vec![],
+        ))
     }
 }
 

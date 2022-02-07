@@ -4753,6 +4753,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-clone"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-checkout",
+ "rad-common",
+ "rad-sync",
+ "rad-terminal",
+ "rad-track",
+]
+
+[[package]]
 name = "rad-common"
 version = "0.1.0"
 dependencies = [
@@ -4824,6 +4838,7 @@ dependencies = [
  "rad-auth",
  "rad-checkout",
  "rad-clib",
+ "rad-clone",
  "rad-common",
  "rad-ens",
  "rad-init",
@@ -4958,6 +4973,7 @@ dependencies = [
  "console",
  "dialoguer",
  "indicatif",
+ "lexopt",
  "librad",
  "rad-profile",
  "thiserror",
@@ -5093,6 +5109,7 @@ dependencies = [
  "rad-account",
  "rad-auth",
  "rad-checkout",
+ "rad-clone",
  "rad-common",
  "rad-ens",
  "rad-exe",

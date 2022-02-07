@@ -8,6 +8,7 @@ anyhow = "1.0"
 dialoguer = "0.9.0"
 indicatif = "0.16.2"
 console = "0.15"
+lexopt = "0.2.0"
 librad = { version = "0" }
 rad-profile = { version = "0" }
 thiserror = "1.0"

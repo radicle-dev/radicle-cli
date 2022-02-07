@@ -1,42 +1,7 @@
-use librad::git::tracking;
-
-use rad_common::{keys, profile};
-use rad_terminal::components as term;
-use rad_track::options::Options;
+use rad_terminal::args;
 use rad_track::HELP;
+use rad_track::{run, Options};
 
 fn main() {
-    term::run_command::<Options, _>(HELP, "Tracking", run);
-}
-
-fn run(options: Options) -> anyhow::Result<()> {
-    term::info!(
-        "Establishing tracking relationship for {}...",
-        term::format::highlight(&options.urn)
-    );
-
-    let cfg = tracking::config::Config::default();
-    let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
-
-    tracking::track(
-        &storage,
-        &options.urn,
-        options.peer,
-        cfg,
-        tracking::policy::Track::Any,
-    )??;
-
-    if let Some(peer) = options.peer {
-        term::success!(
-            "Tracking relationship {} established for {}",
-            peer,
-            options.urn
-        );
-    } else {
-        term::success!("Tracking relationship for {} established", options.urn);
-    }
-
-    Ok(())
+    args::run_command::<Options, _>(HELP, "Tracking", run);
 }

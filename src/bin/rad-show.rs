@@ -1,9 +1,10 @@
 use rad_common::{keys, person, profile, project};
 use rad_show::{Options, HELP};
+use rad_terminal::args;
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options, _>(HELP, "Show", run);
+    args::run_command::<Options, _>(HELP, "Show", run);
 }
 
 fn run(mut options: Options) -> anyhow::Result<()> {

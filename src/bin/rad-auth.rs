@@ -2,10 +2,11 @@ use anyhow::Context as _;
 
 use rad_auth::{Options, HELP};
 use rad_common::{git, keys, person, profile};
+use rad_terminal::args;
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<Options, _>(HELP, "Authentication", run);
+    args::run_command::<Options, _>(HELP, "Authentication", run);
 }
 
 fn run(options: Options) -> anyhow::Result<()> {

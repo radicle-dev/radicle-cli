@@ -1,5 +1,7 @@
+use std::ffi::OsString;
+
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-use rad_terminal::components::{Args, Error, Help};
 
 pub const HELP: Help = Help {
     name: "help",
@@ -13,6 +15,7 @@ const COMMANDS: &[Help] = &[
     rad_init::HELP,
     rad_show::HELP,
     rad_account::HELP,
+    rad_clone::HELP,
     rad_ls::HELP,
     rad_push::HELP,
     rad_checkout::HELP,
@@ -27,10 +30,10 @@ const COMMANDS: &[Help] = &[
 pub struct Options {}
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
 
         if let Some(arg) = parser.next()? {
             match arg {
@@ -40,7 +43,7 @@ impl Args for Options {
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
-        Ok(Options {})
+        Ok((Options {}, vec![]))
     }
 }
 

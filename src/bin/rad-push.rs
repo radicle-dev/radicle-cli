@@ -2,10 +2,11 @@ use std::path::Path;
 
 use rad_common::git;
 use rad_push::HELP;
+use rad_terminal::args;
 use rad_terminal::components as term;
 
 fn main() {
-    term::run_command::<rad_sync::Options, _>(HELP, "Push", run);
+    args::run_command::<rad_sync::Options, _>(HELP, "Push", run);
 }
 
 fn run(options: rad_sync::Options) -> anyhow::Result<()> {

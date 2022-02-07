@@ -1,16 +1,20 @@
+use std::ffi::OsString;
+
 use rad_common::{keys, profile, project};
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-use rad_terminal::components::{Args, Error, Help};
 
 pub const HELP: Help = Help {
     name: "ls",
     description: env!("CARGO_PKG_DESCRIPTION"),
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
-USAGE
-    rad ls [OPTIONS]
+Usage
 
-OPTIONS
+    rad ls [<option>...]
+
+Options
+
     --help    Print help
 "#,
 };
@@ -18,7 +22,7 @@ OPTIONS
 pub struct Options {}
 
 impl Args for Options {
-    fn from_env() -> anyhow::Result<Self> {
+    fn from_args(_args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_env();
@@ -32,7 +36,7 @@ impl Args for Options {
             }
         }
 
-        Ok(Options {})
+        Ok((Options {}, vec![]))
     }
 }
 
