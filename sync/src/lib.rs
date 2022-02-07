@@ -144,6 +144,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
     let monorepo = profile.paths().git_dir();
+    let mut tips = Vec::new();
 
     let project_urn = if let Some(urn) = &options.urn {
         urn.clone()
@@ -179,6 +180,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             term::info!("Saving seed configuration to git...");
 
             seed::set_seed(&url)?;
+
+            tips.push("To override the seed, pass the `--seed` flag to `rad sync` or `rad push` (see `rad sync --help`).");
+            tips.push("To change the configured seed, run `git config --global rad.seed <url>` with a seed URL.");
 
             url
         } else {
@@ -260,6 +264,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 spinner.failed();
                 term::blank();
                 return Err(err);
+            }
+        }
+
+        if !tips.is_empty() {
+            for tip in tips {
+                term::tip(tip);
             }
         }
         return Ok(());
@@ -374,6 +384,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             term::format::highlight(format!("{}.git", git_url)),
         ));
         term::blank();
+    }
+
+    if !tips.is_empty() {
+        for tip in tips {
+            term::tip(tip);
+        }
     }
 
     Ok(())
