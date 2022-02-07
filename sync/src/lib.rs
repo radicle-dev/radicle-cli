@@ -259,7 +259,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             Ok(None) => {
                 spinner.failed();
                 term::blank();
-                return Err(anyhow!("project is inaccessible"));
+                return Err(anyhow!("project could not be loaded!"));
             }
             Err(err) => {
                 spinner.failed();
