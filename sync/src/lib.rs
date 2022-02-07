@@ -18,13 +18,13 @@ pub const HELP: Help = Help {
     version: env!("CARGO_PKG_VERSION"),
     usage: r#"
 USAGE
-    rad sync [<urn>] [--seed <host>] [--fetch] [--http]
+    rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch]
 
 OPTIONS
-    --seed <host>    Use the given seed node for syncing
-    --fetch          Fetch updates (default: false)
-    --http           Use HTTP instead of HTTPS for syncing (default: false)
-    --help           Print help
+    --seed <host>       Use the given seed node for syncing
+    --seed-url <url>    Use the given seed node URL for syncing
+    --fetch             Fetch updates (default: false)
+    --help              Print help
 "#,
 };
 
@@ -65,8 +65,8 @@ impl FromStr for Addr {
 
 pub struct Options {
     pub seed: Option<Addr>,
+    pub seed_url: Option<Url>,
     pub urn: Option<Urn>,
-    pub http: bool,
     pub verbose: bool,
     pub fetch: bool,
     pub force: bool,
@@ -78,15 +78,15 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_env();
         let mut seed: Option<Addr> = None;
+        let mut seed_url: Option<Url> = None;
         let mut verbose = false;
         let mut fetch = false;
-        let mut http = false;
         let mut urn: Option<Urn> = None;
         let mut force = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("seed") => {
+                Long("seed") if seed_url.is_none() => {
                     let value = parser.value()?;
                     let value = value.to_string_lossy();
                     let value = value.as_ref();
@@ -95,11 +95,17 @@ impl Args for Options {
 
                     seed = Some(addr);
                 }
+                Long("seed-url") if seed.is_none() => {
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+                    let url =
+                        Url::from_str(value).context("invalid URL specified for `--seed-url`")?;
+
+                    seed_url = Some(url);
+                }
                 Long("verbose") | Short('v') => {
                     verbose = true;
-                }
-                Long("http") => {
-                    http = true;
                 }
                 Long("fetch") => {
                     fetch = true;
@@ -124,7 +130,7 @@ impl Args for Options {
 
         Ok(Options {
             seed,
-            http,
+            seed_url,
             fetch,
             force,
             urn,
@@ -158,11 +164,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
 
     let seed = &if let Some(seed) = options.seed {
-        if options.http {
-            Url::parse(&format!("http://{}", seed)).unwrap()
-        } else {
-            Url::parse(&format!("https://{}", seed)).unwrap()
-        }
+        Url::parse(&format!("https://{}", seed)).unwrap()
+    } else if let Some(seed) = options.seed_url {
+        seed
     } else if let Ok(seed) = seed::get_seed() {
         seed
     } else {
