@@ -55,27 +55,36 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
       - run: cargo deb
         if: matrix.os == 'ubuntu-latest'
+
+      - name: Build release archive (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          staging="radicle-tools-${{ matrix.target }}"
+          mkdir -p "$staging"
+          find ./target/release -maxdepth 1 -name 'rad*' -executable | xargs --replace cp '{}' "$staging"/
+          cp ./target/release/git-remote-rad "$staging"/
+          cp radicle-tools.1.gz "$staging"/
+          tar czf "$staging.tar.gz" "$staging"
+
+      - name: Build release archive (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          staging="radicle-tools-${{ matrix.target }}"
+          mkdir -p "$staging"
+          find ./target/release -maxdepth 1 -name 'rad*' -perm +111 -type f | xargs -J '{}' -n 1 cp '{}' "$staging"/
+          cp ./target/release/git-remote-rad "$staging"/
+          cp radicle-tools.1.gz "$staging"/
+          tar czf "$staging.tar.gz" "$staging"
+
       - name: Release (Linux)
         if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
         with:
           fail_on_unmatched_files: true
           files: |
-            target/release/rad-show
-            target/release/rad-account
-            target/release/rad-sync
-            target/release/rad-help
-            target/release/rad-ens
-            target/release/rad-push
-            target/release/rad
-            target/release/rad-auth
-            target/release/rad-track
-            target/release/rad-ls
-            target/release/rad-init
-            target/release/rad-checkout
-            target/release/rad-untrack
-            target/release/git-remote-rad
-            radicle-tools.1.gz
+            radicle-tools-*.tar.gz
             target/debian/*.deb
       - name: Release (macOS)
         if: matrix.os == 'macos-latest'
@@ -83,18 +92,4 @@ jobs:
         with:
           fail_on_unmatched_files: true
           files: |
-            target/release/rad-show
-            target/release/rad-account
-            target/release/rad-sync
-            target/release/rad-help
-            target/release/rad-ens
-            target/release/rad-push
-            target/release/rad
-            target/release/rad-auth
-            target/release/rad-track
-            target/release/rad-ls
-            target/release/rad-init
-            target/release/rad-checkout
-            target/release/rad-untrack
-            target/release/git-remote-rad
-            radicle-tools.1.gz
+            radicle-tools-*.tar.gz
