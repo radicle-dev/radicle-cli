@@ -15,9 +15,11 @@ jobs:
           - build: linux-latest-stable-rust
             os: ubuntu-latest
             rust: stable
+            target: i686-ubuntu-linux-gnu
           - build: macos-latest-stable-rust
             os: macos-latest
             rust: stable
+            target: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
       - name: Update dependencies
