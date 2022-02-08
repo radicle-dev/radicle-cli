@@ -35,6 +35,12 @@ fn run(options: Options) -> anyhow::Result<()> {
             &profile
         };
 
+        if selection.id() != profile.id() {
+            let id = selection.id();
+            profile::set(id)?;
+
+            term::success!("Profile {} activated", id);
+        }
         if !keys::is_ready(selection, sock.clone())? {
             term::warning("Adding your radicle key to ssh-agent");
 
@@ -51,12 +57,6 @@ fn run(options: Options) -> anyhow::Result<()> {
             term::success!("Signing key already in ssh-agent");
         }
 
-        if selection.id() != profile.id() {
-            let id = selection.id();
-            profile::set(id)?;
-
-            term::success!("Profile {} activated", id);
-        }
         let (signer, _) = keys::storage(&profile, sock)?;
 
         git::configure_monorepo(profile.paths().git_dir(), &signer.peer_id())?;
