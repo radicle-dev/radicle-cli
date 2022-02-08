@@ -41,10 +41,6 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-      - name: Build
-        run: cargo build --release
-        env:
-          RUSTFLAGS: -D warnings
       - name: script
         run: .github/build-man-page.bash radicle-tools.1.adoc >radicle-tools.1.gz
         shell: bash
@@ -55,7 +51,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
       - run: cargo deb
         if: matrix.os == 'ubuntu-latest'
-
       - name: Build release archive (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
@@ -66,7 +61,6 @@ jobs:
           cp ./target/release/git-remote-rad "$staging"/
           cp radicle-tools.1.gz "$staging"/
           tar czf "$staging.tar.gz" "$staging"
-
       - name: Build release archive (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
@@ -77,7 +71,6 @@ jobs:
           cp ./target/release/git-remote-rad "$staging"/
           cp radicle-tools.1.gz "$staging"/
           tar czf "$staging.tar.gz" "$staging"
-
       - name: Release (Linux)
         if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
