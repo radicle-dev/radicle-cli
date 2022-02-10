@@ -4,7 +4,7 @@ The Radicle Team <dev@radicle.xyz>
 :revnumber: 0.1.0
 :revdate: 2022-02-01
 :mansource: radicle-tools {revnumber}
-:manmanual: radicle-tools
+:manmanual: Radicle Tools Manual
 
 == Name
 

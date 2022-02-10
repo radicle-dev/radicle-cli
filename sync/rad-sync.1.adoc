@@ -1,0 +1,101 @@
+= rad-sync(1)
+The Radicle Team <dev@radicle.xyz>
+:doctype: manpage
+:revnumber: 0.1.0
+:revdate: 2022-02-01
+:mansource: rad-sync {revnumber}
+:manmanual: Radicle Tools Manual
+
+== Name
+
+rad-sync - synchronize radicle projects with seeds
+
+== Synopsis
+
+*rad sync* [<urn>] [--seed <host> | --seed-url <url>] [--fetch]
+
+== Description
+
+The radicle *sync* command synchronizes projects between a seed node and
+the user's local device.
+
+== Pushing
+
+When pushing, ie. when copying git refs from the local device's _monorepo_ to a
+remote seed, the following operations are conducted (from local device to seed):
+
+1. For each project delegate, the delegate identity is pushed:
+
+  refs/namespaces/<delegate>/refs/rad/* -> refs/namespaces/<delegate>/refs/remotes/<peer-id>/rad/*
+
+2. The project identity is pushed:
+
+  refs/namespaces/<project>/refs/rad/id -> refs/namespaces/<project>/refs/remotes/<peer-id>/rad/id
+
+3. The project radicle refs are pushed:
+
+  refs/namespaces/<project>/refs/rad/ids/* -> refs/namespaces/<project>/refs/remotes/<peer-id>/rad/ids/*
+  refs/namespaces/<project>/refs/rad/self -> refs/namespaces/<project>/refs/remotes/<peer-id>/rad/self
+  refs/namespaces/<project>/refs/rad/signed_refs -> refs/namespaces/<project>/refs/remotes/<peer-id>/rad/signed_refs
+
+4. The project heads are pushed:
+
+  +refs/namespaces/<project>/refs/heads/* -> refs/remotes/<peer-id>/heads/*
+
+In the above,
+
+- *<project>* is the project id encoded as a string, eg.
+*hnrkemobagsicpf9sr95o3g551otspcd84c9o*
+- *<delegate>* is a project delegate,
+eg. *hnrkqdpm9ub19oc8dccx44echy76hzfsezyio*
+- *<peer-id>* is the local device's Peer ID, in canonical encoding, eg.
+*hyn9diwfnytahjq8u3iw63h9jte1ydcatxax3saymwdxqu1zo645pe*.
+
+It's worth noting that all refs are pushed to a namespace scoped to the
+local device's Peer ID, ie. */remotes/<peer-id>/*. If the refs pushed are
+valid, the seed node will copy the relevant ones to its local scope.
+
+Specifically, in step *(4)*, when the heads are pushed, a locally-scoped head
+will be created under *refs/namespaces/<project>/refs/heads/<default-branch>*,
+which points to the commit agreed by a quorum of delegates.
+
+The *HEAD* ref will then point to that local head. Thus, we might end up
+with a local scope that looks like this:
+
+  refs/
+    namespaces/
+      <project>/
+        HEAD
+        refs/
+          heads/
+            master
+          rad/
+            id
+          remotes/
+            ...
+
+== Fetching
+
+Fetching, ie. downloading a project to the local device involves the following
+fetch operations (from seed to local device):
+
+1. The project identity is fetched:
+
+  refs/namespaces/<project>/refs/rad/id* -> refs/namespaces/<project>/refs/rad/id*
+
+2. Based on the fetched identity, the delegates are fetched next:
+
+  refs/namespaces/<delegate>/refs/rad/id* -> refs/namespaces/<delegate>/refs/rad/id*
+
+3. The project is then verified.
+4. The project heads are fetched:
+
+  refs/namespaces/<project>/refs/heads/* -> refs/namespaces/<project>/refs/heads/*
+
+== See also
+
+*rad-clone(1)*
+
+== Copyright
+
+Copyright The Radicle Team <dev@radicle.xyz> and contributors.
