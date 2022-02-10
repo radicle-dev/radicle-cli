@@ -4956,6 +4956,7 @@ name = "rad-sync"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fastrand",
  "lexopt",
  "librad",
  "rad-clib",

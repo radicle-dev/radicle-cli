@@ -8,6 +8,7 @@ description = "Synchronize radicle projects with seeds"
 
 [dependencies]
 anyhow = "1.0"
+fastrand = "1.6"
 lexopt = { version = "0.2" }
 librad = "0"
 rad-clib = "0"

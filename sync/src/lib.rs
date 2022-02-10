@@ -144,7 +144,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     } else {
         term::info!("Select a seed node to sync with...");
 
-        if let Some(selection) = term::select(seed::DEFAULT_SEEDS, &seed::DEFAULT_SEEDS[0]) {
+        if let Some(selection) = term::select(
+            seed::DEFAULT_SEEDS,
+            &seed::DEFAULT_SEEDS[fastrand::usize(0..seed::DEFAULT_SEEDS.len())],
+        ) {
             let url = Url::parse(&format!("https://{}", selection)).unwrap();
 
             term::info!("Selected {}", term::format::highlight(selection));
