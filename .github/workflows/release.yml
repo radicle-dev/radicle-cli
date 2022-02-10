@@ -49,11 +49,15 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-      - run: cargo install cargo-deb
+      - name: Install cargo-deb (Linux)
+        run: cargo install cargo-deb
         if: matrix.os == 'ubuntu-latest'
-      - run: cargo deb
+      - name: Build the release binaries
+        run: cargo build --release
+      - name: Run cargo deb (Linux)
+        run: cargo deb
         if: matrix.os == 'ubuntu-latest'
-      - name: Build release archive (Linux)
+      - name: Build the release archive (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
@@ -63,7 +67,7 @@ jobs:
           cp ./target/release/git-remote-rad "$staging"/
           cp radicle-tools.1.gz "$staging"/
           tar czf "$staging.tar.gz" "$staging"
-      - name: Build release archive (macOS)
+      - name: Build the release archive (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
