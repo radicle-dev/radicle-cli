@@ -6,7 +6,7 @@ use anyhow::Context as _;
 
 use librad::git::Urn;
 
-use rad_common::{identities, keys, profile};
+use rad_common::{git, identities, keys, profile};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -83,7 +83,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     ));
 
     let spinner = term::spinner("Performing checkout...");
-    if let Err(err) = identities::project::checkout(
+    if let Err(err) = git::checkout(
         &storage,
         profile.paths().clone(),
         signer,
@@ -92,7 +92,9 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
         path.clone(),
     ) {
         spinner.failed();
-        return Err(err.into());
+        term::blank();
+
+        return Err(err);
     }
     spinner.finish();
 

@@ -1,8 +1,12 @@
-use anyhow::anyhow;
-use anyhow::Context as _;
+use std::path::PathBuf;
 use std::process::Command;
 
-use librad::PeerId;
+use anyhow::anyhow;
+use anyhow::Context as _;
+
+use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths, PeerId};
+
+use crate::identities;
 
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
 pub const CONFIG_GPG_FORMAT: &str = "gpg.format";
@@ -74,6 +78,28 @@ pub fn version() -> Result<Version, anyhow::Error> {
         return Ok(version);
     }
     Err(anyhow!("failed to run `git version`"))
+}
+
+pub fn checkout<S>(
+    storage: &S,
+    paths: Paths,
+    signer: BoxedSigner,
+    urn: &Urn,
+    peer: Option<PeerId>,
+    path: PathBuf,
+) -> anyhow::Result<git2::Repository>
+where
+    S: AsRef<ReadOnly>,
+{
+    let repo = identities::project::checkout(storage, paths, signer, urn, peer, path)?;
+    // The checkout leaves a leftover config section sometimes, we clean it up here.
+    git(
+        repo.path(),
+        ["config", "--remove-section", "remote.__tmp_/rad"],
+    )
+    .ok();
+
+    Ok(repo)
 }
 
 pub fn git<S: AsRef<std::ffi::OsStr>>(
