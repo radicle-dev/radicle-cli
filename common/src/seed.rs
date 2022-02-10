@@ -19,7 +19,7 @@ pub const DEFAULT_SEEDS: &[&str] = &[
 ];
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Addr {
     pub host: Host,
     pub port: Option<u16>,
@@ -55,10 +55,20 @@ impl FromStr for Addr {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct SeedOptions {
     pub seed: Option<Addr>,
     pub seed_url: Option<Url>,
+}
+
+impl SeedOptions {
+    pub fn seed_url(&self) -> Option<Url> {
+        if let Some(seed) = &self.seed {
+            Some(Url::parse(&format!("https://{}", seed)).unwrap())
+        } else {
+            self.seed_url.as_ref().cloned()
+        }
+    }
 }
 
 impl Args for SeedOptions {
@@ -112,6 +122,20 @@ pub fn set_seed(seed: &Url) -> Result<(), anyhow::Error> {
         [
             "config",
             "--global",
+            CONFIG_SEED_KEY,
+            seed.to_string().as_str(),
+        ],
+    )
+    .map(|_| ())
+    .context("failed to save seed configuration")
+}
+
+pub fn set_local_seed(repository: &Path, seed: &Url) -> Result<(), anyhow::Error> {
+    git::git(
+        repository,
+        [
+            "config",
+            "--local",
             CONFIG_SEED_KEY,
             seed.to_string().as_str(),
         ],

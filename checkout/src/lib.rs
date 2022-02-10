@@ -60,6 +60,10 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    execute(options).map(|_| ())
+}
+
+pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (signer, storage) = keys::storage(&profile, sock)?;
@@ -85,7 +89,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         signer,
         &options.urn,
         None,
-        path,
+        path.clone(),
     ) {
         spinner.failed();
         return Err(err.into());
@@ -97,5 +101,5 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         term::format::highlight(name)
     );
 
-    Ok(())
+    Ok(path)
 }

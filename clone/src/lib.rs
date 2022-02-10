@@ -5,8 +5,9 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use librad::git::Urn;
 
-use rad_common::seed::SeedOptions;
+use rad_common::seed::{self, SeedOptions};
 use rad_terminal::args::{Args, Error, Help};
+use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
     name: "clone",
@@ -77,13 +78,22 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     rad_sync::run(rad_sync::Options {
         fetch: true,
         urn: Some(options.urn.clone()),
-        seed: options.seed,
+        seed: options.seed.clone(),
         verbose: false,
         force: false,
     })?;
-    rad_checkout::run(rad_checkout::Options {
+    let path = rad_checkout::execute(rad_checkout::Options {
         urn: options.urn.clone(),
     })?;
+
+    if let Some(seed_url) = options.seed.seed_url() {
+        seed::set_local_seed(&path, &seed_url)?;
+        term::success!(
+            "Local repository seed for {} set to {}",
+            term::format::highlight(path.display()),
+            term::format::highlight(seed_url)
+        );
+    }
 
     if options.track {
         rad_track::run(rad_track::Options {

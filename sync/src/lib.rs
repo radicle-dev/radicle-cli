@@ -113,7 +113,6 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let SeedOptions { seed, seed_url } = options.seed;
     let profile = Profile::load()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
@@ -138,10 +137,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    let seed = &if let Some(seed) = seed {
-        Url::parse(&format!("https://{}", seed)).unwrap()
-    } else if let Some(seed) = seed_url {
-        seed
+    let seed = &if let Some(seed_url) = options.seed.seed_url() {
+        seed_url
     } else if let Ok(seed) = seed::get_seed() {
         seed
     } else {
