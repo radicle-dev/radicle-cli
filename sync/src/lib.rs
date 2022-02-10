@@ -1,6 +1,7 @@
 use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 
+use rad_common::seed::SeedOptions;
 use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::args;
 use rad_terminal::args::{Args, Error, Help};
@@ -8,7 +9,7 @@ use rad_terminal::components as term;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
-use url::{Host, Url};
+use url::Url;
 
 use std::ffi::OsString;
 use std::iter;
@@ -33,59 +34,21 @@ Options
 "#,
 };
 
-#[derive(Debug)]
-pub struct Addr {
-    pub host: Host,
-    pub port: Option<u16>,
-}
-
-impl std::fmt::Display for Addr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(port) = self.port {
-            write!(f, "{}:{}", self.host, port)
-        } else {
-            write!(f, "{}", self.host)
-        }
-    }
-}
-
-impl FromStr for Addr {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.split_once(':') {
-            Some((host, port)) => {
-                let host = Host::parse(host)?;
-                let port = Some(port.parse()?);
-
-                Ok(Self { host, port })
-            }
-            None => {
-                let host = Host::parse(s)?;
-
-                Ok(Self { host, port: None })
-            }
-        }
-    }
-}
-
 #[derive(Default, Debug)]
 pub struct Options {
-    pub seed: Option<Addr>,
-    pub seed_url: Option<Url>,
     pub urn: Option<Urn>,
     pub verbose: bool,
     pub fetch: bool,
     pub force: bool,
+    pub seed: SeedOptions,
 }
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_args(args);
-        let mut seed: Option<Addr> = None;
-        let mut seed_url: Option<Url> = None;
+        let (seed, unparsed) = SeedOptions::from_args(args)?;
+        let mut parser = lexopt::Parser::from_args(unparsed);
         let mut verbose = false;
         let mut fetch = false;
         let mut urn: Option<Urn> = None;
@@ -94,24 +57,6 @@ impl Args for Options {
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("seed") if seed_url.is_none() => {
-                    let value = parser.value()?;
-                    let value = value.to_string_lossy();
-                    let value = value.as_ref();
-                    let addr =
-                        Addr::from_str(value).context("invalid host specified for `--seed`")?;
-
-                    seed = Some(addr);
-                }
-                Long("seed-url") if seed.is_none() => {
-                    let value = parser.value()?;
-                    let value = value.to_string_lossy();
-                    let value = value.as_ref();
-                    let url =
-                        Url::from_str(value).context("invalid URL specified for `--seed-url`")?;
-
-                    seed_url = Some(url);
-                }
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
@@ -143,7 +88,6 @@ impl Args for Options {
         Ok((
             Options {
                 seed,
-                seed_url,
                 fetch,
                 force,
                 urn,
@@ -169,6 +113,7 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    let SeedOptions { seed, seed_url } = options.seed;
     let profile = Profile::load()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
@@ -193,9 +138,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    let seed = &if let Some(seed) = options.seed {
+    let seed = &if let Some(seed) = seed {
         Url::parse(&format!("https://{}", seed)).unwrap()
-    } else if let Some(seed) = options.seed_url {
+    } else if let Some(seed) = seed_url {
         seed
     } else if let Ok(seed) = seed::get_seed() {
         seed

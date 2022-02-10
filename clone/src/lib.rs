@@ -5,7 +5,7 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use librad::git::Urn;
 
-use rad_terminal::args;
+use rad_common::seed::SeedOptions;
 use rad_terminal::args::{Args, Error, Help};
 
 pub const HELP: Help = Help {
@@ -15,16 +15,14 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad clone <urn> [--track] [<sync-option>...] [<option>...]
+    rad clone <urn> [--track] [--seed <host>] [<option>...]
 
 Options
 
-    --track   Track the project after syncing (default: false)
-    --help    Print help
+    --track         Track the project after syncing (default: false)
+    --seed <host>   Seed to clone from
+    --help          Print help
 
-Sync options
-
-    See `rad sync --help`
 "#,
 };
 
@@ -32,17 +30,17 @@ Sync options
 pub struct Options {
     urn: Urn,
     track: bool,
-    sync: rad_sync::Options,
+    seed: SeedOptions,
 }
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_args(args);
+        let (seed, unparsed) = SeedOptions::from_args(args)?;
+        let mut parser = lexopt::Parser::from_args(unparsed);
         let mut urn: Option<Urn> = None;
         let mut track = false;
-        let mut sync = rad_sync::Options::default();
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -58,17 +56,7 @@ impl Args for Options {
 
                     urn = Some(val);
                 }
-                _ => {
-                    let unparsed = std::iter::once(args::format(arg))
-                        .chain(std::iter::from_fn(|| parser.value().ok()))
-                        .collect();
-                    let (sync_opts, unparsed) = rad_sync::Options::from_args(unparsed)?;
-
-                    args::finish(unparsed)?;
-                    sync = sync_opts;
-
-                    break;
-                }
+                _ => return Err(anyhow!(arg.unexpected())),
             }
         }
 
@@ -78,7 +66,7 @@ impl Args for Options {
                     anyhow!("a URN to clone must be provided; see `rad clone --help`")
                 })?,
                 track,
-                sync,
+                seed,
             },
             vec![],
         ))
@@ -89,7 +77,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     rad_sync::run(rad_sync::Options {
         fetch: true,
         urn: Some(options.urn.clone()),
-        ..options.sync
+        seed: options.seed,
+        verbose: false,
+        force: false,
     })?;
     rad_checkout::run(rad_checkout::Options {
         urn: options.urn.clone(),

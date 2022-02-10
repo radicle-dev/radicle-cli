@@ -1,9 +1,13 @@
+use std::ffi::OsString;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::{anyhow, Context as _, Result};
 use librad::crypto::peer::PeerId;
 use librad::git::Urn;
-use url::Url;
+use url::{Host, Url};
+
+use rad_terminal::args::{self, Args};
 
 use crate::git;
 
@@ -14,6 +18,84 @@ pub const DEFAULT_SEEDS: &[&str] = &[
     "maple.radicle.garden",
 ];
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
+
+#[derive(Debug)]
+pub struct Addr {
+    pub host: Host,
+    pub port: Option<u16>,
+}
+
+impl std::fmt::Display for Addr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(port) = self.port {
+            write!(f, "{}:{}", self.host, port)
+        } else {
+            write!(f, "{}", self.host)
+        }
+    }
+}
+
+impl FromStr for Addr {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.split_once(':') {
+            Some((host, port)) => {
+                let host = Host::parse(host)?;
+                let port = Some(port.parse()?);
+
+                Ok(Self { host, port })
+            }
+            None => {
+                let host = Host::parse(s)?;
+
+                Ok(Self { host, port: None })
+            }
+        }
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct SeedOptions {
+    pub seed: Option<Addr>,
+    pub seed_url: Option<Url>,
+}
+
+impl Args for SeedOptions {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
+        use lexopt::prelude::*;
+
+        let mut parser = lexopt::Parser::from_args(args);
+        let mut seed: Option<Addr> = None;
+        let mut seed_url: Option<Url> = None;
+        let mut unparsed = Vec::new();
+
+        while let Some(arg) = parser.next()? {
+            match arg {
+                Long("seed") if seed_url.is_none() => {
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+                    let addr =
+                        Addr::from_str(value).context("invalid host specified for `--seed`")?;
+
+                    seed = Some(addr);
+                }
+                Long("seed-url") if seed.is_none() => {
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+                    let url =
+                        Url::from_str(value).context("invalid URL specified for `--seed-url`")?;
+
+                    seed_url = Some(url);
+                }
+                _ => unparsed.push(args::format(arg)),
+            }
+        }
+        Ok((SeedOptions { seed, seed_url }, unparsed))
+    }
+}
 
 pub fn get_seed() -> Result<Url, anyhow::Error> {
     let output = git::git(Path::new("."), ["config", CONFIG_SEED_KEY])
