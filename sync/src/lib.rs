@@ -376,7 +376,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 "{} {}",
                 term::format::dim("(web)"),
                 term::format::highlight(format!(
-                    "https://{}/seeds/{}/projects/{}",
+                    "https://{}/seeds/{}/{}",
                     GATEWAY_HOST, host, project_urn
                 ))
             ));
@@ -384,7 +384,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 "{} {}",
                 term::format::dim("(web)"),
                 term::format::highlight(format!(
-                    "https://{}/seeds/{}/projects/{}/remotes/{}",
+                    "https://{}/seeds/{}/{}/remotes/{}",
                     GATEWAY_HOST, host, project_urn, peer_id
                 ))
             ));
