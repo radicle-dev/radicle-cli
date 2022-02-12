@@ -82,9 +82,16 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         verbose: false,
         force: false,
     })?;
-    let path = rad_checkout::execute(rad_checkout::Options {
-        urn: options.urn.clone(),
-    })?;
+
+    // Tracking influences the checkout (by creating having it create additional remotes),
+    // so we run it first.
+    if options.track {
+        rad_track::run(rad_track::Options {
+            urn: Some(options.urn.clone()),
+            peer: None,
+        })?;
+    }
+    let path = rad_checkout::execute(rad_checkout::Options { urn: options.urn })?;
 
     if let Some(seed_url) = options.seed.seed_url() {
         seed::set_local_seed(&path, &seed_url)?;
@@ -95,11 +102,5 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    if options.track {
-        rad_track::run(rad_track::Options {
-            urn: Some(options.urn),
-            peer: None,
-        })?;
-    }
     Ok(())
 }
