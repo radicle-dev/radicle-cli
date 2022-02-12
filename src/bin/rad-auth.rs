@@ -57,9 +57,9 @@ fn run(options: Options) -> anyhow::Result<()> {
             term::success!("Signing key already in ssh-agent");
         }
 
-        let (signer, _) = keys::storage(&profile, sock)?;
+        let (signer, _) = keys::storage(selection, sock)?;
 
-        git::configure_monorepo(profile.paths().git_dir(), &signer.peer_id())?;
+        git::configure_monorepo(selection.paths().git_dir(), &signer.peer_id())?;
         term::success!("Signing key configured in git");
     } else {
         term::headline("Initializing your 🌱 profile and identity");
