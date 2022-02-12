@@ -79,9 +79,10 @@ with a local scope that looks like this:
 Fetching, ie. downloading a project to the local device involves the following
 fetch operations (from seed to local device):
 
-1. The project identity is fetched:
+1. The project identity is fetched, along with associated identities:
 
-  refs/namespaces/<project>/refs/rad/id* -> refs/namespaces/<project>/refs/rad/id*
+  refs/namespaces/<project>/refs/rad/id -> refs/namespaces/<project>/refs/rad/id
+  refs/namespaces/<project>/refs/rad/ids/* -> refs/namespaces/<project>/refs/rad/ids/*
 
 2. Based on the fetched identity, the delegates are fetched next:
 

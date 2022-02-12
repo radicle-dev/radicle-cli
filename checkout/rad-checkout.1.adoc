@@ -1,0 +1,47 @@
+= rad-checkout(1)
+The Radicle Team <dev@radicle.xyz>
+:doctype: manpage
+:revnumber: 0.1.0
+:revdate: 2022-02-01
+:mansource: rad-checkout {revnumber}
+:manmanual: Radicle Tools Manual
+
+== Name
+
+rad-checkout - checkout a working copy of a radicle project
+
+== Synopsis
+
+*rad checkout* <urn> [<options>...]
+
+== Description
+
+The radicle *checkout* command creates a working copy of a project on the
+user's local device. The project must already be on the device for the checkout
+to succeed.
+
+== Remotes
+
+The checkout command will setup git remotes in the working copy based on
+tracked peers: a remote will be configured for each tracking relationship under
+the project.
+
+Tracking relationships can be edited with the *rad-track(1)* and
+*rad-untrack(1)* commands.
+
+== Include file
+
+To ensure that up-to-date remotes are available in all local checkouts of a
+project, an *include* file is used: instead of configuring per-project remotes
+in each working copy, they are configured in a per-project git include file
+stored under _~/.config/radicle-link_ (linux), and that file is included in
+git checkouts. When a peer is tracked, the include file is updated, and all
+working copies of that project can access the new remote.
+
+== See also
+
+*rad-clone(1)*, *rad-track(1)*
+
+== Copyright
+
+Copyright The Radicle Team <dev@radicle.xyz> and contributors.
