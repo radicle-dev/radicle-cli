@@ -1,6 +1,7 @@
+use anyhow::Context as _;
 use librad::git::tracking;
 
-use rad_common::{keys, profile};
+use rad_common::{keys, profile, project};
 use rad_terminal::args::Help;
 use rad_terminal::components as term;
 
@@ -14,7 +15,9 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad track <urn> [--peer <peer-id>]
+    rad track [<urn>] [--peer <peer-id>]
+
+    If <urn> isn't specified, the working copy project will be used.
 
 Options
 
@@ -24,9 +27,15 @@ Options
 };
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    let urn = if let Some(urn) = &options.urn {
+        urn.clone()
+    } else {
+        project::urn().context("a URN must be specified")?
+    };
+
     term::info!(
         "Establishing tracking relationship for {}...",
-        term::format::highlight(&options.urn)
+        term::format::highlight(&urn)
     );
 
     let cfg = tracking::config::Config::default();
@@ -36,20 +45,16 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     tracking::track(
         &storage,
-        &options.urn,
+        &urn,
         options.peer,
         cfg,
         tracking::policy::Track::Any,
     )??;
 
     if let Some(peer) = options.peer {
-        term::success!(
-            "Tracking relationship {} established for {}",
-            peer,
-            options.urn
-        );
+        term::success!("Tracking relationship {} established for {}", peer, urn);
     } else {
-        term::success!("Tracking relationship for {} established", options.urn);
+        term::success!("Tracking relationship for {} established", urn);
     }
 
     Ok(())

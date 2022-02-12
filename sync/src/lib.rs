@@ -122,8 +122,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let project_urn = if let Some(urn) = &options.urn {
         urn.clone()
     } else {
-        let repo = project::repository()?;
-        project::remote(&repo)?.url.urn
+        project::urn()?
     };
     let project_id = project_urn.encode_id();
     let git_version = git::version()?;

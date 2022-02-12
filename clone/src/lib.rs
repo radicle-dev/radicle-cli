@@ -97,7 +97,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if options.track {
         rad_track::run(rad_track::Options {
-            urn: options.urn,
+            urn: Some(options.urn),
             peer: None,
         })?;
     }

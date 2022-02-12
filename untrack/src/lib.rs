@@ -1,7 +1,9 @@
+use anyhow::Context as _;
+
 use librad::git::tracking::git::tracking;
 use rad_terminal::args::Help;
 
-use rad_common::{keys, profile};
+use rad_common::{keys, profile, project};
 use rad_terminal::components as term;
 
 pub use rad_track::Options;
@@ -13,7 +15,9 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad untrack <urn> [--peer <peer-id>]
+    rad untrack [<urn>] [--peer <peer-id>]
+
+    If <urn> isn't specified, the working copy project will be used.
 
 Options
 
@@ -23,9 +27,15 @@ Options
 };
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    let urn = if let Some(urn) = &options.urn {
+        urn.clone()
+    } else {
+        project::urn().context("a URN must be specified")?
+    };
+
     term::info!(
         "Removing tracking relationship for {}...",
-        term::format::highlight(&options.urn)
+        term::format::highlight(&urn)
     );
 
     let profile = profile::default()?;
@@ -33,19 +43,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let (_, storage) = keys::storage(&profile, sock)?;
 
     if let Some(peer) = options.peer {
-        tracking::untrack(
-            &storage,
-            &options.urn,
-            peer,
-            tracking::policy::Untrack::MustExist,
-        )??;
-
-        term::success!("Tracking relationship {} removed for {}", peer, options.urn);
+        tracking::untrack(&storage, &urn, peer, tracking::policy::Untrack::MustExist)??;
+        term::success!("Tracking relationship {} removed for {}", peer, urn);
     } else {
-        tracking::untrack_all(&storage, &options.urn, tracking::policy::UntrackAll::Any)?
-            .for_each(drop);
-
-        term::success!("Tracking relationships for {} removed", options.urn);
+        tracking::untrack_all(&storage, &urn, tracking::policy::UntrackAll::Any)?.for_each(drop);
+        term::success!("Tracking relationships for {} removed", urn);
     }
 
     Ok(())

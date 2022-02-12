@@ -73,7 +73,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     term::warning("Warning: experimental tool; use at your own risk!");
 
     rad_untrack::run(rad_untrack::Options {
-        urn: options.urn.clone(),
+        urn: Some(options.urn.clone()),
         peer: None,
     })?;
 

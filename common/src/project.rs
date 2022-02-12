@@ -144,3 +144,8 @@ pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
         Err(err) => Err(err).context("could not read git remote configuration"),
     }
 }
+
+pub fn urn() -> Result<Urn, Error> {
+    let repo = self::repository()?;
+    Ok(self::remote(&repo)?.url.urn)
+}

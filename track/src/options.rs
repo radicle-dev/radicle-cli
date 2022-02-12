@@ -13,7 +13,7 @@ use rad_terminal::args::{Args, Error};
 /// Nb. These options are also used by the `untrack` tool.
 #[derive(Debug)]
 pub struct Options {
-    pub urn: Urn,
+    pub urn: Option<Urn>,
     pub peer: Option<PeerId>,
 }
 
@@ -50,12 +50,6 @@ impl Args for Options {
             }
         }
 
-        Ok((
-            Options {
-                urn: urn.ok_or_else(|| anyhow!("a tracking URN must be specified"))?,
-                peer,
-            },
-            vec![],
-        ))
+        Ok((Options { urn, peer }, vec![]))
     }
 }
