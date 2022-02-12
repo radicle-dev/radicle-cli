@@ -196,7 +196,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             Err(err) => {
                 spinner.failed();
                 term::blank();
-                return Err(err);
+
+                return Err(err)
+                    .with_context(|| format!("project {} was not found on the seed", project_urn));
             }
         }
 
@@ -232,7 +234,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             Ok(None) => {
                 spinner.failed();
                 term::blank();
-                return Err(anyhow!("project could not be loaded!"));
+                return Err(anyhow!("project {} could not be loaded", project_urn));
             }
             Err(err) => {
                 spinner.failed();

@@ -257,7 +257,8 @@ pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyh
             "--verbose",
             "--atomic",
             url.as_str(),
-            &format!("refs/rad/id*:refs/namespaces/{}/refs/rad/id*", id),
+            &format!("refs/rad/id:refs/namespaces/{}/refs/rad/id", id),
+            &format!("refs/rad/ids/*:refs/namespaces/{}/refs/rad/ids/*", id),
         ],
     )
 }
