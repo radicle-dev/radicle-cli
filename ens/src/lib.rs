@@ -4,6 +4,7 @@ use anyhow::anyhow;
 
 use ethers::prelude::{Address, Http, Provider, Signer, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
+use librad::git::Storage;
 
 use rad_common::ethereum::{ProviderOptions, SignerOptions};
 use rad_common::{ethereum, keys, person, profile, seed};
@@ -28,6 +29,7 @@ Usage
 Operations
 
     --setup [<name>]             Associate your local radicle id with an ENS name
+    --set-local <name>           Set an ENS name for your local radicle identity
 
 Options
 
@@ -48,7 +50,9 @@ Environment variables
 
 #[derive(Debug)]
 pub enum Operation {
+    Show,
     Setup(Option<String>),
+    SetLocal(String),
 }
 
 #[derive(Debug)]
@@ -69,7 +73,7 @@ impl Args for Options {
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("setup") => {
+                Long("setup") if operation.is_none() => {
                     let val = parser.value().ok();
                     let name = if let Some(val) = val {
                         Some(
@@ -81,6 +85,20 @@ impl Args for Options {
                     };
                     operation = Some(Operation::Setup(name));
                 }
+                Long("set-local") if operation.is_none() => {
+                    let val = parser.value().ok();
+                    if let Some(name) = val {
+                        operation = Some(Operation::SetLocal(
+                            name.into_string()
+                                .map_err(|_| anyhow!("invalid ENS name specified"))?,
+                        ));
+                    } else {
+                        return Err(anyhow!("an ENS name must be specified"));
+                    }
+                }
+                Long("show") if operation.is_none() => {
+                    operation = Some(Operation::Show);
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -90,9 +108,7 @@ impl Args for Options {
 
         Ok((
             Options {
-                operation: operation.ok_or_else(|| {
-                    anyhow!("an operation must be specified, see 'rad ens --help'")
-                })?,
+                operation: operation.unwrap_or(Operation::Show),
                 provider,
                 signer,
             },
@@ -107,20 +123,43 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let (_, storage) = keys::storage(&profile, sock)?;
     let rt = tokio::runtime::Runtime::new()?;
     let id = person::local(&storage)?;
-    let provider = ethereum::provider(options.provider)?;
-    let signer_opts = options.signer;
 
-    rt.block_on(transaction(options.operation, id, signer_opts, provider))?;
+    match options.operation {
+        Operation::Show => {
+            if let Some(person) = person::verify(&storage, &id.urn())? {
+                term::success!("Your local identity is {}", term::format::dim(id.urn()));
+
+                if let Some(ens) = person.payload().get_ext::<person::Ens>()? {
+                    term::success!(
+                        "Your local identity is associated with ENS name {}",
+                        term::format::highlight(ens.name)
+                    );
+                } else {
+                    term::warning("Your local identity is not associated with an ENS name");
+                }
+            }
+        }
+        Operation::Setup(name) => {
+            term::headline(&format!(
+                "Associating local 🌱 identity {} with ENS",
+                term::format::highlight(&id.urn()),
+            ));
+            let name = term::text_input("ENS name", name)?;
+            let provider = ethereum::provider(options.provider)?;
+            let signer_opts = options.signer;
+            let (wallet, provider) = rt.block_on(get_wallet(signer_opts, provider))?;
+            rt.block_on(setup(&name, id, provider, wallet))?;
+        }
+        Operation::SetLocal(name) => set_ens_payload(&name, &storage)?,
+    }
 
     Ok(())
 }
 
-async fn transaction(
-    operation: Operation,
-    id: LocalIdentity,
+async fn get_wallet(
     signer_opts: SignerOptions,
     provider: Provider<Http>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<(ethereum::Wallet, Provider<Http>)> {
     use ethereum::WalletError;
 
     term::tip("Accessing your wallet...");
@@ -149,17 +188,22 @@ async fn transaction(
         )
     );
 
-    match operation {
-        Operation::Setup(name) => {
-            term::headline(&format!(
-                "Associating local 🌱 identity {} with ENS",
-                term::format::highlight(&id.urn()),
-            ));
-            let name = term::text_input("ENS name", name)?;
+    Ok((signer, provider))
+}
 
-            setup(&name, id, provider, signer).await
-        }
+fn set_ens_payload(name: &str, storage: &Storage) -> anyhow::Result<()> {
+    term::info!("Setting ENS name for local 🌱 identity");
+
+    if term::confirm(format!(
+        "Associate local identity with ENS name {}?",
+        term::format::highlight(name)
+    )) {
+        let doc = person::set_ens_payload(name, storage)?;
+
+        term::success!("Local identity successfully updated with ENS name {}", name);
+        term::blob(serde_json::to_string(&doc.payload())?);
     }
+    Ok(())
 }
 
 async fn setup(

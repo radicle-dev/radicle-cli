@@ -16,7 +16,9 @@ either = { version = "1.6" }
 git-repository = "0.14"
 indicatif = "0.16.2"
 git2 = "0.13"
+lazy_static = "1.4.0"
 serde_json = "1.0"
+serde = "1.0"
 lexopt = "0.2"
 librad = { version = "0" }
 rad-clib = { version = "0" }
