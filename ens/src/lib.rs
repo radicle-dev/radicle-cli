@@ -22,13 +22,17 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad ens --setup     [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
-    rad ens --setup     [<option>...] [--rpc-url <url>] --keystore <file>
-    rad ens <operation> [<option>...]
+    rad ens               [<option>...]
+    rad ens --setup       [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
+    rad ens --setup       [<option>...] [--rpc-url <url>] --keystore <file>
+    rad ens [<operation>] [<option>...]
+
+    If no operation is specified, `--show` is implied.
 
 Operations
 
-    --setup [<name>]             Associate your local radicle id with an ENS name
+    --show                       Show ENS data for your local radicle identity
+    --setup [<name>]             Associate your local identity with an ENS name
     --set-local <name>           Set an ENS name for your local radicle identity
 
 Options
