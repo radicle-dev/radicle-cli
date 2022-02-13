@@ -17,7 +17,7 @@ use rad_terminal::components as term;
 pub use librad::git::identities::person::verify;
 
 lazy_static::lazy_static! {
-    static ref ENS_NAMESPACE: url::Url = "https://radicle.xyz/ens"
+    static ref ENS_NAMESPACE: url::Url = "https://radicle.xyz/ethereum/ens/v1"
         .parse()
         .expect("static URL malformed");
 }
