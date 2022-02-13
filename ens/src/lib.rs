@@ -318,7 +318,12 @@ async fn setup(
         term::format::highlight(name)
     );
 
-    // TODO: Link to radicle interface.
+    term::blank();
+    term::tip("To view your profile, visit:");
+    term::indented(&term::format::secondary(format!(
+        "https://app.radicle.network/{}",
+        name
+    )));
 
     Ok(())
 }
