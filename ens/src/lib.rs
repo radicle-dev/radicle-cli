@@ -148,7 +148,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let provider = ethereum::provider(options.provider)?;
             let signer_opts = options.signer;
             let (wallet, provider) = rt.block_on(get_wallet(signer_opts, provider))?;
-            rt.block_on(setup(&name, id, provider, wallet))?;
+            rt.block_on(setup(&name, id, provider, wallet, &storage))?;
         }
         Operation::SetLocal(name) => set_ens_payload(&name, &storage)?,
     }
@@ -211,6 +211,7 @@ async fn setup(
     id: LocalIdentity,
     provider: Provider<Http>,
     signer: ethereum::Wallet,
+    storage: &Storage,
 ) -> anyhow::Result<()> {
     let urn = id.urn();
     let signer = SignerMiddleware::new(provider, signer);
@@ -312,6 +313,18 @@ async fn setup(
 
     let call = resolver.multicall(calls)?;
     ethereum::transaction(call).await?;
+
+    let spinner = term::spinner("Updating local identity...");
+    match person::set_ens_payload(name, storage) {
+        Ok(doc) => {
+            spinner.finish();
+            term::blob(serde_json::to_string(&doc.payload())?);
+        }
+        Err(err) => {
+            spinner.failed();
+            return Err(err);
+        }
+    }
 
     term::info!(
         "Successfully associated local 🌱 identity with {}",
