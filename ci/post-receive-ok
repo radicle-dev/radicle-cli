@@ -1,0 +1,102 @@
+#!/bin/sh
+
+echo "**** ***** Running Radicle CI Hook ***** ****"
+
+if [ -f "$GIT_PROJECT_ROOT/etc/.ci.env" ]; then
+	. "$GIT_PROJECT_ROOT/etc/.ci.env"
+fi
+
+run_pipeline() {
+  local tag=$(echo $GIT_NAMESPACE | cut -c 31-)
+  local urn="$RADICLE_NAME-$tag"
+  # login
+  fly -t local login -c $CONCOURSE_URL -u $CONCOURSE_USER -p $CONCOURSE_PASS
+  # create pipeline
+  if [ -f "$GIT_PROJECT_ROOT/secrets/$GIT_NAMESPACE.yml" ]; then
+    fly -t local validate-pipeline -c /tmp/$GIT_NAMESPACE/.rad/concourse.yml
+    fly -t local set-pipeline -p $urn -c /tmp/$GIT_NAMESPACE/.rad/concourse.yml --non-interactive -l $GIT_PROJECT_ROOT/secrets/$GIT_NAMESPACE.yml > /dev/null
+  else
+    fly -t local set-pipeline -p $urn -c /tmp/$GIT_NAMESPACE/.rad/concourse.yml --non-interactive
+  fi
+  # unpause pipeline
+  fly -t local unpause-pipeline -p $urn
+  # trigger a job
+  # TODO: trigger all jobs
+  fly -t local trigger-job --job $urn/job
+}
+
+delete_team() {
+  local tag=$(echo $GIT_NAMESPACE | cut -c 31-)
+  local urn="$RADICLE_NAME-$tag"
+  # login
+  fly -t local login -c $CONCOURSE_URL -u $CONCOURSE_USER -p $CONCOURSE_PASS
+  # destroy pipeline
+  fly -t local destroy-pipeline -p $urn -n
+}
+
+check_ci_deletion() {
+  local urn=$1
+  local commit=$2
+  local branch=$3
+  # initial commit has prev_commit as 00..00
+  if [ "$commit" = "0000000000000000000000000000000000000000" ]; then
+    return;
+  fi
+
+  # checkout into that commit
+  unset GIT_DIR && cd /tmp/$urn && git checkout $commit -f -q
+
+  if [ -f "/tmp/$urn/.rad/concourse.yml" ]; then
+    echo "ci yml was deleted in this commit"
+    delete_team $urn
+  fi
+
+  # revert checkout
+  unset GIT_DIR && cd /tmp/$urn && git checkout $branch -f
+}
+
+clone_or_pull() {
+  local urn=$GIT_NAMESPACE
+  if [ -e "/tmp/$urn" ]; then
+    echo "pulling..."
+    unset GIT_DIR && cd /tmp/$urn && git pull -f --rebase
+  else
+    echo "cloning..."
+    git clone $GIT_DIR /tmp/$urn
+  fi
+}
+
+while read line
+do
+  echo "stdin: $line"
+  urn=$GIT_NAMESPACE
+  prev_commit=$(echo $line | cut -d' ' -f2)
+  branch=$(echo $line | cut -d' ' -f4)
+  echo "urn: $urn, project: $RADICLE_NAME, prev_commit: $prev_commit, branch: $branch"
+
+  # clone the project locally in /tmp
+  clone_or_pull
+
+  default_branch=$(GIT_DIR=/tmp/$urn/.git git symbolic-ref --short refs/remotes/origin/HEAD)
+  # remove the `origin` part
+  default_branch=$(echo $default_branch | cut -c 8-)
+
+  if [ "$branch" != "$default_branch" ]; then
+    echo "skpping, only running on pushes to branch $default_branch"
+    continue
+  fi
+
+  # check for .rad/concourse.yml
+  if [ -f "/tmp/$urn/.rad/concourse.yml" ]; then
+    echo "yml exists."
+    run_pipeline
+  else
+    echo "yml does not exist."
+    check_ci_deletion $urn $prev_commit $branch
+    exit 0
+  fi
+
+done
+
+echo "Exiting..."
+exit 0

@@ -4736,6 +4736,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-ci"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "rad-common",
+ "rad-terminal",
+ "ssh2",
+ "url",
+ "whoami",
+]
+
+[[package]]
 name = "rad-clib"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?rev=b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8#b51ed772fe4ec2ae4fdb4e95bac0e3271be197c8"
@@ -5112,6 +5125,7 @@ dependencies = [
  "rad-account",
  "rad-auth",
  "rad-checkout",
+ "rad-ci",
  "rad-clone",
  "rad-common",
  "rad-ens",
@@ -5969,6 +5983,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssh2"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "269343e64430067a14937ae0e3c4ec604c178fb896dde0964b1acd22b3e2eeb1"
+dependencies = [
+ "bitflags",
+ "libc",
+ "libssh2-sys",
+ "parking_lot",
+]
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6682,6 +6708,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d743fdedc5c64377b5fc2bc036b01c7fd642205a0d96356034ae3404d49eb7fb"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "whoami"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "524b58fa5a20a2fb3014dd6358b70e6579692a56ef6fce928834e488f42f65e8"
+dependencies = [
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

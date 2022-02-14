@@ -1,0 +1,16 @@
+[package]
+name = "rad-ci"
+version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Install or uninstall ci on your seed node"
+
+[dependencies]
+anyhow = "1.0"
+lexopt = { version = "0.2" }
+rad-common = { path = "../common" }
+rad-terminal = { path = "../terminal" }
+url = { version = "*" }
+ssh2 = "0.9.3"
+whoami = "1.2.1"

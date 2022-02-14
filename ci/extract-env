@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -ue
+
+file=$1
+port=$(cat $file | grep ports | cut -d \" -f2 | cut -d \: -f1)
+user=$(cat $file | grep "CONCOURSE_ADD_LOCAL_USER" | cut -d \: -f2 | cut -d ' ' -f2)
+pass=$(cat $file | grep "CONCOURSE_ADD_LOCAL_USER" | cut -d \: -f3)
+
+cat <<END > $2
+CONCOURSE_USER=$user
+CONCOURSE_PASS=$pass
+CONCOURSE_URL=http://localhost:$port
+END
+
