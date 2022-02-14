@@ -6,7 +6,7 @@ use anyhow::Context as _;
 
 use librad::git::Urn;
 
-use rad_common::{git, identities, keys, profile};
+use rad_common::{git, keys, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -67,10 +67,9 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (signer, storage) = keys::storage(&profile, sock)?;
-    let project = identities::project::get(&storage, &options.urn)?
+    let project = project::get(&storage, &options.urn)?
         .context("project could not be found in local storage")?;
-    let name = project.subject().name.to_string();
-    let path = PathBuf::from(name.clone());
+    let path = PathBuf::from(project.name.clone());
 
     if path.exists() {
         anyhow::bail!("the local path {:?} already exists", path.as_path());
@@ -79,8 +78,29 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     term::headline(&format!(
         "Initializing local checkout for 🌱 {} ({})",
         term::format::highlight(&options.urn),
-        name,
+        project.name,
     ));
+
+    let repo = git::repository(storage.path())?;
+    // If we have a local head, we should checkout our local "fork", so we don't specify
+    // a peer.
+    // If we *don't* have a local head, we have to checkout a delegate's head. If there is
+    // only one delegate, the choice is easy.
+    let peer = if project::get_local_head(&repo, &options.urn, &project.default_branch)?.is_some() {
+        term::success!("Local {} branch found...", project.default_branch);
+        None
+    } else if project.remotes.len() > 1 {
+        anyhow::bail!("project has more than one delegate, please specify which one you would like to checkout");
+    } else if let Some(delegate) = project.remotes.iter().next() {
+        term::success!(
+            "Remote {} branch found via {}...",
+            project.default_branch,
+            term::format::highlight(delegate)
+        );
+        Some(*delegate)
+    } else {
+        anyhow::bail!("project has no delegates, cannot checkout");
+    };
 
     let spinner = term::spinner("Performing checkout...");
     if let Err(err) = git::checkout(
@@ -88,7 +108,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
         profile.paths().clone(),
         signer,
         &options.urn,
-        None,
+        peer,
         path.clone(),
     ) {
         spinner.failed();
@@ -100,7 +120,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
 
     term::success!(
         "Project checkout successful under ./{}",
-        term::format::highlight(name)
+        term::format::highlight(project.name)
     );
 
     Ok(path)

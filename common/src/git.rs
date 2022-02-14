@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::anyhow;
@@ -102,6 +102,10 @@ where
     Ok(repo)
 }
 
+pub fn repository(path: &Path) -> Result<git_repository::Repository, git_repository::open::Error> {
+    git_repository::Repository::open(path)
+}
+
 pub fn git<S: AsRef<std::ffi::OsStr>>(
     repo: &std::path::Path,
     args: impl IntoIterator<Item = S>,
@@ -123,7 +127,7 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
     )))
 }
 
-pub fn configure_monorepo(repo: &std::path::Path, peer_id: &PeerId) -> Result<(), anyhow::Error> {
+pub fn configure_monorepo(repo: &Path, peer_id: &PeerId) -> Result<(), anyhow::Error> {
     let key = crate::keys::to_ssh_key(peer_id)?;
 
     git(repo, ["config", "--local", CONFIG_SIGNING_KEY, &key])?;

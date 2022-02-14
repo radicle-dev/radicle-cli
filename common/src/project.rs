@@ -1,8 +1,9 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::path::Path;
 
 use anyhow::{anyhow, Context as _, Error, Result};
+use either::Either;
 use git2::Repository;
 use git_repository as git;
 
@@ -16,6 +17,7 @@ use librad::identities::payload;
 use librad::identities::SomeIdentity;
 use librad::profile::Profile;
 use librad::reflike;
+use librad::PeerId;
 
 use rad_identities::{self, project};
 
@@ -30,6 +32,8 @@ pub struct Metadata {
     pub default_branch: String,
     /// List of delegates.
     pub delegates: HashSet<Urn>,
+    /// List of remotes.
+    pub remotes: HashSet<PeerId>,
 }
 
 impl TryFrom<librad::identities::Project> for Metadata {
@@ -43,10 +47,20 @@ impl TryFrom<librad::identities::Project> for Metadata {
             .indirect()
             .map(|indirect| indirect.urn())
             .collect();
+        let remotes = project
+            .delegations()
+            .iter()
+            .flat_map(|either| match either {
+                Either::Left(pk) => Either::Left(std::iter::once(PeerId::from(*pk))),
+                Either::Right(indirect) => {
+                    Either::Right(indirect.delegations().iter().map(|pk| PeerId::from(*pk)))
+                }
+            })
+            .collect::<HashSet<PeerId>>();
         let default_branch = subject
             .default_branch
             .clone()
-            .ok_or(anyhow!("missing default branch"))?
+            .ok_or(anyhow!("project is missing a default branch"))?
             .to_string();
 
         Ok(Self {
@@ -57,6 +71,7 @@ impl TryFrom<librad::identities::Project> for Metadata {
                 .map_or_else(|| "".into(), |desc| desc.to_string()),
             default_branch,
             delegates,
+            remotes,
         })
     }
 }
@@ -72,7 +87,7 @@ pub fn create(
     let path = Path::new("..").to_path_buf();
     let paths = profile.paths().clone();
     let whoami = project::WhoAmI::from(None);
-    let delegations = Vec::new().into_iter().collect();
+    let delegations = BTreeSet::new();
 
     project::create::<payload::Project>(
         storage,
@@ -94,7 +109,9 @@ pub fn list(storage: &Storage) -> Result<Vec<(Urn, Metadata, Option<git::ObjectI
                 SomeIdentity::Project(project) => {
                     let urn = project.urn();
                     let meta: Metadata = project.try_into().ok()?;
-                    let head = get_head(&repo, &urn, &meta.default_branch).ok();
+                    let head = get_local_head(&repo, &urn, &meta.default_branch)
+                        .ok()
+                        .flatten();
 
                     Some((urn, meta, head))
                 }
@@ -107,18 +124,17 @@ pub fn list(storage: &Storage) -> Result<Vec<(Urn, Metadata, Option<git::ObjectI
     Ok(objs)
 }
 
-pub fn get_head<'r>(
+pub fn get_local_head<'r>(
     repo: &'r git::Repository,
     urn: &Urn,
     branch: &str,
-) -> Result<git::ObjectId, Error> {
+) -> Result<Option<git::ObjectId>, Error> {
     let mut repo = repo.to_easy();
     repo.set_namespace(urn.encode_id())?;
 
-    let reference = repo.find_reference(format!("heads/{}", branch))?;
-    let oid = reference.id().detach();
+    let reference = repo.try_find_reference(format!("heads/{}", branch))?;
 
-    Ok(oid)
+    Ok(reference.map(|r| r.id().detach()))
 }
 
 pub fn get(storage: &Storage, urn: &Urn) -> Result<Option<Metadata>, Error> {
