@@ -243,22 +243,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             }
         }
 
-        let spinner = term::spinner("Fetching project heads...");
-        match seed::fetch_heads(monorepo, seed, &project_urn) {
-            Ok(output) => {
-                spinner.finish();
-
-                if options.verbose {
-                    term::blob(output);
-                }
-            }
-            Err(err) => {
-                spinner.failed();
-                term::blank();
-                return Err(err);
-            }
-        }
-
         let spinner = term::spinner(&format!(
             "Fetching {} remotes...",
             if remotes.is_empty() {

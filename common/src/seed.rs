@@ -263,22 +263,6 @@ pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyh
     )
 }
 
-pub fn fetch_heads(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyhow::Error> {
-    let id = urn.encode_id();
-    let url = seed.join(&id)?;
-
-    git::git(
-        repo,
-        [
-            "fetch",
-            "--verbose",
-            "--atomic",
-            url.as_str(),
-            &format!("refs/heads/*:refs/namespaces/{}/refs/heads/*", id,),
-        ],
-    )
-}
-
 pub fn fetch_remotes(
     repo: &Path,
     seed: &Url,
