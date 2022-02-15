@@ -1,6 +1,7 @@
 use std::convert::TryFrom as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
@@ -154,6 +155,29 @@ pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, 
     }]);
 
     Ok(remote)
+}
+
+pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<PeerId>> {
+    let mut remotes = Vec::new();
+
+    for remote in repo.remotes().iter().flatten().flatten() {
+        let remote = repo.find_remote(remote)?;
+        for refspec in remote.refspecs() {
+            if refspec.direction() != git2::Direction::Fetch {
+                continue;
+            }
+            if let Some(peer) = refspec
+                .src()
+                .and_then(|s| s.strip_prefix("refs/remotes/"))
+                .and_then(|s| s.split_once('/'))
+                .and_then(|(peer, _)| PeerId::from_str(peer).ok())
+            {
+                remotes.push(peer);
+            }
+        }
+    }
+
+    Ok(remotes)
 }
 
 #[cfg(test)]

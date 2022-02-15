@@ -90,7 +90,7 @@ impl Args for Options {
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
-    let (_, _storage) = keys::storage(&profile, sock)?;
+    let (_, storage) = keys::storage(&profile, sock)?;
     let (urn, repo) = project::cwd()?;
 
     match options.op {
@@ -104,7 +104,19 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             );
         }
         Operation::List => {
-            todo!();
+            let mut table = term::Table::default();
+
+            for remote in git::remotes(&repo)? {
+                if let Some(person) = project::person(&storage, &urn, &remote)? {
+                    table.push([
+                        term::format::bold(person.subject().name.to_string()),
+                        term::format::tertiary(remote),
+                    ]);
+                } else {
+                    table.push([String::new(), term::format::tertiary(remote)]);
+                }
+            }
+            table.render();
         }
     }
 
