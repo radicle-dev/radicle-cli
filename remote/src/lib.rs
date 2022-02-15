@@ -80,7 +80,7 @@ impl Args for Options {
 
                 unknown => anyhow::bail!("unknown operation '{}'", unknown),
             },
-            None => anyhow::bail!("an operation must be specified; see `rad remote --help`"),
+            None => Operation::List,
         };
 
         Ok((Options { op }, vec![]))
