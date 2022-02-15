@@ -17,6 +17,7 @@ pub const HELP: Help = Help {
 Usage
 
     rad remote add <name> <peer-id>
+    rad remote rm <name | peer-id>
     rad remote ls
 
 Examples
@@ -32,7 +33,7 @@ Options
 #[derive(Debug)]
 pub enum Operation {
     Add { name: String, peer: PeerId },
-    Remove { name: String },
+    Remove { remote: String },
     List,
 }
 
@@ -48,7 +49,7 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut peer: Option<PeerId> = None;
-        let mut name: Option<String> = None;
+        let mut remote: Option<String> = None;
         let mut op: Option<String> = None;
 
         while let Some(arg) = parser.next()? {
@@ -59,8 +60,8 @@ impl Args for Options {
                 Value(val) if op.is_none() => {
                     op = Some(val.to_string_lossy().to_string());
                 }
-                Value(val) if name.is_none() => {
-                    name = Some(val.to_string_lossy().to_string());
+                Value(val) if remote.is_none() => {
+                    remote = Some(val.to_string_lossy().to_string());
                 }
                 Value(val) if peer.is_none() => {
                     peer = Some(val.parse().context("invalid value specified for peer")?);
@@ -74,11 +75,11 @@ impl Args for Options {
         let op = match op {
             Some(op) => match op.as_str() {
                 "add" => Operation::Add {
-                    name: name.ok_or_else(|| anyhow!("a remote name must be specified"))?,
+                    name: remote.ok_or_else(|| anyhow!("a remote name must be specified"))?,
                     peer: peer.ok_or_else(|| anyhow!("a remote peer must be specified"))?,
                 },
                 "rm" => Operation::Remove {
-                    name: name.ok_or_else(|| anyhow!("a remote name must be specified"))?,
+                    remote: remote.ok_or_else(|| anyhow!("a remote name must be specified"))?,
                 },
                 "ls" => Operation::List,
 
@@ -107,21 +108,50 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 term::format::highlight(name)
             );
         }
-        Operation::Remove { name } => {
-            repo.remote_delete(&name)?;
-            term::success!("Remote {} removed", term::format::highlight(name));
+        Operation::Remove { remote } => {
+            if let Ok(peer_) = remote.parse() {
+                // Delete by peer id.
+                for (name, peer) in git::remotes(&repo)? {
+                    if peer == peer_ {
+                        repo.remote_delete(&name)?;
+                        term::success!(
+                            "Remote {} {} removed",
+                            term::format::highlight(remote),
+                            term::format::dim(format!("{:?}", name)),
+                        );
+
+                        break;
+                    }
+                }
+            } else {
+                // Delete by peer name.
+                for (name, peer) in git::remotes(&repo)? {
+                    if let Some(person) = project::person(&storage, &urn, &peer)? {
+                        if person.subject().name.to_string() == remote {
+                            repo.remote_delete(&name)?;
+                            term::success!(
+                                "Remote {} {} removed",
+                                term::format::highlight(remote),
+                                term::format::dim(format!("{:?}", name)),
+                            );
+
+                            break;
+                        }
+                    }
+                }
+            }
         }
         Operation::List => {
             let mut table = term::Table::default();
 
-            for remote in git::remotes(&repo)? {
-                if let Some(person) = project::person(&storage, &urn, &remote)? {
+            for (_, peer) in git::remotes(&repo)? {
+                if let Some(person) = project::person(&storage, &urn, &peer)? {
                     table.push([
                         term::format::bold(person.subject().name.to_string()),
-                        term::format::tertiary(remote),
+                        term::format::tertiary(peer),
                     ]);
                 } else {
-                    table.push([String::new(), term::format::tertiary(remote)]);
+                    table.push([String::new(), term::format::tertiary(peer)]);
                 }
             }
             table.render();

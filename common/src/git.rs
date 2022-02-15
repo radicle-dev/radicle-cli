@@ -157,11 +157,11 @@ pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, 
     Ok(remote)
 }
 
-pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<PeerId>> {
+pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>> {
     let mut remotes = Vec::new();
 
-    for remote in repo.remotes().iter().flatten().flatten() {
-        let remote = repo.find_remote(remote)?;
+    for name in repo.remotes().iter().flatten().flatten() {
+        let remote = repo.find_remote(name)?;
         for refspec in remote.refspecs() {
             if refspec.direction() != git2::Direction::Fetch {
                 continue;
@@ -172,7 +172,7 @@ pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<PeerId>> {
                 .and_then(|s| s.split_once('/'))
                 .and_then(|(peer, _)| PeerId::from_str(peer).ok())
             {
-                remotes.push(peer);
+                remotes.push((name.to_owned(), peer));
             }
         }
     }
