@@ -7,6 +7,9 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     strategy:
       matrix:
         build:
@@ -93,3 +96,15 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             radicle-tools-*.tar.gz
+      - id: 'auth'
+        if: matrix.os == 'ubuntu-latest'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          workload_identity_provider: 'https://iam.googleapis.com/projects/281042598092/locations/global/workloadIdentityPools/github-actions/providers/GCP'
+          service_account: 'github-actions@radicle-services.iam.gserviceaccount.com'
+      - name: 'Set up Cloud SDK'
+        if: matrix.os == 'ubuntu-latest'
+        uses: 'google-github-actions/setup-gcloud@v0'
+      - name: Upload .deb package to an APT repo
+        if: matrix.os == 'ubuntu-latest'
+        run: gcloud beta artifacts apt upload radicle-tools --location=us-central1 --source radicle-tools_0.0.0_amd64.deb
