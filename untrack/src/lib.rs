@@ -35,7 +35,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     term::info!(
         "Removing tracking relationship for {}...",
-        term::format::highlight(&urn)
+        term::format::dim(&urn)
     );
 
     let profile = profile::default()?;
@@ -44,10 +44,17 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if let Some(peer) = options.peer {
         tracking::untrack(&storage, &urn, peer, tracking::policy::Untrack::MustExist)??;
-        term::success!("Tracking relationship {} removed for {}", peer, urn);
+        term::success!(
+            "Tracking relationship {} removed for {}",
+            peer,
+            term::format::highlight(urn)
+        );
     } else {
         tracking::untrack_all(&storage, &urn, tracking::policy::UntrackAll::Any)?.for_each(drop);
-        term::success!("Tracking relationships for {} removed", urn);
+        term::success!(
+            "Tracking relationships for {} removed",
+            term::format::highlight(urn)
+        );
     }
 
     Ok(())

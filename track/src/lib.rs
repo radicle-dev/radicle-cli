@@ -34,8 +34,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
 
     term::info!(
-        "Establishing tracking relationship for {}...",
-        term::format::highlight(&urn)
+        "🌱 Establishing tracking relationship for {}...",
+        term::format::dim(&urn)
     );
 
     let cfg = tracking::config::Config::default();
@@ -52,9 +52,16 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     )??;
 
     if let Some(peer) = options.peer {
-        term::success!("Tracking relationship {} established for {}", peer, urn);
+        term::success!(
+            "Tracking relationship {} established for {}",
+            peer,
+            term::format::highlight(urn)
+        );
     } else {
-        term::success!("Tracking relationship for {} established", urn);
+        term::success!(
+            "Tracking relationship for {} established",
+            term::format::highlight(urn)
+        );
     }
 
     Ok(())
