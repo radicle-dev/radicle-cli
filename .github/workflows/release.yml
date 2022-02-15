@@ -6,7 +6,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  build:
+  create-artifacts:
     strategy:
       matrix:
         build:
@@ -40,6 +40,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
+            !target/debian
           key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
@@ -86,6 +87,11 @@ jobs:
           files: |
             radicle-tools-*.tar.gz
             target/debian/*.deb
+      - uses: actions/upload-artifact@v2
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: deb-package
+          path: target/debian/*.deb
       - name: Release (macOS)
         if: matrix.os == 'macos-latest'
         uses: softprops/action-gh-release@v1
@@ -93,3 +99,25 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             radicle-tools-*.tar.gz
+
+  upload-deb:
+    needs: create-artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: deb-package
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          workload_identity_provider: 'projects/281042598092/locations/global/workloadIdentityPools/github-actions/providers/google-cloud'
+          service_account: 'github-actions@radicle-services.iam.gserviceaccount.com'
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
+        with:
+          install_components: beta
+      - name: Upload .deb package to an APT repo
+        run: gcloud --quiet beta artifacts apt upload radicle-tools --location=us-central1 --source *.deb
