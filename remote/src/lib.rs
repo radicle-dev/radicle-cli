@@ -32,6 +32,7 @@ Options
 #[derive(Debug)]
 pub enum Operation {
     Add { name: String, peer: PeerId },
+    Remove { name: String },
     List,
 }
 
@@ -76,6 +77,9 @@ impl Args for Options {
                     name: name.ok_or_else(|| anyhow!("a remote name must be specified"))?,
                     peer: peer.ok_or_else(|| anyhow!("a remote peer must be specified"))?,
                 },
+                "rm" => Operation::Remove {
+                    name: name.ok_or_else(|| anyhow!("a remote name must be specified"))?,
+                },
                 "ls" => Operation::List,
 
                 unknown => anyhow::bail!("unknown operation '{}'", unknown),
@@ -102,6 +106,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 "Remote {} successfully added",
                 term::format::highlight(name)
             );
+        }
+        Operation::Remove { name } => {
+            repo.remote_delete(&name)?;
+            term::success!("Remote {} removed", term::format::highlight(name));
         }
         Operation::List => {
             let mut table = term::Table::default();
