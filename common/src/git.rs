@@ -1,9 +1,13 @@
+use std::convert::TryFrom as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
 
+use librad::git::local::url::LocalUrl;
+use librad::git::types::{remote::Remote, Flat, Force, GenericRef, Reference, Refspec};
+use librad::git_ext::RefLike;
 use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths, PeerId};
 
 use crate::identities;
@@ -138,6 +142,18 @@ pub fn configure_monorepo(repo: &Path, peer_id: &PeerId) -> Result<(), anyhow::E
     )?;
 
     Ok(())
+}
+
+pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, anyhow::Error> {
+    let name = RefLike::try_from(name)?;
+    let url = LocalUrl::from(urn.clone());
+    let remote = Remote::new(url, name.clone()).with_fetchspecs(vec![Refspec {
+        src: Reference::heads(Flat, *peer),
+        dst: GenericRef::heads(Flat, name),
+        force: Force::True,
+    }]);
+
+    Ok(remote)
 }
 
 #[cfg(test)]

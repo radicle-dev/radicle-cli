@@ -19,6 +19,7 @@ assets = [
     ["target/release/rad-init", "usr/bin/rad-init", "755"],
     ["target/release/rad-checkout", "usr/bin/rad-checkout", "755"],
     ["target/release/rad-untrack", "usr/bin/rad-untrack", "755"],
+    ["target/release/rad-remote", "usr/bin/rad-remote", "755"],
     ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
     ["radicle-tools.1.gz", "usr/share/man/man1/radicle-tools.1.gz", "644"],
 ]
@@ -41,6 +42,7 @@ rad-init = { path = "./init" }
 rad-show = { path = "./show" }
 rad-push = { path = "./push" }
 rad-sync = { path = "./sync" }
+rad-remote = { path = "./remote" }
 rad-ens = { path = "./ens" }
 rad-checkout = { path = "./checkout" }
 rad-track = { path = "./track" }
@@ -71,6 +73,7 @@ members = [
   "ls",
   "rm",
   "push",
+  "remote",
   "sync",
   "show",
   "track",

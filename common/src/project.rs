@@ -13,8 +13,8 @@ use librad::git::local::url::LocalUrl;
 use librad::git::storage::Storage;
 use librad::git::types::remote::Remote;
 use librad::git::Urn;
-use librad::identities::payload;
 use librad::identities::SomeIdentity;
+use librad::identities::{payload, Person};
 use librad::profile::Profile;
 use librad::reflike;
 use librad::PeerId;
@@ -144,6 +144,18 @@ pub fn get(storage: &Storage, urn: &Urn) -> Result<Option<Metadata>, Error> {
     Ok(meta)
 }
 
+pub fn person(storage: &Storage, urn: &Urn, peer: &PeerId) -> anyhow::Result<Option<Person>> {
+    use librad::git::types::{Namespace, Reference};
+
+    let urn = Urn::try_from(Reference::rad_self(Namespace::from(urn.clone()), *peer))
+        .map_err(|e| anyhow!(e))?;
+
+    let person = identities::person::get(&storage, &urn)
+        .map_err(|_| identities::Error::NotFound(urn.clone()))?;
+
+    Ok(person)
+}
+
 pub fn repository() -> Result<Repository, Error> {
     match Repository::open(".") {
         Ok(repo) => Ok(repo),
@@ -164,4 +176,11 @@ pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
 pub fn urn() -> Result<Urn, Error> {
     let repo = self::repository()?;
     Ok(self::remote(&repo)?.url.urn)
+}
+
+pub fn cwd() -> Result<(Urn, Repository), Error> {
+    let repo = self::repository()?;
+    let urn = self::remote(&repo)?.url.urn;
+
+    Ok((urn, repo))
 }
