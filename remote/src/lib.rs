@@ -16,7 +16,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad remote add <name> <peer-id>
+    rad remote add <name> <peer-id> [-f | --fetch]
     rad remote rm <name | peer-id>
     rad remote ls
 
@@ -26,14 +26,21 @@ Examples
 
 Options
 
-    --help   Print help
+    -f, --fetch     Fetch the remote immediately after it is setup
+        --help      Print help
 "#,
 };
 
 #[derive(Debug)]
 pub enum Operation {
-    Add { name: String, peer: PeerId },
-    Remove { remote: String },
+    Add {
+        name: String,
+        peer: PeerId,
+        fetch: bool,
+    },
+    Remove {
+        remote: String,
+    },
     List,
 }
 
@@ -51,11 +58,15 @@ impl Args for Options {
         let mut peer: Option<PeerId> = None;
         let mut remote: Option<String> = None;
         let mut op: Option<String> = None;
+        let mut fetch = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
+                }
+                Long("fetch") | Short('f') if op.is_some() => {
+                    fetch = true;
                 }
                 Value(val) if op.is_none() => {
                     op = Some(val.to_string_lossy().to_string());
@@ -77,6 +88,7 @@ impl Args for Options {
                 "add" => Operation::Add {
                     name: remote.ok_or_else(|| anyhow!("a remote name must be specified"))?,
                     peer: peer.ok_or_else(|| anyhow!("a remote peer must be specified"))?,
+                    fetch,
                 },
                 "rm" => Operation::Remove {
                     remote: remote.ok_or_else(|| anyhow!("a remote name must be specified"))?,
@@ -95,11 +107,11 @@ impl Args for Options {
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
+    let (signer, storage) = keys::storage(&profile, sock)?;
     let (urn, repo) = project::cwd()?;
 
     match options.op {
-        Operation::Add { name, peer } => {
+        Operation::Add { name, peer, fetch } => {
             let mut remote = git::remote(&urn, &peer, &name)?;
             remote.save(&repo)?;
 
@@ -107,6 +119,19 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 "Remote {} successfully added",
                 term::format::highlight(name)
             );
+
+            if fetch {
+                let spinner = term::spinner("Fetching remote...");
+                let settings = git::transport::Settings {
+                    paths: profile.paths().clone(),
+                    signer,
+                };
+                remote
+                    .fetch(settings, &repo, git::LocalFetchspec::Configured)?
+                    .for_each(drop);
+
+                spinner.finish();
+            }
         }
         Operation::Remove { remote } => {
             if let Ok(peer_) = remote.parse() {

@@ -11,6 +11,9 @@ use librad::git::types::{remote::Remote, Flat, Force, GenericRef, Reference, Ref
 use librad::git_ext::RefLike;
 use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths, PeerId};
 
+pub use librad::git::local::transport;
+pub use librad::git::types::remote::LocalFetchspec;
+
 use crate::identities;
 
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
