@@ -267,27 +267,19 @@ pub fn fetch_remotes(
     repo: &Path,
     seed: &Url,
     project: &Urn,
-    remotes: &[PeerId],
+    remotes: impl IntoIterator<Item = PeerId>,
 ) -> Result<String, anyhow::Error> {
     let project_id = project.encode_id();
     let url = seed.join(&project_id)?;
     let mut args = Vec::new();
 
     args.extend(["fetch", "--verbose", "--force", "--atomic", url.as_str()].map(|s| s.to_string()));
-
-    if remotes.is_empty() {
-        args.push(format!(
-            "refs/remotes/*:refs/namespaces/{}/refs/remotes/*",
-            project_id
-        ));
-    } else {
-        args.extend(remotes.iter().map(|remote| {
-            format!(
-                "refs/remotes/{}/*:refs/namespaces/{}/refs/remotes/{}/*",
-                remote, project_id, remote
-            )
-        }));
-    }
+    args.extend(remotes.into_iter().map(|remote| {
+        format!(
+            "refs/remotes/{}/*:refs/namespaces/{}/refs/remotes/{}/*",
+            remote, project_id, remote
+        )
+    }));
 
     git::git(repo, args)
 }

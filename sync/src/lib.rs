@@ -1,5 +1,6 @@
 use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
+use librad::PeerId;
 
 use rad_common::seed::SeedOptions;
 use rad_common::{git, keys, profile, project, seed};
@@ -11,6 +12,7 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use url::Url;
 
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::iter;
 use std::str::FromStr;
@@ -172,17 +174,27 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
         term::blank();
 
-        let seed_id = seed::get_seed_id(seed.clone())?;
-        term::info!("Seed ID is {}", term::format::highlight(seed_id));
-
-        let track_everyone = tracking::default_only(&storage, &project_urn)
+        let track_default = tracking::default_only(&storage, &project_urn)
             .context("couldn't read tracking graph")?;
+        let tracked = tracking::tracked_peers(&storage, Some(&project_urn))?
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let remotes = if track_everyone {
-            vec![]
-        } else {
-            tracking::tracked_peers(&storage, Some(&project_urn))?.collect::<Result<Vec<_>, _>>()?
-        };
+        if !track_default && tracked.is_empty() {
+            let cfg = tracking::config::Config::default();
+
+            tracking::track(
+                &storage,
+                &project_urn,
+                None,
+                cfg,
+                tracking::policy::Track::Any,
+            )??;
+
+            term::success!(
+                "Tracking relationship established for {}",
+                term::format::highlight(&project_urn)
+            );
+        }
 
         let spinner = term::spinner("Fetching project identity...");
         match seed::fetch_identity(monorepo, seed, &project_urn) {
@@ -197,8 +209,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 spinner.failed();
                 term::blank();
 
-                return Err(err)
-                    .with_context(|| format!("project {} was not found on the seed", project_urn));
+                return Err(err).with_context(|| {
+                    format!(
+                        "project {} was not found on {}",
+                        project_urn,
+                        seed.host_str().unwrap_or("seed")
+                    )
+                });
             }
         }
 
@@ -243,15 +260,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             }
         }
 
-        let spinner = term::spinner(&format!(
-            "Fetching {} remotes...",
-            if remotes.is_empty() {
-                "all".to_owned()
-            } else {
-                remotes.len().to_string()
-            }
-        ));
-        match seed::fetch_remotes(monorepo, seed, &project_urn, &remotes) {
+        // Start with the default set of remotes that should always be tracked.
+        // These are the remotes of the project delegates.
+        let mut remotes: HashSet<PeerId> = proj.remotes.clone();
+        // Add the explicitly tracked peers.
+        remotes.extend(tracked);
+
+        let spinner = if remotes == proj.remotes {
+            term::spinner("Fetching default remotes...")
+        } else {
+            term::spinner("Fetching tracked remotes...")
+        };
+        match seed::fetch_remotes(monorepo, seed, &project_urn, remotes) {
             Ok(output) => {
                 spinner.finish();
 
