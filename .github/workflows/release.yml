@@ -112,7 +112,7 @@ jobs:
       - id: 'auth'
         uses: 'google-github-actions/auth@v0'
         with:
-          workload_identity_provider: 'https://iam.googleapis.com/projects/281042598092/locations/global/workloadIdentityPools/github-actions/providers/GCP'
+          workload_identity_provider: 'projects/281042598092/locations/global/workloadIdentityPools/github-actions/providers/google-cloud'
           service_account: 'github-actions@radicle-services.iam.gserviceaccount.com'
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
