@@ -11,6 +11,9 @@ pub enum Error {
     /// If this error is returned from argument parsing, help is displayed.
     #[error("help invoked")]
     Help,
+    /// If this error is returned from argument parsing, usage is displayed.
+    #[error("usage invoked")]
+    Usage,
     /// An error with a hint.
     #[error("{err}")]
     WithHint {
@@ -51,9 +54,16 @@ where
     let options = match A::from_env() {
         Ok(opts) => opts,
         Err(err) => {
-            if let Some(Error::Help) = err.downcast_ref::<Error>() {
-                term::usage(help.name, help.version, help.description, help.usage);
-                process::exit(0);
+            match err.downcast_ref::<Error>() {
+                Some(Error::Help) => {
+                    term::help(help.name, help.version, help.description, help.usage);
+                    process::exit(0);
+                }
+                Some(Error::Usage) => {
+                    term::usage(help.name, help.usage);
+                    process::exit(1);
+                }
+                _ => {}
             }
             term::failure(help.name, &err);
             process::exit(1);

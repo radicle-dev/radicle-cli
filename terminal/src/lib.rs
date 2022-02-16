@@ -144,13 +144,21 @@ pub mod components {
 
     pub fn prefixed(prefix: &str, text: &str) -> String {
         text.split('\n')
-            .filter(|line| !line.trim().is_empty())
-            .map(|line| format!("  {}: {}\n", prefix, line))
+            .map(|line| format!("{}{}\n", prefix, line))
             .collect()
     }
 
-    pub fn usage(name: &str, version: &str, description: &str, usage: &str) {
+    pub fn help(name: &str, version: &str, description: &str, usage: &str) {
         println!("rad-{} v{}\n{}\n{}", name, version, description, usage);
+    }
+
+    pub fn usage(name: &str, usage: &str) {
+        eprintln!(
+            "{} {}\n{}",
+            style("==").red(),
+            style(format!("Error: rad-{}: invalid usage", name)).red(),
+            style(prefixed(TAB, usage)).red().dim()
+        );
     }
 
     pub fn eprintln(prefix: impl fmt::Display, msg: impl fmt::Display) {

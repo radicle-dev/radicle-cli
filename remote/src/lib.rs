@@ -87,8 +87,8 @@ impl Args for Options {
         let op = match op {
             Some(op) => match op.as_str() {
                 "add" => Operation::Add {
-                    name: remote.ok_or_else(|| anyhow!("a remote name must be specified"))?,
-                    peer: peer.ok_or_else(|| anyhow!("a remote peer must be specified"))?,
+                    name: remote.ok_or(Error::Usage)?,
+                    peer: peer.ok_or(Error::Usage)?,
                     fetch,
                 },
                 "rm" => Operation::Remove {
