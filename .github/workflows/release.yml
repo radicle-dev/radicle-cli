@@ -116,5 +116,7 @@ jobs:
           service_account: 'github-actions@radicle-services.iam.gserviceaccount.com'
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
+        with:
+          install_components: beta
       - name: Upload .deb package to an APT repo
         run: gcloud --quiet beta artifacts apt upload radicle-tools --location=us-central1 --source *.deb
