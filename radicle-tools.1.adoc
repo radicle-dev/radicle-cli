@@ -41,8 +41,12 @@ command:
 
   $ rad auth
 
-Follow the instructions by entering a username and password to protect your
-key pair. You may then proceed to creating your first radicle project.
+Follow the instructions by entering a username and password to protect your key
+pair. When you've completed the steps, your *Peer ID* will be displayed. This
+identifies your radicle key pair and device, as well as all the code you
+publish. Share it freely with collaborators.
+
+You may now proceed to creating your first radicle project.
 
 Radicle is built around *git*, and thus radicle projects must be initialized
 from *git* repositories. Navigate to a repository of your choosing and run
@@ -85,6 +89,120 @@ synchronized with your seed.
 
 You may run *rad* with no arguments to see what additional commands are
 available.
+
+== Contributing to a radicle project
+
+Lets look at how you can contribute code to a project. First, get a hold of the
+project *URN* for which you'd like to make a contribution, eg.
+__rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo__, and the seed on which this
+project is hosted, eg. __willow.radicle.garden__. Usually, the seed will
+be shown on the project profile, when browsing on the web.
+
+You may then use *rad-clone(1)* to fetch a fresh copy of the project from the
+seed:
+
+  $ rad clone rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo --seed willow.radicle.garden
+
+  Syncing project rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo from https://willow.radicle.garden/
+  Initializing local checkout for rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo (radicle-client-tools)
+  ...
+
+If the project is found, it will be fetched and a working copy will be created,
+with the canonical branch checked out. We can inspect the repository and see
+that it is configured with the seed we have cloned it from:
+
+  $ cd radicle-client-tools
+  $ git config --local rad.seed
+  https://willow.radicle.garden/
+
+We can also check what radicle remotes are configured:
+
+  $ rad remote
+  cloudhead hyn9diwfnytahjq8u3iw63h9jte1ydcatxax3saymwdxqu1zo645pe (delegate)
+
+This tells us that there is one remote setup, which is one of the project
+delegates. A delegate is a peer who can sign on behalf of the project. These
+can be trusted within the context of a project. The name of the delegate as
+well as the id (also known as *Peer ID*) is shown.
+
+Now let's commit a change to the README:
+
+  $ vim README.md
+  $ git add README.md
+  $ git commit -m "Update README.md"
+
+And push it to the seed:
+
+  $ rad push
+
+  Syncing project rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo to https://willow.radicle.garden/
+  ...
+
+Your changes will be pushed to a sub-tree of the project on the seed node, which
+will be namespaced under your *Peer ID*. To check what your *Peer ID* is, run:
+
+  $ rad show --peer
+  hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
+
+The remote seed now has two source trees: one by the project delegate, and one
+by you. Your `master` branch is further along the canonical branch by one
+commit.
+
+You may share your *Peer ID* with a project maintainer to have them take a look
+at your contribution.
+
+== Merging project contributions
+
+In the previous section we looked at the contributor flow. Now let's look at how
+contributions can be merged back into the project by playing the role of a
+maintainer.
+
+Project maintainers will most often be *delegates*, this helps as delegate
+branches are fetched by default via *rad-clone(1)* and automatically tracked.
+
+As a maintainer, the first thing you will want to do is to find out if there
+is any code published on the seed node that you may be interested in. To do
+this, you can use *rad-tree(1)*. This will query the seed node and return
+the list of contributors and branches:
+
+  $ rad tree --seed willow.radicle.garden
+
+  hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
+  └── master 26fc90625774bc6e219bb15b51f5f9f51d26248b Update README.md
+  ...
+
+You may omit the __--seed__ argument if it is the default seed for this project.
+
+Here we can see the earlier contribution we made and the id of the peer that
+made it. If we're interested in viewing this commit and potentially merging it,
+we can start by adding the remote peer to our working copy:
+
+  $ rad remote add bob hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q -f
+
+We're calling this remote *"bob"*, but any name will do. The __-f__ flag, just
+like with *git*, fetches the remote after configuring it.
+
+Now that we have the remote source tree in our working copy, we can create
+a tracking branch to explore the code:
+
+  $ git branch remotes/bob/master bob/heads/master
+
+We've chosen to call this branch *"remotes/bob/master"*, but you can call it
+anything. The second parameter specifies that we'd like to track bob's *master*
+branch.
+
+To see what changes bob contributed, we can diff the remote branch against our
+master:
+
+  $ git diff master..remotes/bob/master
+
+If we're happy with these changes, we can merge them and publish our new
+head:
+
+  $ git merge remotes/bob/master
+  $ rad push
+
+And we're done!
 
 == See also
 

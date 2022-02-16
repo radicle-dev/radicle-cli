@@ -116,11 +116,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let mut remote = git::remote(&urn, &peer, &name)?;
             remote.save(&repo)?;
 
-            term::success!(
-                "Remote {} successfully added",
-                term::format::highlight(&name)
-            );
-
             tracking::track(
                 &storage,
                 &urn,
@@ -159,6 +154,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
                 spinner.finish();
             }
+            term::success!(
+                "Remote {} successfully added",
+                term::format::highlight(&name)
+            );
         }
         Operation::Remove { remote } => {
             if let Ok(peer_) = remote.parse() {
