@@ -1,6 +1,6 @@
 [package]
 name = "radicle-tools"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 
