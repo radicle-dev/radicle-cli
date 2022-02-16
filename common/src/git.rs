@@ -179,11 +179,23 @@ pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>>
     Ok(remotes)
 }
 
+pub fn set_upstream(repo: &Path, name: &str, branch: &str) -> anyhow::Result<String> {
+    git(
+        repo,
+        [
+            "branch",
+            &format!("{}/{}", name, branch),
+            &format!("{}/heads/{}", name, branch),
+        ],
+    )
+}
+
 pub fn list_remotes(
     repo: &git2::Repository,
     url: &url::Url,
     urn: &Urn,
 ) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
+    // TODO: Use `Remote::remote_heads`.
     let url = url.join(&urn.encode_id())?;
     let mut remote = repo.remote_anonymous(url.as_str())?;
     let mut remotes = HashMap::new();
