@@ -10,7 +10,7 @@ use git_repository as git;
 use librad::crypto::BoxedSigner;
 use librad::git::identities::{self, Project};
 use librad::git::local::url::LocalUrl;
-use librad::git::storage::Storage;
+use librad::git::storage::{ReadOnly, Storage};
 use librad::git::types::remote::Remote;
 use librad::git::Urn;
 use librad::identities::SomeIdentity;
@@ -137,7 +137,10 @@ pub fn get_local_head<'r>(
     Ok(reference.map(|r| r.id().detach()))
 }
 
-pub fn get(storage: &Storage, urn: &Urn) -> Result<Option<Metadata>, Error> {
+pub fn get<S>(storage: &S, urn: &Urn) -> Result<Option<Metadata>, Error>
+where
+    S: AsRef<ReadOnly>,
+{
     let proj = project::get(storage, urn)?;
     let meta = proj.map(|p| p.try_into()).transpose()?;
 

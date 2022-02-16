@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context as _, Error, Result};
 
-use librad::crypto::peer::PeerId;
 use librad::git::storage::Storage;
 use librad::git::Urn;
+use librad::{crypto::peer::PeerId, git::storage::ReadOnly};
 
 pub use librad::profile::{Profile, ProfileId, RadHome};
 
@@ -37,6 +37,12 @@ pub fn repo(home: &RadHome, profile: &Profile) -> Result<PathBuf, Error> {
             "Radicle home is not set.",
         ))),
     }
+}
+
+pub fn read_only(profile: &Profile) -> Result<ReadOnly, Error> {
+    let storage = ReadOnly::open(profile.paths())?;
+
+    Ok(storage)
 }
 
 pub fn user(storage: &Storage) -> Result<Urn, Error> {

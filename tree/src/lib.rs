@@ -4,7 +4,7 @@ use std::ffi::OsString;
 use anyhow::anyhow;
 
 use rad_common::seed::{self, SeedOptions};
-use rad_common::{git, project};
+use rad_common::{git, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -63,8 +63,17 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");
     };
 
+    let profile = profile::default()?;
+    let storage = profile::read_only(&profile)?;
+    let project = if let Some(p) = project::get(&storage, &urn)? {
+        p
+    } else {
+        anyhow::bail!("project {} not found in local storage", urn);
+    };
+
     let spinner = term::spinner(&format!(
-        "Listing remotes on {}...",
+        "Listing {} remotes on {}...",
+        term::format::highlight(project.name),
         term::format::highlight(seed.host_str().unwrap_or("seed"))
     ));
     let remotes = git::list_remotes(&repo, seed, &urn)?;
@@ -88,13 +97,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             };
 
             table.push([
-                String::from(" "),
                 term::format::tertiary(branch),
                 term::format::secondary(oid.to_string()),
                 term::format::italic(message),
             ]);
         }
-        table.render();
+        table.render_tree();
         term::blank();
     }
     Ok(())

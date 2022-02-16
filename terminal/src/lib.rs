@@ -88,6 +88,23 @@ pub mod components {
                 println!();
             }
         }
+
+        pub fn render_tree(self) {
+            for (r, row) in self.rows.iter().enumerate() {
+                if r != self.rows.len() - 1 {
+                    print!("├── ");
+                } else {
+                    print!("└── ");
+                }
+                for (i, cell) in row.iter().enumerate() {
+                    print!(
+                        "{} ",
+                        console::pad_str(cell, self.widths[i], console::Alignment::Left, None)
+                    );
+                }
+                println!();
+            }
+        }
     }
 
     pub struct Spinner {
