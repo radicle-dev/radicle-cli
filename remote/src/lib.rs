@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use anyhow::anyhow;
 use anyhow::Context as _;
 
+use librad::git::tracking;
 use librad::PeerId;
 
 use rad_common::{git, keys, profile, project};
@@ -118,6 +119,19 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             term::success!(
                 "Remote {} successfully added",
                 term::format::highlight(name)
+            );
+
+            tracking::track(
+                &storage,
+                &urn,
+                Some(peer),
+                tracking::config::Config::default(),
+                tracking::policy::Track::Any,
+            )??;
+
+            term::success!(
+                "Tracking relationship established with {}",
+                term::format::highlight(peer)
             );
 
             if fetch {
