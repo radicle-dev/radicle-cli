@@ -1,3 +1,4 @@
+use librad::git::Storage;
 use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 use librad::PeerId;
@@ -119,15 +120,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = Profile::load()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
-    let monorepo = profile.paths().git_dir();
-    let mut tips = Vec::new();
 
     let project_urn = if let Some(urn) = &options.urn {
         urn.clone()
     } else {
         project::urn()?
     };
-    let project_id = project_urn.encode_id();
     let git_version = git::version()?;
 
     term::info!("Git version {}", git_version);
@@ -160,146 +158,34 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     };
 
+    if options.fetch {
+        fetch(project_urn, &profile, seed, storage, options)?;
+    } else {
+        push(project_urn, &profile, seed, storage, options)?;
+    }
+
     // If we're in a project repo and no seed is configured, save the seed.
     if project::cwd().is_ok() && seed::get_seed(Scope::Any).is_err() {
-        term::info!("Saving seed configuration to local git config...");
         seed::set_seed(seed, Scope::Local(Path::new(".")))?;
 
-        tips.push("To override the seed, pass the '--seed' flag to `rad sync` or `rad push`.");
-        tips.push(
+        term::success!("Saving seed configuration to local git config...");
+        term::tip("To override the seed, pass the '--seed' flag to `rad sync` or `rad push`.");
+        term::tip(
             "To change the configured seed, run `git config rad.seed <url>` with a seed URL.",
         );
     }
 
-    if options.fetch {
-        term::blank();
-        term::info!(
-            "Syncing 🌱 project {} from {}",
-            term::format::highlight(&project_urn),
-            term::format::highlight(seed)
-        );
-        term::blank();
+    Ok(())
+}
 
-        let track_default = tracking::default_only(&storage, &project_urn)
-            .context("couldn't read tracking graph")?;
-        let tracked = tracking::tracked_peers(&storage, Some(&project_urn))?
-            .collect::<Result<Vec<_>, _>>()?;
-
-        if !track_default && tracked.is_empty() {
-            let cfg = tracking::config::Config::default();
-
-            tracking::track(
-                &storage,
-                &project_urn,
-                None,
-                cfg,
-                tracking::policy::Track::Any,
-            )??;
-
-            term::success!(
-                "Tracking relationship established for {}",
-                term::format::highlight(&project_urn)
-            );
-        }
-
-        let spinner = term::spinner("Fetching project identity...");
-        match seed::fetch_identity(monorepo, seed, &project_urn) {
-            Ok(output) => {
-                spinner.finish();
-
-                if options.verbose {
-                    term::blob(output);
-                }
-            }
-            Err(err) => {
-                spinner.failed();
-                term::blank();
-
-                return Err(err).with_context(|| {
-                    format!(
-                        "project {} was not found on {}",
-                        project_urn,
-                        seed.host_str().unwrap_or("seed")
-                    )
-                });
-            }
-        }
-
-        let proj =
-            project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
-
-        for delegate in proj.delegates {
-            let spinner = term::spinner(&format!(
-                "Fetching project delegate {}...",
-                delegate.encode_id()
-            ));
-            match seed::fetch_identity(monorepo, seed, &delegate) {
-                Ok(output) => {
-                    spinner.finish();
-
-                    if options.verbose {
-                        term::blob(output);
-                    }
-                }
-                Err(err) => {
-                    spinner.failed();
-                    term::blank();
-                    return Err(err);
-                }
-            }
-        }
-
-        let spinner = term::spinner("Verifying...");
-        match identities::project::verify(&storage, &project_urn) {
-            Ok(Some(_)) => {
-                spinner.finish();
-            }
-            Ok(None) => {
-                spinner.failed();
-                term::blank();
-                return Err(anyhow!("project {} could not be loaded", project_urn));
-            }
-            Err(err) => {
-                spinner.failed();
-                term::blank();
-                return Err(err.into());
-            }
-        }
-
-        // Start with the default set of remotes that should always be tracked.
-        // These are the remotes of the project delegates.
-        let mut remotes: HashSet<PeerId> = proj.remotes.clone();
-        // Add the explicitly tracked peers.
-        remotes.extend(tracked);
-
-        let spinner = if remotes == proj.remotes {
-            term::spinner("Fetching default remotes...")
-        } else {
-            term::spinner("Fetching tracked remotes...")
-        };
-        match seed::fetch_remotes(monorepo, seed, &project_urn, remotes) {
-            Ok(output) => {
-                spinner.finish();
-
-                if options.verbose {
-                    term::blob(output);
-                }
-            }
-            Err(err) => {
-                spinner.failed();
-                term::blank();
-                return Err(err);
-            }
-        }
-
-        if !tips.is_empty() {
-            for tip in tips {
-                term::tip(tip);
-            }
-        }
-        return Ok(());
-    }
-
+pub fn push(
+    project_urn: Urn,
+    profile: &Profile,
+    seed: &Url,
+    storage: Storage,
+    options: Options,
+) -> anyhow::Result<()> {
+    let monorepo = profile.paths().git_dir();
     let peer_id = profile::peer_id(&storage)?;
     let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
         .context("git signing key is not properly configured")?;
@@ -311,7 +197,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         )
     })?;
 
-    term::info!("Git signing key {}", term::format::dim(signing_key));
+    term::info!(
+        "Radicle signing key {}",
+        term::format::dim(signing_key.trim())
+    );
+    term::blank();
     term::info!(
         "Syncing 🌱 project {} to {}",
         term::format::highlight(&project_urn),
@@ -380,6 +270,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             url::Host::Ipv4(ip) => !ip.is_loopback() && !ip.is_unspecified() && !ip.is_private(),
             url::Host::Ipv6(ip) => !ip.is_loopback() && !ip.is_unspecified(),
         };
+        let project_id = project_urn.encode_id();
         let git_url = seed.join(&project_id)?;
 
         term::info!("🌱 Your project is synced and available at:");
@@ -410,12 +301,135 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         ));
         term::blank();
     }
+    Ok(())
+}
 
-    if !tips.is_empty() {
-        for tip in tips {
-            term::tip(tip);
+pub fn fetch(
+    project_urn: Urn,
+    profile: &Profile,
+    seed: &Url,
+    storage: Storage,
+    options: Options,
+) -> anyhow::Result<()> {
+    term::blank();
+    term::info!(
+        "Syncing 🌱 project {} from {}",
+        term::format::highlight(&project_urn),
+        term::format::highlight(seed)
+    );
+    term::blank();
+
+    let track_default =
+        tracking::default_only(&storage, &project_urn).context("couldn't read tracking graph")?;
+    let tracked =
+        tracking::tracked_peers(&storage, Some(&project_urn))?.collect::<Result<Vec<_>, _>>()?;
+
+    if !track_default && tracked.is_empty() {
+        let cfg = tracking::config::Config::default();
+
+        tracking::track(
+            &storage,
+            &project_urn,
+            None,
+            cfg,
+            tracking::policy::Track::Any,
+        )??;
+
+        term::success!(
+            "Tracking relationship established for {}",
+            term::format::highlight(&project_urn)
+        );
+    }
+
+    let monorepo = profile.paths().git_dir();
+    let spinner = term::spinner("Fetching project identity...");
+    match seed::fetch_identity(monorepo, seed, &project_urn) {
+        Ok(output) => {
+            spinner.finish();
+
+            if options.verbose {
+                term::blob(output);
+            }
+        }
+        Err(err) => {
+            spinner.failed();
+            term::blank();
+
+            return Err(err).with_context(|| {
+                format!(
+                    "project {} was not found on {}",
+                    project_urn,
+                    seed.host_str().unwrap_or("seed")
+                )
+            });
         }
     }
 
+    let proj =
+        project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
+
+    for delegate in proj.delegates {
+        let spinner = term::spinner(&format!(
+            "Fetching project delegate {}...",
+            delegate.encode_id()
+        ));
+        match seed::fetch_identity(monorepo, seed, &delegate) {
+            Ok(output) => {
+                spinner.finish();
+
+                if options.verbose {
+                    term::blob(output);
+                }
+            }
+            Err(err) => {
+                spinner.failed();
+                term::blank();
+                return Err(err);
+            }
+        }
+    }
+
+    let spinner = term::spinner("Verifying...");
+    match identities::project::verify(&storage, &project_urn) {
+        Ok(Some(_)) => {
+            spinner.finish();
+        }
+        Ok(None) => {
+            spinner.failed();
+            term::blank();
+            return Err(anyhow!("project {} could not be loaded", project_urn));
+        }
+        Err(err) => {
+            spinner.failed();
+            term::blank();
+            return Err(err.into());
+        }
+    }
+
+    // Start with the default set of remotes that should always be tracked.
+    // These are the remotes of the project delegates.
+    let mut remotes: HashSet<PeerId> = proj.remotes.clone();
+    // Add the explicitly tracked peers.
+    remotes.extend(tracked);
+
+    let spinner = if remotes == proj.remotes {
+        term::spinner("Fetching default remotes...")
+    } else {
+        term::spinner("Fetching tracked remotes...")
+    };
+    match seed::fetch_remotes(monorepo, seed, &project_urn, remotes) {
+        Ok(output) => {
+            spinner.finish();
+
+            if options.verbose {
+                term::blob(output);
+            }
+        }
+        Err(err) => {
+            spinner.failed();
+            term::blank();
+            return Err(err);
+        }
+    }
     Ok(())
 }

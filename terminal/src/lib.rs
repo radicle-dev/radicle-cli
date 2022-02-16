@@ -170,7 +170,7 @@ pub mod components {
     }
 
     pub fn tip(msg: &str) {
-        println!("{} {}", style("=>").blue(), msg);
+        println!("{} {}", style("=>").blue(), style(msg).dim().italic());
     }
 
     pub fn subcommand(msg: &str) {
