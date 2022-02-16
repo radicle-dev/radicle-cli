@@ -4879,10 +4879,12 @@ dependencies = [
  "rad-ls",
  "rad-profile",
  "rad-push",
+ "rad-remote",
  "rad-show",
  "rad-sync",
  "rad-terminal",
  "rad-track",
+ "rad-tree",
  "rad-untrack",
 ]
 
