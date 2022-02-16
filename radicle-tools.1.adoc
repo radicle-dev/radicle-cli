@@ -118,7 +118,7 @@ that it is configured with the seed we have cloned it from:
 We can also check what radicle remotes are configured:
 
   $ rad remote
-  cloudhead hyn9diwfnytahjq8u3iw63h9jte1ydcatxax3saymwdxqu1zo645pe (delegate)
+  cloudhead hyn9diwfnytahjq8u3iw63h9jte1ydcatxax3saymwdxqu1zo645pe delegate
 
 This tells us that there is one remote setup, which is one of the project
 delegates. A delegate is a peer who can sign on behalf of the project. These

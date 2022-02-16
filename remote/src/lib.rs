@@ -194,15 +194,24 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Operation::List => {
             let mut table = term::Table::default();
+            let proj = project::get(&storage, &urn)?
+                .ok_or_else(|| anyhow!("project {} not found on local device", urn))?;
 
             for (_, peer) in git::remotes(&repo)? {
+                let delegate = if proj.remotes.contains(&peer) {
+                    term::format::highlight("delegate")
+                } else {
+                    String::new()
+                };
+
                 if let Some(person) = project::person(&storage, &urn, &peer)? {
                     table.push([
                         term::format::bold(person.subject().name.to_string()),
                         term::format::tertiary(peer),
+                        delegate,
                     ]);
                 } else {
-                    table.push([String::new(), term::format::tertiary(peer)]);
+                    table.push([String::new(), term::format::tertiary(peer), delegate]);
                 }
             }
             table.render();
