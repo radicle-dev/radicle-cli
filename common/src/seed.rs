@@ -19,6 +19,16 @@ pub const DEFAULT_SEEDS: &[&str] = &[
 ];
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 
+#[derive(serde::Deserialize)]
+pub struct CommitHeader {
+    pub summary: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct Commit {
+    pub header: CommitHeader,
+}
+
 #[derive(Debug, Clone)]
 pub struct Addr {
     pub host: Host,
@@ -159,6 +169,21 @@ pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
     let id = PeerId::from_default_encoding(id)?;
 
     Ok(id)
+}
+
+pub fn get_commit(
+    mut seed: Url,
+    project: &Urn,
+    commit: &git2::Oid,
+) -> Result<Commit, anyhow::Error> {
+    seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
+    seed = seed.join(&format!("/v1/projects/{}/commits/{}", project, commit))?;
+
+    let agent = ureq::Agent::new();
+    let val: serde_json::Value = agent.get(seed.as_str()).call()?.into_json()?;
+    let commit = serde_json::from_value(val)?;
+
+    Ok(commit)
 }
 
 pub fn push_delegate(

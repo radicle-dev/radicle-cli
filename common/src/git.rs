@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryFrom as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -169,18 +170,43 @@ pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>>
             if refspec.direction() != git2::Direction::Fetch {
                 continue;
             }
-            if let Some(peer) = refspec
-                .src()
-                .and_then(|s| s.strip_prefix("refs/remotes/"))
-                .and_then(|s| s.split_once('/'))
-                .and_then(|(peer, _)| PeerId::from_str(peer).ok())
-            {
+            if let Some((peer, _)) = refspec.src().and_then(self::parse_remote) {
                 remotes.push((name.to_owned(), peer));
             }
         }
     }
 
     Ok(remotes)
+}
+
+pub fn list_remotes(
+    repo: &git2::Repository,
+    url: &url::Url,
+    urn: &Urn,
+) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
+    let url = url.join(&urn.encode_id())?;
+    let mut remote = repo.remote_anonymous(url.as_str())?;
+    let mut remotes = HashMap::new();
+
+    remote.connect(git2::Direction::Fetch)?;
+
+    let heads = remote.list()?;
+    for head in heads {
+        if let Some((peer, r)) = parse_remote(head.name()) {
+            if let Some(branch) = r.strip_prefix("heads/") {
+                let value = (branch.to_owned(), head.oid());
+                remotes.entry(peer).or_insert_with(Vec::new).push(value);
+            }
+        }
+    }
+    Ok(remotes)
+}
+
+fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
+    refspec
+        .strip_prefix("refs/remotes/")
+        .and_then(|s| s.split_once('/'))
+        .and_then(|(peer, r)| PeerId::from_str(peer).ok().map(|p| (p, r)))
 }
 
 #[cfg(test)]

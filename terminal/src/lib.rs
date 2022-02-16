@@ -33,6 +33,8 @@ pub mod components {
 
     use super::keys;
 
+    pub const TAB: &str = "   ";
+
     #[macro_export]
     macro_rules! info {
         ($($arg:tt)*) => ({
@@ -139,7 +141,7 @@ pub mod components {
     }
 
     pub fn indented(msg: &str) {
-        println!("   {}", msg);
+        println!("{}{}", TAB, msg);
     }
 
     pub fn tip(msg: &str) {
@@ -349,6 +351,10 @@ pub mod components {
 
         pub fn tertiary<D: std::fmt::Display>(msg: D) -> String {
             style(msg).cyan().to_string()
+        }
+
+        pub fn yellow<D: std::fmt::Display>(msg: D) -> String {
+            style(msg).yellow().to_string()
         }
 
         pub fn highlight<D: std::fmt::Display>(input: D) -> String {

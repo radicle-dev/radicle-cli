@@ -1,0 +1,14 @@
+[package]
+name = "rad-tree"
+version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "View radicle project source trees"
+
+[dependencies]
+lexopt = { version = "0.2" }
+anyhow = { version = "1.0" }
+librad = { version = "0" }
+rad-terminal = { path = "../terminal" }
+rad-common = { path = "../common" }
