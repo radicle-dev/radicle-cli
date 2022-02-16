@@ -6,7 +6,7 @@ use anyhow::Context as _;
 use librad::git::tracking;
 use librad::PeerId;
 
-use rad_common::{git, keys, profile, project};
+use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -118,7 +118,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
             term::success!(
                 "Remote {} successfully added",
-                term::format::highlight(name)
+                term::format::highlight(&name)
             );
 
             tracking::track(
@@ -129,13 +129,26 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 tracking::policy::Track::Any,
             )??;
 
+            // TODO: Only show this if new.
             term::success!(
                 "Tracking relationship established with {}",
                 term::format::highlight(peer)
             );
 
             if fetch {
+                let seed = if let Ok(seed) = seed::get_seed() {
+                    seed
+                } else {
+                    anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");
+                };
+
+                let monorepo = profile.paths().git_dir();
                 let spinner = term::spinner("Fetching remote...");
+
+                // Fetch refs from seed...
+                seed::fetch_remotes(monorepo, &seed, &urn, [peer])?;
+
+                // Fetch refs into working copy...
                 let settings = git::transport::Settings {
                     paths: profile.paths().clone(),
                     signer,
