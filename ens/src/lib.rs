@@ -239,7 +239,7 @@ async fn setup(
         }
     };
 
-    let seed_host = if let Ok(seed_url) = seed::get_seed() {
+    let seed_host = if let Ok(seed_url) = seed::get_seed(seed::Scope::Any) {
         seed_url.host_str().map(|s| s.to_owned())
     } else {
         None

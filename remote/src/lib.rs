@@ -131,7 +131,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             );
 
             if fetch {
-                let seed = if let Ok(seed) = seed::get_seed() {
+                let seed = if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
                     seed
                 } else {
                     anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");

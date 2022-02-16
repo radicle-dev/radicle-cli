@@ -94,7 +94,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let path = rad_checkout::execute(rad_checkout::Options { urn: options.urn })?;
 
     if let Some(seed_url) = options.seed.seed_url() {
-        seed::set_local_seed(&path, &seed_url)?;
+        seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
         term::success!(
             "Local repository seed for {} set to {}",
             term::format::highlight(path.display()),

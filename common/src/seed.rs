@@ -19,6 +19,13 @@ pub const DEFAULT_SEEDS: &[&str] = &[
 ];
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Scope<'a> {
+    Local(&'a Path),
+    Global,
+    Any,
+}
+
 #[derive(serde::Deserialize)]
 pub struct CommitHeader {
     pub summary: String,
@@ -117,41 +124,33 @@ impl Args for SeedOptions {
     }
 }
 
-pub fn get_seed() -> Result<Url, anyhow::Error> {
-    let output = git::git(Path::new("."), ["config", CONFIG_SEED_KEY])
-        .context("failed to lookup seed configuration")?;
+pub fn get_seed(scope: Scope) -> Result<Url, anyhow::Error> {
+    let (path, args) = match scope {
+        Scope::Any => (Path::new("."), vec!["config", CONFIG_SEED_KEY]),
+        Scope::Local(path) => (path, vec!["config", "--local", CONFIG_SEED_KEY]),
+        Scope::Global => (Path::new("."), vec!["config", "--global", CONFIG_SEED_KEY]),
+    };
+    let output = git::git(path, args).context("failed to lookup seed configuration")?;
     let url =
         Url::parse(&output).context(format!("`{}` is not set to a valid URL", CONFIG_SEED_KEY))?;
 
     Ok(url)
 }
 
-pub fn set_seed(seed: &Url) -> Result<(), anyhow::Error> {
-    git::git(
-        Path::new("."),
-        [
-            "config",
-            "--global",
-            CONFIG_SEED_KEY,
-            seed.to_string().as_str(),
-        ],
-    )
-    .map(|_| ())
-    .context("failed to save seed configuration")
-}
+pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
+    let seed = seed.as_str();
+    let (path, args) = match scope {
+        Scope::Any => (Path::new("."), vec!["config", CONFIG_SEED_KEY, seed]),
+        Scope::Local(path) => (path, vec!["config", "--local", CONFIG_SEED_KEY, seed]),
+        Scope::Global => (
+            Path::new("."),
+            vec!["config", "--global", CONFIG_SEED_KEY, seed],
+        ),
+    };
 
-pub fn set_local_seed(repository: &Path, seed: &Url) -> Result<(), anyhow::Error> {
-    git::git(
-        repository,
-        [
-            "config",
-            "--local",
-            CONFIG_SEED_KEY,
-            seed.to_string().as_str(),
-        ],
-    )
-    .map(|_| ())
-    .context("failed to save seed configuration")
+    git::git(path, args)
+        .map(|_| ())
+        .context("failed to save seed configuration")
 }
 
 pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {

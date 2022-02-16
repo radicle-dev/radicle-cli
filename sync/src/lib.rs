@@ -3,7 +3,7 @@ use librad::profile::Profile;
 use librad::PeerId;
 
 use rad_common::seed::SeedOptions;
-use rad_common::{git, keys, profile, project, seed};
+use rad_common::{git, keys, profile, project, seed, seed::Scope};
 use rad_terminal::args;
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
@@ -15,6 +15,7 @@ use url::Url;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::iter;
+use std::path::Path;
 use std::str::FromStr;
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
@@ -140,7 +141,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     let seed = &if let Some(seed_url) = options.seed.seed_url() {
         seed_url
-    } else if let Ok(seed) = seed::get_seed() {
+    } else if let Ok(seed) = seed::get_seed(Scope::Any) {
         seed
     } else {
         term::info!("Select a seed node to sync with...");
@@ -152,18 +153,23 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let url = Url::parse(&format!("https://{}", selection)).unwrap();
 
             term::info!("Selected {}", term::format::highlight(selection));
-            term::info!("Saving seed configuration to git...");
-
-            seed::set_seed(&url)?;
-
-            tips.push("To override the seed, pass the `--seed` flag to `rad sync` or `rad push` (see `rad sync --help`).");
-            tips.push("To change the configured seed, run `git config --global rad.seed <url>` with a seed URL.");
 
             url
         } else {
             return Ok(());
         }
     };
+
+    // If we're in a project repo and no seed is configured, save the seed.
+    if project::cwd().is_ok() && seed::get_seed(Scope::Any).is_err() {
+        term::info!("Saving seed configuration to local git config...");
+        seed::set_seed(seed, Scope::Local(Path::new(".")))?;
+
+        tips.push("To override the seed, pass the '--seed' flag to `rad sync` or `rad push`.");
+        tips.push(
+            "To change the configured seed, run `git config rad.seed <url>` with a seed URL.",
+        );
+    }
 
     if options.fetch {
         term::blank();

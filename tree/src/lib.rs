@@ -57,7 +57,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let (urn, repo) = project::cwd()?;
     let seed = &if let Some(seed_url) = options.seed.seed_url() {
         seed_url
-    } else if let Ok(seed) = seed::get_seed() {
+    } else if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
         seed
     } else {
         anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");
