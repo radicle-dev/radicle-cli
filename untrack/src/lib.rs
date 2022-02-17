@@ -94,14 +94,29 @@ pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
     let (_, storage) = keys::storage(&profile, sock)?;
 
     if let Some(peer) = options.peer {
-        tracking::untrack(&storage, urn, peer, tracking::policy::Untrack::MustExist)??;
+        tracking::untrack(
+            &storage,
+            urn,
+            peer,
+            tracking::UntrackArgs {
+                policy: tracking::policy::Untrack::MustExist,
+                prune: true,
+            },
+        )??;
         term::success!(
             "Tracking relationship {} removed for {}",
             peer,
             term::format::highlight(urn)
         );
     } else {
-        tracking::untrack_all(&storage, urn, tracking::policy::UntrackAll::Any)?.for_each(drop);
+        tracking::untrack_all(
+            &storage,
+            urn,
+            tracking::UntrackAllArgs {
+                policy: tracking::policy::UntrackAll::Any,
+                prune: true,
+            },
+        )?;
         term::success!(
             "Tracking relationships for {} removed",
             term::format::highlight(urn)
