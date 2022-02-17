@@ -1,6 +1,6 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::HashSet;
 use std::convert::{TryFrom, TryInto};
-use std::path::Path;
+use std::iter;
 
 use anyhow::{anyhow, Context as _, Error, Result};
 use either::Either;
@@ -8,18 +8,21 @@ use git2::Repository;
 use git_repository as git;
 
 use librad::crypto::BoxedSigner;
-use librad::git::identities::{self, Project};
+use librad::git::identities::{self, project, Project};
+use librad::git::local::transport;
 use librad::git::local::url::LocalUrl;
 use librad::git::storage::{ReadOnly, Storage};
 use librad::git::types::remote::Remote;
 use librad::git::Urn;
+use librad::git_ext::RefLike;
+use librad::identities::payload::{self, ProjectPayload};
+use librad::identities::Person;
 use librad::identities::SomeIdentity;
-use librad::identities::{payload, Person};
 use librad::profile::Profile;
 use librad::reflike;
 use librad::PeerId;
 
-use rad_identities::{self, project};
+use rad_identities;
 
 /// Project metadata.
 #[derive(Debug)]
@@ -77,28 +80,35 @@ impl TryFrom<librad::identities::Project> for Metadata {
 }
 
 pub fn create(
+    repo: &git2::Repository,
+    identity: identities::local::LocalIdentity,
     storage: &Storage,
     signer: BoxedSigner,
     profile: &Profile,
     payload: payload::Project,
 ) -> Result<Project, Error> {
-    // Currently, radicle link adds the project name to the path, so we're forced to
-    // have them match, and specify the parent folder instead of the current folder.
-    let path = Path::new("..").to_path_buf();
     let paths = profile.paths().clone();
-    let whoami = project::WhoAmI::from(None);
-    let delegations = BTreeSet::new();
+    let payload = ProjectPayload::new(payload);
 
-    project::create::<payload::Project>(
-        storage,
-        paths,
-        signer,
-        whoami,
-        delegations,
-        payload,
-        vec![],
-        rad_identities::project::Creation::Existing { path },
-    )
+    let delegations = identities::IndirectDelegation::try_from_iter(iter::once(Either::Right(
+        identity.clone().into_inner().into_inner(),
+    )))?;
+
+    let urn = project::urn(storage, payload.clone(), delegations.clone())?;
+    let url = LocalUrl::from(urn);
+    let project = project::create(storage, identity, payload, delegations)?;
+
+    if let Some(branch) = project.subject().default_branch.clone() {
+        let branch = RefLike::try_from(branch.to_string())?.into();
+        let settings = transport::Settings {
+            paths: paths.clone(),
+            signer,
+        };
+        rad_identities::git::setup_remote(repo, settings, url, &branch)?;
+    }
+    rad_identities::git::include::update(storage, &paths, &project)?;
+
+    Ok(project)
 }
 
 pub fn list(storage: &Storage) -> Result<Vec<(Urn, Metadata, Option<git::ObjectId>)>, Error> {
@@ -141,7 +151,7 @@ pub fn get<S>(storage: &S, urn: &Urn) -> Result<Option<Metadata>, Error>
 where
     S: AsRef<ReadOnly>,
 {
-    let proj = project::get(storage, urn)?;
+    let proj = rad_identities::project::get(storage, urn)?;
     let meta = proj.map(|p| p.try_into()).transpose()?;
 
     Ok(meta)
