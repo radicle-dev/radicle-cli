@@ -1,12 +1,16 @@
+use std::ffi::OsString;
+use std::str::FromStr;
+
+use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::git::tracking::git::tracking;
-use rad_terminal::args::Help;
+use librad::git::Urn;
+use librad::PeerId;
 
 use rad_common::{keys, profile, project};
+use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
-
-pub use rad_track::Options;
 
 pub const HELP: Help = Help {
     name: "untrack",
@@ -15,42 +19,89 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad untrack [<urn>] [--peer <peer-id>]
+    rad untrack [<peer-id>] [--all]
 
-    If <urn> isn't specified, the working copy project will be used.
+    Must be run within a project working copy.
 
 Options
 
-    --peer <peer-id>   Peer ID to track (default: all)
-    --help             Print help
+    --help   Print help
 "#,
 };
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let urn = if let Some(urn) = &options.urn {
-        urn.clone()
-    } else {
-        project::urn().context("a URN must be specified")?
-    };
+/// Tool options.
+#[derive(Debug)]
+pub struct Options {
+    pub peer: Option<PeerId>,
+}
 
+impl Args for Options {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
+        use lexopt::prelude::*;
+
+        let mut parser = lexopt::Parser::from_args(args);
+        let mut peer: Option<PeerId> = None;
+        let mut all = false;
+
+        while let Some(arg) = parser.next()? {
+            match arg {
+                Long("all") if peer.is_none() => {
+                    all = true;
+                }
+                Value(val) if peer.is_none() => {
+                    let val = val.to_string_lossy();
+
+                    if let Ok(val) = PeerId::from_str(&val) {
+                        peer = Some(val);
+                    } else {
+                        return Err(anyhow!("invalid <peer-id> '{}'", val));
+                    }
+                }
+                Long("help") => {
+                    return Err(Error::Help.into());
+                }
+                _ => {
+                    return Err(anyhow!(arg.unexpected()));
+                }
+            }
+        }
+
+        if peer.is_none() && !all {
+            return Err(Error::Usage.into());
+        }
+
+        Ok((Options { peer }, vec![]))
+    }
+}
+
+pub fn run(options: Options) -> anyhow::Result<()> {
+    let urn = project::urn().context("this command must be run in the context of a project")?;
+
+    execute(&urn, options)
+}
+
+pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
     term::info!(
         "Removing tracking relationship for {}...",
-        term::format::dim(&urn)
+        term::format::dim(urn)
     );
+
+    // TODO: Remove remote
+    // TODO: Remove tracking branch
 
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
 
     if let Some(peer) = options.peer {
-        tracking::untrack(&storage, &urn, peer, tracking::policy::Untrack::MustExist)??;
+        tracking::untrack(&storage, urn, peer, tracking::policy::Untrack::MustExist)??;
         term::success!(
             "Tracking relationship {} removed for {}",
             peer,
             term::format::highlight(urn)
         );
     } else {
-        tracking::untrack_all(&storage, &urn, tracking::policy::UntrackAll::Any)?.for_each(drop);
+        tracking::untrack_all(&storage, urn, tracking::policy::UntrackAll::Any)?.for_each(drop);
         term::success!(
             "Tracking relationships for {} removed",
             term::format::highlight(urn)

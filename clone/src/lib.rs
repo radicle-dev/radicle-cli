@@ -3,9 +3,11 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
+use librad::git::tracking;
 use librad::git::Urn;
 
 use rad_common::seed::{self, SeedOptions};
+use rad_common::{keys, profile};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -16,11 +18,11 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad clone <urn> [--track] [--seed <host>] [<option>...]
+    rad clone <urn> [--no-track] [--seed <host>] [<option>...]
 
 Options
 
-    --track         Track the project after syncing (default: false)
+    --no-track      Don't track the project after syncing (default: false)
     --seed <host>   Seed to clone from
     --help          Print help
 
@@ -41,15 +43,15 @@ impl Args for Options {
         let (seed, unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut urn: Option<Urn> = None;
-        let mut track = false;
+        let mut track = true;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Long("track") => {
-                    track = true;
+                Long("no-track") => {
+                    track = false;
                 }
                 Value(val) if urn.is_none() => {
                     let val = val.to_string_lossy();
@@ -83,13 +85,21 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         force: false,
     })?;
 
-    // Tracking influences the checkout (by creating having it create additional remotes),
+    // Tracking influences the checkout (by creating additional remotes),
     // so we run it first.
     if options.track {
-        rad_track::run(rad_track::Options {
-            urn: Some(options.urn.clone()),
-            peer: None,
-        })?;
+        let profile = profile::default()?;
+        let sock = keys::ssh_auth_sock();
+        let (_, storage) = keys::storage(&profile, sock)?;
+        let cfg = tracking::config::Config::default();
+
+        tracking::track(
+            &storage,
+            &options.urn,
+            None,
+            cfg,
+            tracking::policy::Track::Any,
+        )??;
     }
     let path = rad_checkout::execute(rad_checkout::Options { urn: options.urn })?;
 

@@ -175,31 +175,22 @@ You may omit the __--seed__ argument if it is the default seed for this project.
 
 Here we can see the earlier contribution we made and the id of the peer that
 made it. If we're interested in viewing this commit and potentially merging it,
-we can start by adding the remote peer to our working copy:
+we can start by tracking the remote peer from our working copy:
 
-  $ rad remote add bob hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q -f
+  $ rad track hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
 
-We're calling this remote *"bob"*, but any name will do. The __-f__ flag, just
-like with *git*, fetches the remote after configuring it.
+This will setup a remote in our working copy, as well as a tracking branch
+named after the peer and project default branch, eg. *bob/master*.
 
-Now that we have the remote source tree in our working copy, we can create
-a tracking branch to explore the code:
-
-  $ git branch remotes/bob/master bob/heads/master
-
-We've chosen to call this branch *"remotes/bob/master"*, but you can call it
-anything. The second parameter specifies that we'd like to track bob's *master*
-branch.
-
-To see what changes bob contributed, we can diff the remote branch against our
+To see what changes were contributed, we can diff the remote branch against our
 master:
 
-  $ git diff master..remotes/bob/master
+  $ git diff master..bob/master
 
 If we're happy with these changes, we can merge them and publish our new
 head:
 
-  $ git merge remotes/bob/master
+  $ git merge bob/master
   $ rad push
 
 And we're done!

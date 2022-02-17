@@ -72,10 +72,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
     term::warning("Warning: experimental tool; use at your own risk!");
 
-    rad_untrack::run(rad_untrack::Options {
-        urn: Some(options.urn.clone()),
-        peer: None,
-    })?;
+    rad_untrack::execute(&options.urn, rad_untrack::Options { peer: None })?;
 
     let monorepo = profile.paths().git_dir();
     let namespace = monorepo

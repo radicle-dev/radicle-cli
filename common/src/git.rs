@@ -10,6 +10,7 @@ use anyhow::Context as _;
 use librad::git::local::url::LocalUrl;
 use librad::git::types::{remote::Remote, Flat, Force, GenericRef, Reference, Refspec};
 use librad::git_ext::RefLike;
+use librad::profile::Profile;
 use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths, PeerId};
 
 pub use librad::git::local::transport;
@@ -180,14 +181,18 @@ pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>>
 }
 
 pub fn set_upstream(repo: &Path, name: &str, branch: &str) -> anyhow::Result<String> {
+    let branch_name = format!("{}/{}", name, branch);
+
     git(
         repo,
         [
             "branch",
-            &format!("{}/{}", name, branch),
+            &branch_name,
             &format!("{}/heads/{}", name, branch),
         ],
-    )
+    )?;
+
+    Ok(branch_name)
 }
 
 pub fn list_remotes(
@@ -212,6 +217,24 @@ pub fn list_remotes(
         }
     }
     Ok(remotes)
+}
+
+/// Fetch refs into working copy.
+pub fn fetch_remote(
+    remote: &mut Remote<LocalUrl>,
+    repo: &git2::Repository,
+    signer: BoxedSigner,
+    profile: &Profile,
+) -> anyhow::Result<()> {
+    let settings = transport::Settings {
+        paths: profile.paths().clone(),
+        signer,
+    };
+    remote
+        .fetch(settings, repo, LocalFetchspec::Configured)?
+        .for_each(drop);
+
+    Ok(())
 }
 
 fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {

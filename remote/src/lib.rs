@@ -134,25 +134,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 let seed = if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
                     seed
                 } else {
-                    anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");
+                    anyhow::bail!("a seed node must be specified with `--seed`");
                 };
 
-                let monorepo = profile.paths().git_dir();
-                let spinner = term::spinner("Fetching remote...");
-
-                // Fetch refs from seed...
-                seed::fetch_remotes(monorepo, &seed, &urn, [peer])?;
-
-                // Fetch refs into working copy...
-                let settings = git::transport::Settings {
-                    paths: profile.paths().clone(),
-                    signer,
-                };
-                remote
-                    .fetch(settings, &repo, git::LocalFetchspec::Configured)?
-                    .for_each(drop);
-
-                spinner.finish();
+                seed::fetch_peers(profile.paths().git_dir(), &seed, &urn, [peer])?;
+                git::fetch_remote(&mut remote, &repo, signer, &profile)?;
             }
             term::success!(
                 "Remote {} successfully added",

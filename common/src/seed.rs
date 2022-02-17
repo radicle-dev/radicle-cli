@@ -287,7 +287,7 @@ pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyh
     )
 }
 
-pub fn fetch_remotes(
+pub fn fetch_peers(
     repo: &Path,
     seed: &Url,
     project: &Urn,
