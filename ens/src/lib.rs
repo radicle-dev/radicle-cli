@@ -166,7 +166,7 @@ async fn get_wallet(
 ) -> anyhow::Result<(ethereum::Wallet, Provider<Http>)> {
     use ethereum::WalletError;
 
-    term::tip("Accessing your wallet...");
+    term::tip!("Accessing your wallet...");
     let signer = match ethereum::signer(signer_opts, provider.clone()).await {
         Ok(signer) => signer,
         Err(err) => {
@@ -336,7 +336,7 @@ async fn setup(
     );
 
     term::blank();
-    term::tip("To view your profile, visit:");
+    term::tip!("To view your profile, visit:");
     term::indented(&term::format::secondary(format!(
         "https://app.radicle.network/{}",
         name

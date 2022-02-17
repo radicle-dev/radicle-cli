@@ -169,8 +169,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         seed::set_seed(seed, Scope::Local(Path::new(".")))?;
 
         term::success!("Saving seed configuration to local git config...");
-        term::tip("To override the seed, pass the '--seed' flag to `rad sync` or `rad push`.");
-        term::tip(
+        term::tip!("To override the seed, pass the '--seed' flag to `rad sync` or `rad push`.");
+        term::tip!(
             "To change the configured seed, run `git config rad.seed <url>` with a seed URL.",
         );
     }

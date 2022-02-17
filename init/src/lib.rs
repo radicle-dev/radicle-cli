@@ -5,7 +5,7 @@ use anyhow::bail;
 use librad::canonical::Cstring;
 use librad::identities::payload::{self};
 
-use rad_common::{keys, person, profile, project};
+use rad_common::{git, keys, person, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -89,6 +89,36 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
 
             spinner.finish();
 
+            if !git::is_signing_configured()? {
+                let peer_id = storage.peer_id();
+
+                term::headline(&format!(
+                    "Configuring 🌱 key {}...",
+                    term::format::tertiary(keys::to_ssh_fingerprint(peer_id)?)
+                ));
+
+                match git::write_gitsigners([peer_id]) {
+                    Ok(()) => {
+                        term::success!("Created {} file", term::format::tertiary(".gitsigners"));
+                    }
+                    Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                        term::success!(
+                            "Found existing {} file",
+                            term::format::tertiary(".gitsigners")
+                        );
+                        if term::confirm("Add radicle key to .gitsigners?") {
+                            git::add_gitsigners([peer_id])?;
+                        }
+                    }
+                    Err(err) => {
+                        return Err(err.into());
+                    }
+                }
+                git::configure_signing(&repo, peer_id)?;
+
+                term::success!("Commit signing key configured");
+            }
+
             term::blank();
             term::info!(
                 "Your project id is {}. You can show it any time by running:",
@@ -99,13 +129,14 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
             term::blank();
             term::info!("To publish your project to the network, run:");
             term::indented(&term::format::secondary("rad push"));
+            term::blank();
         }
         Err(err) => {
             spinner.failed();
             term::blank();
 
-            use rad_common::identities::git::existing::Error;
             use rad_common::identities::git::validation;
+            use rad_common::identities::git::Error;
 
             match err.downcast_ref::<Error>() {
                 Some(Error::Validation(validation::Error::UrlMismatch { found, .. })) => {

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom as _;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
@@ -16,11 +17,13 @@ use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;
 
-use crate::identities;
+use crate::{identities, keys};
 
+pub const CONFIG_COMMIT_GPG_SIGN: &str = "commit.gpgsign";
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
 pub const CONFIG_GPG_FORMAT: &str = "gpg.format";
 pub const CONFIG_GPG_SSH_PROGRAM: &str = "gpg.ssh.program";
+pub const CONFIG_GPG_SSH_ALLOWED_SIGNERS: &str = "gpg.ssh.allowedSignersFile";
 pub const VERSION_REQUIRED: Version = Version {
     major: 2,
     minor: 34,
@@ -137,17 +140,72 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
     )))
 }
 
-pub fn configure_monorepo(repo: &Path, peer_id: &PeerId) -> Result<(), anyhow::Error> {
-    let key = crate::keys::to_ssh_key(peer_id)?;
+pub fn configure_signing(repo: &git2::Repository, peer_id: &PeerId) -> Result<(), anyhow::Error> {
+    let key = keys::to_ssh_key(peer_id)?;
+    let path = repo.path();
 
-    git(repo, ["config", "--local", CONFIG_SIGNING_KEY, &key])?;
-    git(repo, ["config", "--local", CONFIG_GPG_FORMAT, "ssh"])?;
+    git(path, ["config", "--local", CONFIG_SIGNING_KEY, &key])?;
+    git(path, ["config", "--local", CONFIG_GPG_FORMAT, "ssh"])?;
+    git(path, ["config", "--local", CONFIG_COMMIT_GPG_SIGN, "true"])?;
     git(
-        repo,
+        path,
         ["config", "--local", CONFIG_GPG_SSH_PROGRAM, "ssh-keygen"],
+    )?;
+    git(
+        path,
+        [
+            "config",
+            "--local",
+            CONFIG_GPG_SSH_ALLOWED_SIGNERS,
+            ".gitsigners",
+        ],
     )?;
 
     Ok(())
+}
+
+pub fn write_gitsigners<'a>(
+    signers: impl IntoIterator<Item = &'a PeerId>,
+) -> Result<(), io::Error> {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(".gitsigners")?;
+
+    for peer_id in signers.into_iter() {
+        write_gitsigner(&mut file, peer_id)?;
+    }
+
+    let mut ignore = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(".gitignore")?;
+
+    writeln!(ignore, ".gitsigners")?;
+
+    Ok(())
+}
+
+pub fn add_gitsigners<'a>(signers: impl IntoIterator<Item = &'a PeerId>) -> Result<(), io::Error> {
+    use std::fs::OpenOptions;
+
+    let mut file = OpenOptions::new().append(true).open(".gitsigners")?;
+
+    for peer_id in signers.into_iter() {
+        write_gitsigner(&mut file, peer_id)?;
+    }
+    Ok(())
+}
+
+pub fn write_gitsigner(mut w: impl io::Write, signer: &PeerId) -> io::Result<()> {
+    writeln!(w, "{} {}", signer, keys::to_ssh_key(signer)?)
+}
+
+pub fn is_signing_configured() -> Result<bool, anyhow::Error> {
+    Ok(git(Path::new("."), ["config", CONFIG_SIGNING_KEY]).is_ok())
 }
 
 pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, anyhow::Error> {

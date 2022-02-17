@@ -49,12 +49,28 @@ pub mod components {
         })
     }
 
+    #[macro_export]
+    macro_rules! tip {
+        ($($arg:tt)*) => ({
+            $crate::components::tip_args(format_args!($($arg)*));
+        })
+    }
+
     pub fn success_args(args: fmt::Arguments) {
         println!("{} {}", style("ok").green().reverse(), args);
     }
 
+    pub fn tip_args(args: fmt::Arguments) {
+        println!(
+            "{} {}",
+            style("=>").blue(),
+            style(format!("{}", args)).italic()
+        );
+    }
+
     pub use info;
     pub use success;
+    pub use tip;
 
     #[derive(Debug)]
     pub struct Table<const W: usize> {
@@ -167,10 +183,6 @@ pub mod components {
 
     pub fn indented(msg: &str) {
         println!("{}{}", TAB, msg);
-    }
-
-    pub fn tip(msg: &str) {
-        println!("{} {}", style("=>").blue(), style(msg).dim().italic());
     }
 
     pub fn subcommand(msg: &str) {

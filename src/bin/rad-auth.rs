@@ -58,8 +58,9 @@ fn run(options: Options) -> anyhow::Result<()> {
         }
 
         let (signer, _) = keys::storage(selection, sock)?;
+        let repo = profile::monorepo(selection)?;
 
-        git::configure_monorepo(selection.paths().git_dir(), &signer.peer_id())?;
+        git::configure_signing(&repo, &signer.peer_id())?;
         term::success!("Signing key configured in git");
     } else {
         term::headline("Initializing your 🌱 profile and identity");
@@ -69,9 +70,9 @@ fn run(options: Options) -> anyhow::Result<()> {
 
         let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
         let (profile, peer_id) = rad_profile::create(None, pass.clone())?;
-        let monorepo = profile.paths().git_dir();
+        let monorepo = profile::monorepo(&profile)?;
 
-        git::configure_monorepo(monorepo, &peer_id)?;
+        git::configure_signing(&monorepo, &peer_id)?;
 
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");
@@ -90,17 +91,17 @@ fn run(options: Options) -> anyhow::Result<()> {
         );
 
         term::blank();
-        term::info!(
+        term::tip!(
             "Your radicle Peer ID is {}. This identifies your device.",
             term::format::highlight(&peer_id.to_string())
         );
-        term::info!(
+        term::tip!(
             "Your personal 🌱 URN is {}. This identifies you across devices.",
             term::format::highlight(&person.urn().to_string())
         );
 
         term::blank();
-        term::tip("To create a radicle project, run `rad init` from a git repository.");
+        term::tip!("To create a radicle project, run `rad init` from a git repository.");
     }
     Ok(())
 }
