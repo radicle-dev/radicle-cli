@@ -4,6 +4,7 @@ use anyhow::bail;
 
 use librad::canonical::Cstring;
 use librad::identities::payload::{self};
+use librad::PeerId;
 
 use rad_common::{git, keys, person, profile, project};
 use rad_terminal::args::{Args, Error, Help};
@@ -89,35 +90,8 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
 
             spinner.finish();
 
-            if !git::is_signing_configured()? {
-                let peer_id = storage.peer_id();
-
-                term::headline(&format!(
-                    "Configuring 🌱 key {}...",
-                    term::format::tertiary(keys::to_ssh_fingerprint(peer_id)?)
-                ));
-
-                match git::write_gitsigners([peer_id]) {
-                    Ok(()) => {
-                        term::success!("Created {} file", term::format::tertiary(".gitsigners"));
-                    }
-                    Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-                        term::success!(
-                            "Found existing {} file",
-                            term::format::tertiary(".gitsigners")
-                        );
-                        if term::confirm("Add radicle key to .gitsigners?") {
-                            git::add_gitsigners([peer_id])?;
-                        }
-                    }
-                    Err(err) => {
-                        return Err(err.into());
-                    }
-                }
-                git::configure_signing(&repo, peer_id)?;
-
-                term::success!("Commit signing key configured");
-            }
+            // Setup radicle signing key.
+            self::setup_signing(storage.peer_id(), &repo)?;
 
             term::blank();
             term::info!(
@@ -154,5 +128,39 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// Setup radicle key as commit signing key in repository.
+pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result<()> {
+    let path = repo.workdir().unwrap_or_else(|| repo.path());
+
+    if !git::is_signing_configured(path)? {
+        term::headline(&format!(
+            "Configuring 🌱 key {}...",
+            term::format::tertiary(keys::to_ssh_fingerprint(peer_id)?)
+        ));
+
+        match git::write_gitsigners([peer_id], path) {
+            Ok(()) => {
+                term::success!("Created {} file", term::format::tertiary(".gitsigners"));
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                term::success!(
+                    "Found existing {} file",
+                    term::format::tertiary(".gitsigners")
+                );
+                if term::confirm("Add radicle key to .gitsigners?") {
+                    git::add_gitsigners([peer_id], path)?;
+                }
+            }
+            Err(err) => {
+                return Err(err.into());
+            }
+        }
+        git::configure_signing(repo, peer_id)?;
+
+        term::success!("Commit signing key configured");
+    }
     Ok(())
 }

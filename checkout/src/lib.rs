@@ -103,7 +103,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     };
 
     let spinner = term::spinner("Performing checkout...");
-    if let Err(err) = git::checkout(
+    match git::checkout(
         &storage,
         profile.paths().clone(),
         signer,
@@ -111,17 +111,22 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
         peer,
         path.clone(),
     ) {
-        spinner.failed();
-        term::blank();
+        Err(err) => {
+            spinner.failed();
+            term::blank();
 
-        return Err(err);
+            return Err(err);
+        }
+        Ok(repo) => {
+            spinner.finish();
+            rad_init::setup_signing(storage.peer_id(), &repo)?;
+        }
     }
-    spinner.finish();
 
-    term::success!(
-        "Project checkout successful under ./{}",
+    term::headline(&format!(
+        "🌱 Project checkout successful under ./{}",
         term::format::highlight(project.name)
-    );
+    ));
 
     Ok(path)
 }
