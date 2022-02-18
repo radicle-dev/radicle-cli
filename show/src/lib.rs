@@ -1,8 +1,15 @@
 use std::ffi::OsString;
+use std::str::FromStr;
 
 use rad_common::{keys, person, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
+
+use librad::git::identities::any;
+use librad::git::Urn;
+
+use anyhow::Context;
+use colored_json::prelude::*;
 
 pub const HELP: Help = Help {
     name: "show",
@@ -11,7 +18,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad show [<option>...]
+    rad show [<urn>] [<option>...]
 
 Options
 
@@ -31,6 +38,7 @@ pub struct Options {
     pub show_proj_id: bool,
     pub show_ssh_key: bool,
     pub show_profile_id: bool,
+    pub urn: Option<Urn>,
 }
 
 impl Args for Options {
@@ -43,6 +51,7 @@ impl Args for Options {
         let mut show_proj_id = false;
         let mut show_profile_id = false;
         let mut show_ssh_key = false;
+        let mut urn: Option<Urn> = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -64,6 +73,12 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
+                Value(val) if urn.is_none() => {
+                    let val = val.to_string_lossy();
+                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
+
+                    urn = Some(val);
+                }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
@@ -75,6 +90,7 @@ impl Args for Options {
                 show_proj_id,
                 show_ssh_key,
                 show_profile_id,
+                urn,
             },
             vec![],
         ))
@@ -92,6 +108,20 @@ pub fn run(mut options: Options) -> anyhow::Result<()> {
         options.show_self = true;
         options.show_profile_id = true;
         options.show_ssh_key = true;
+    }
+
+    if let Some(urn) = options.urn {
+        let payload = any::get(&storage, &urn)
+            .map(|o| o.map(|p| p.payload()))
+            .map_err(|_| anyhow::anyhow!("Couldn't load project or person."))?
+            .ok_or(anyhow::anyhow!("No project or person found for urn"))?;
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload)?.to_colored_json_auto()?
+        );
+
+        return Ok(());
     }
 
     if options.show_proj_id {
