@@ -51,6 +51,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("project {} not found in local storage", &urn))?;
     let peer = options.peer;
 
+    if &peer == storage.peer_id() {
+        anyhow::bail!("you can't track yourself");
+    }
+
     tracking::track(
         &storage,
         &urn,
