@@ -5,7 +5,6 @@ use std::iter;
 use anyhow::{anyhow, Context as _, Error, Result};
 use either::Either;
 use git2::Repository;
-use git_repository as git;
 
 use librad::crypto::BoxedSigner;
 use librad::git::identities::{self, project, Project};
@@ -23,10 +22,13 @@ use librad::reflike;
 use librad::PeerId;
 
 use rad_identities;
+use rad_terminal::components as term;
 
 /// Project metadata.
 #[derive(Debug)]
 pub struct Metadata {
+    /// Project URN.
+    pub urn: Urn,
     /// Project name.
     pub name: String,
     /// Project description.
@@ -67,6 +69,7 @@ impl TryFrom<librad::identities::Project> for Metadata {
             .to_string();
 
         Ok(Self {
+            urn: project.urn(),
             name: subject.name.to_string(),
             description: subject
                 .description
@@ -111,8 +114,10 @@ pub fn create(
     Ok(project)
 }
 
-pub fn list(storage: &Storage) -> Result<Vec<(Urn, Metadata, Option<git::ObjectId>)>, Error> {
-    let repo = git::Repository::open(storage.path())?;
+pub fn list(
+    storage: &Storage,
+) -> Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>, Error> {
+    let repo = git_repository::Repository::open(storage.path())?;
     let objs = identities::any::list(storage)?
         .filter_map(|res| {
             res.map(|id| match id {
@@ -135,10 +140,10 @@ pub fn list(storage: &Storage) -> Result<Vec<(Urn, Metadata, Option<git::ObjectI
 }
 
 pub fn get_local_head<'r>(
-    repo: &'r git::Repository,
+    repo: &'r git_repository::Repository,
     urn: &Urn,
     branch: &str,
-) -> Result<Option<git::ObjectId>, Error> {
+) -> Result<Option<git_repository::ObjectId>, Error> {
     let mut repo = repo.to_easy();
     repo.set_namespace(urn.encode_id())?;
 
@@ -196,4 +201,47 @@ pub fn cwd() -> Result<(Urn, Repository), Error> {
     let urn = self::remote(&repo)?.url.urn;
 
     Ok((urn, repo))
+}
+
+pub struct SetupRemote<'a> {
+    pub project: &'a Metadata,
+    pub repo: &'a git2::Repository,
+    pub signer: BoxedSigner,
+    pub fetch: bool,
+    pub upstream: bool,
+}
+
+impl<'a> SetupRemote<'a> {
+    pub fn run(&self, peer: &PeerId, profile: &Profile, storage: &Storage) -> anyhow::Result<()> {
+        use crate::git;
+
+        let repo = self.repo;
+        let urn = &self.project.urn;
+
+        // TODO: Handle conflicts in remote name.
+        if let Some(person) = self::person(storage, urn, peer)? {
+            let name = person.subject().name.to_string();
+            let mut remote = git::remote(urn, peer, &name)?;
+
+            // Configure the remote in the repository.
+            remote.save(repo)?;
+            // Fetch the refs into the working copy.
+            if self.fetch {
+                git::fetch_remote(&mut remote, repo, self.signer.clone(), profile)?;
+            }
+            // Setup remote-tracking branch.
+            if self.upstream {
+                // TODO: If this fails because the branch already exists, suggest how to specify a
+                // different branch name or prefix.
+                let branch = git::set_upstream(repo.path(), &name, &self.project.default_branch)?;
+
+                term::success!(
+                    "Remote-tracking branch {} created for {}",
+                    term::format::highlight(&branch),
+                    term::format::tertiary(crate::fmt::peer(peer))
+                );
+            }
+        }
+        Ok(())
+    }
 }

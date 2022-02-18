@@ -1,8 +1,9 @@
 use anyhow::anyhow;
 use anyhow::Context as _;
+
 use librad::git::tracking;
 
-use rad_common::{git, keys, profile, project, seed};
+use rad_common::{keys, profile, project, seed};
 use rad_terminal::args::Help;
 use rad_terminal::components as term;
 
@@ -87,29 +88,14 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
 
     if options.remote {
-        // TODO: Handle conflicts in remote name.
-        if let Some(person) = project::person(&storage, &urn, &peer)? {
-            let name = person.subject().name.to_string();
-            let mut remote = git::remote(&urn, &peer, &name)?;
-
-            // Configure the remote in the repository.
-            remote.save(&repo)?;
-            // Fetch the refs into the working copy.
-            if options.fetch {
-                git::fetch_remote(&mut remote, &repo, signer, &profile)?;
-            }
-            // Setup remote-tracking branch.
-            if options.upstream {
-                // TODO: If this fails because the branch already exists, suggest how to specify a
-                // different branch name or prefix.
-                let branch = git::set_upstream(repo.path(), &name, &proj.default_branch)?;
-
-                term::success!(
-                    "Remote-tracking branch {} created",
-                    term::format::highlight(&branch)
-                );
-            }
+        project::SetupRemote {
+            project: &proj,
+            repo: &repo,
+            signer,
+            fetch: options.fetch,
+            upstream: options.upstream,
         }
+        .run(&peer, &profile, &storage)?;
     }
 
     Ok(())

@@ -106,7 +106,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     match git::checkout(
         &storage,
         profile.paths().clone(),
-        signer,
+        signer.clone(),
         &options.urn,
         peer,
         path.clone(),
@@ -120,6 +120,20 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
         Ok(repo) => {
             spinner.finish();
             rad_init::setup_signing(storage.peer_id(), &repo)?;
+
+            // Setup a remote and tracking branch for all project delegates except yourself.
+            let setup = project::SetupRemote {
+                project: &project,
+                repo: &repo,
+                signer,
+                fetch: true,
+                upstream: true,
+            };
+            for peer in &project.remotes {
+                if peer != storage.peer_id() {
+                    setup.run(peer, &profile, &storage)?;
+                }
+            }
         }
     }
 
