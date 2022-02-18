@@ -91,17 +91,20 @@ fn run(options: Options) -> anyhow::Result<()> {
         );
 
         term::blank();
-        term::tip!(
+        term::info!(
             "Your radicle Peer ID is {}. This identifies your device.",
             term::format::highlight(&peer_id.to_string())
         );
-        term::tip!(
+        term::info!(
             "Your personal 🌱 URN is {}. This identifies you across devices.",
             term::format::highlight(&person.urn().to_string())
         );
 
         term::blank();
-        term::tip!("To create a radicle project, run `rad init` from a git repository.");
+        term::tip!(
+            "To create a radicle project, run {} from a git repository.",
+            term::format::secondary("`rad init`")
+        );
     }
     Ok(())
 }

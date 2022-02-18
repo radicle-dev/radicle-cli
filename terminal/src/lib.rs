@@ -64,7 +64,7 @@ pub mod components {
         println!(
             "{} {}",
             style("=>").blue(),
-            style(format!("{}", args)).italic()
+            style(format!("{}", args)).dim()
         );
     }
 
@@ -383,7 +383,7 @@ pub mod components {
         use super::theme;
 
         pub fn secondary<D: std::fmt::Display>(msg: D) -> String {
-            style(msg).blue().to_string()
+            style(msg).blue().bright().to_string()
         }
 
         pub fn tertiary<D: std::fmt::Display>(msg: D) -> String {
