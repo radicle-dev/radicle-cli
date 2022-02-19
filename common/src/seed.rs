@@ -209,14 +209,14 @@ pub fn push_delegate(
     )
 }
 
-pub fn push_project(
+pub fn push_identity(
     repo: &Path,
     seed: &Url,
-    project: &Urn,
-    peer_id: PeerId,
+    urn: &Urn,
+    peer_id: &PeerId,
 ) -> Result<String, anyhow::Error> {
-    let project_id = project.encode_id();
-    let url = seed.join(&project_id)?;
+    let id = urn.encode_id();
+    let url = seed.join(&id)?;
 
     git::git(
         repo,
@@ -227,7 +227,7 @@ pub fn push_project(
             url.as_str(),
             &format!(
                 "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
-                project_id,
+                id,
                 peer_id.default_encoding()
             ),
         ],

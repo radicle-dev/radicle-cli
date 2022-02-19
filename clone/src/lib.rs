@@ -81,6 +81,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         fetch: true,
         urn: Some(options.urn.clone()),
         seed: options.seed.clone(),
+        identity: false,
         verbose: false,
         force: false,
     })?;

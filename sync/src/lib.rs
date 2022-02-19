@@ -4,7 +4,7 @@ use librad::profile::Profile;
 use librad::PeerId;
 
 use rad_common::seed::SeedOptions;
-use rad_common::{git, keys, profile, project, seed, seed::Scope};
+use rad_common::{git, keys, person, profile, project, seed, seed::Scope};
 use rad_terminal::args;
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
@@ -27,12 +27,13 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch]
+    rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch] [--identity]
 
 Options
 
     --seed <host>       Use the given seed node for syncing
     --seed-url <url>    Use the given seed node URL for syncing
+    -i, --identity      Sync your local identity to a seed
     --fetch             Fetch updates (default: false)
     --help              Print help
 "#,
@@ -44,6 +45,7 @@ pub struct Options {
     pub verbose: bool,
     pub fetch: bool,
     pub force: bool,
+    pub identity: bool,
     pub seed: SeedOptions,
 }
 
@@ -57,6 +59,7 @@ impl Args for Options {
         let mut fetch = false;
         let mut urn: Option<Urn> = None;
         let mut force = false;
+        let mut identity = false;
         let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
@@ -69,6 +72,9 @@ impl Args for Options {
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
+                }
+                Long("identity") | Short('i') => {
+                    identity = true;
                 }
                 Long("force") | Short('f') => {
                     force = true;
@@ -89,11 +95,16 @@ impl Args for Options {
             }
         }
 
+        if fetch && identity {
+            anyhow::bail!("'--fetch' and '--identity' cannot be used together");
+        }
+
         Ok((
             Options {
                 seed,
                 fetch,
                 force,
+                identity,
                 urn,
                 verbose,
             },
@@ -160,8 +171,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if options.fetch {
         fetch(project_urn, &profile, seed, storage, options)?;
+    } else if options.identity {
+        push_identity(&profile, seed, storage)?;
     } else {
-        push(project_urn, &profile, seed, storage, options)?;
+        push_project(project_urn, &profile, seed, storage, options)?;
     }
 
     // If we're in a project repo and no seed is configured, save the seed.
@@ -178,7 +191,23 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn push(
+pub fn push_identity(profile: &Profile, seed: &Url, storage: Storage) -> anyhow::Result<()> {
+    let monorepo = profile.paths().git_dir();
+    let identity = person::local(&storage)?;
+    let urn = identity.urn();
+
+    term::headline(&format!(
+        "Syncing 🌱 identity {} to {}",
+        term::format::highlight(&urn),
+        term::format::highlight(seed)
+    ));
+
+    seed::push_identity(monorepo, seed, &urn, storage.peer_id())?;
+
+    Ok(())
+}
+
+pub fn push_project(
     project_urn: Urn,
     profile: &Profile,
     seed: &Url,
@@ -229,7 +258,7 @@ pub fn push(
     }
 
     let spinner = term::spinner("Syncing project identity...");
-    match seed::push_project(monorepo, seed, &project_urn, peer_id) {
+    match seed::push_identity(monorepo, seed, &project_urn, &peer_id) {
         Ok(output) => {
             spinner.finish();
 
