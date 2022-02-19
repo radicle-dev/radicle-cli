@@ -46,6 +46,9 @@ fn parse_args() -> anyhow::Result<Args> {
             Long("rad-verbose") => {
                 global.rad_verbose = true;
             }
+            Long("help") | Short('h') => {
+                command = Some(Command::External(vec![String::from("help")]));
+            }
             Value(val) if command.is_none() => {
                 let args = iter::once(val)
                     .chain(iter::from_fn(|| parser.value().ok()))
