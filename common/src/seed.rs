@@ -9,7 +9,7 @@ use url::{Host, Url};
 
 use rad_terminal::args::{self, Args};
 
-use crate::git;
+use crate::{git, project};
 
 pub const CONFIG_SEED_KEY: &str = "rad.seed";
 pub const DEFAULT_SEEDS: &[&str] = &[
@@ -183,6 +183,20 @@ pub fn get_commit(
     let commit = serde_json::from_value(val)?;
 
     Ok(commit)
+}
+
+pub fn get_remotes(
+    mut seed: Url,
+    project: &Urn,
+) -> Result<Vec<project::RemoteMetadata>, anyhow::Error> {
+    seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
+    seed = seed.join(&format!("/v1/projects/{}/remotes", project))?;
+
+    let agent = ureq::Agent::new();
+    let val: serde_json::Value = agent.get(seed.as_str()).call()?.into_json()?;
+    let response = serde_json::from_value(val)?;
+
+    Ok(response)
 }
 
 pub fn push_delegate(

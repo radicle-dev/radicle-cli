@@ -185,7 +185,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
             for (_, peer) in git::remotes(&repo)? {
                 let delegate = if proj.remotes.contains(&peer) {
-                    term::format::highlight("delegate")
+                    term::format::badge("delegate")
                 } else {
                     String::new()
                 };

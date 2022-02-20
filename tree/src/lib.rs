@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 
 use anyhow::anyhow;
+use librad::PeerId;
 
 use rad_common::seed::{self, SeedOptions};
 use rad_common::{git, profile, project};
@@ -79,11 +80,34 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let remotes = git::list_remotes(&repo, seed, &urn)?;
     let mut commits: HashMap<_, String> = HashMap::new();
 
+    let remote_metadata: HashMap<PeerId, _> =
+        if let Ok(meta) = seed::get_remotes(seed.clone(), &urn) {
+            meta.into_iter().map(|r| (r.id, r)).collect()
+        } else {
+            HashMap::new() // Support old seeds that don't have metadata.
+        };
+
     spinner.finish();
+
+    if remotes.is_empty() {
+        term::info!("{}", term::format::dim("No remotes found."));
+        return Ok(());
+    }
     term::blank();
 
     for (peer, branches) in remotes {
-        term::info!("{}", term::format::bold(peer));
+        let mut header = vec![term::format::bold(peer)];
+
+        if let Some(meta) = remote_metadata.get(&peer) {
+            if meta.delegate {
+                header.push(term::format::badge("delegate"));
+            }
+            header.push(format!("({})", meta.name));
+        }
+        if &peer == storage.peer_id() {
+            header.push(term::format::yellow("*"));
+        }
+        term::info!("{}", header.join(" "));
 
         let mut table = term::Table::default();
         for (branch, oid) in branches {

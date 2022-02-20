@@ -24,6 +24,15 @@ use librad::PeerId;
 use rad_identities;
 use rad_terminal::components as term;
 
+/// Project delegate.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub struct RemoteMetadata {
+    pub id: PeerId,
+    pub name: String,
+    pub delegate: bool,
+}
+
 /// Project metadata.
 #[derive(Debug)]
 pub struct Metadata {
