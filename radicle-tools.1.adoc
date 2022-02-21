@@ -162,16 +162,18 @@ branches are fetched by default via *rad-clone(1)* and automatically tracked.
 
 As a maintainer, the first thing you will want to do is to find out if there
 is any code published on the seed node that you may be interested in. To do
-this, you can use *rad-tree(1)*. This will query the seed node and return
-the list of contributors and branches:
+this, you can use *rad-track(1)* without specifying a peer. This will query
+the seed node and return the list of contributors and branches:
 
-  $ rad tree --seed willow.radicle.garden
+  $ rad track --seed willow.radicle.garden
 
-  hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
+  hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q bob
   └── master 26fc90625774bc6e219bb15b51f5f9f51d26248b Update README.md
   ...
 
-You may omit the __--seed__ argument if it is the default seed for this project.
+You may omit the __--seed__ argument if it is the default seed for this project,
+but you must then pass the __--remote__ flag to indicate that you'd like to
+query remote data.
 
 Here we can see the earlier contribution we made and the id of the peer that
 made it. If we're interested in viewing this commit and potentially merging it,
