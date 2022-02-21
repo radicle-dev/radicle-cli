@@ -109,7 +109,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             tracking::policy::Track::Any,
         )??;
     }
-    term::success!("Tracking setup for project delegates");
+    term::success!("Tracking for project delegates configured");
 
     Ok(())
 }
