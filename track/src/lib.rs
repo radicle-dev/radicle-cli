@@ -99,17 +99,20 @@ pub fn track(
         term::format::dim(&urn)
     );
 
-    tracking::track(
+    let result = tracking::track(
         &storage,
         urn,
         Some(peer),
         tracking::config::Config::default(),
-        tracking::policy::Track::Any,
-    )??;
+        tracking::policy::Track::MustNotExist,
+    )?;
+    // Whether or not the tracking existed.
+    let existing = matches!(result.err(), Some(tracking::PreviousError::DidExist));
 
     term::success!(
-        "Tracking relationship {} established for {}",
+        "Tracking relationship {} {} for {}",
         term::format::tertiary(peer),
+        if existing { "exists" } else { "established" },
         term::format::highlight(&urn)
     );
 
@@ -135,14 +138,18 @@ pub fn track(
         }
     }
 
-    project::SetupRemote {
-        project: &project,
-        repo: &repo,
-        signer,
-        fetch: options.fetch,
-        upstream: options.upstream,
+    // Don't setup remote if tracking relationship already existed, as the branch
+    // probably already exists.
+    if !existing {
+        project::SetupRemote {
+            project: &project,
+            repo: &repo,
+            signer,
+            fetch: options.fetch,
+            upstream: options.upstream,
+        }
+        .run(&peer, &profile, &storage)?;
     }
-    .run(&peer, &profile, &storage)?;
 
     Ok(())
 }
