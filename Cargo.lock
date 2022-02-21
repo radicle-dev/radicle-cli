@@ -4502,9 +4502,11 @@ dependencies = [
  "librad",
  "rad-checkout",
  "rad-common",
+ "rad-init",
  "rad-sync",
  "rad-terminal",
  "rad-track",
+ "url",
 ]
 
 [[package]]

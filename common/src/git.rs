@@ -311,6 +311,10 @@ pub fn fetch_remote(
     Ok(())
 }
 
+pub fn clone(url: &str) -> Result<String, anyhow::Error> {
+    git(PathBuf::from(".").as_path(), ["clone", url])
+}
+
 fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
     refspec
         .strip_prefix("refs/remotes/")

@@ -27,7 +27,7 @@ Options
 };
 
 pub struct Options {
-    path: Option<PathBuf>,
+    pub path: Option<PathBuf>,
 }
 
 impl Args for Options {

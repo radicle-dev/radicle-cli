@@ -2,12 +2,12 @@ use std::ffi::OsString;
 use std::str::FromStr;
 
 use anyhow::anyhow;
-use anyhow::Context as _;
 use librad::git::tracking;
 use librad::git::Urn;
+use url::Url;
 
 use rad_common::seed::{self, SeedOptions};
-use rad_common::{keys, profile, project};
+use rad_common::{git, keys, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -18,7 +18,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad clone <urn> [--seed <host>] [<option>...]
+    rad clone <urn | url> [--seed <host>] [<option>...]
 
 Options
 
@@ -29,8 +29,14 @@ Options
 };
 
 #[derive(Debug)]
+enum UrnUrl {
+    Urn(Urn),
+    Url(Url),
+}
+
+#[derive(Debug)]
 pub struct Options {
-    urn: Urn,
+    urn_url: UrnUrl,
     seed: SeedOptions,
 }
 
@@ -40,18 +46,20 @@ impl Args for Options {
 
         let (seed, unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
-        let mut urn: Option<Urn> = None;
+        let mut urn_url: Option<UrnUrl> = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Value(val) if urn.is_none() => {
+                Value(val) if urn_url.is_none() => {
                     let val = val.to_string_lossy();
-                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
+                    let val = Urn::from_str(&val)
+                        .map(UrnUrl::Urn)
+                        .or_else(|_| Url::parse(&val).map(UrnUrl::Url))?;
 
-                    urn = Some(val);
+                    urn_url = Some(val);
                 }
                 _ => return Err(anyhow!(arg.unexpected())),
             }
@@ -59,8 +67,8 @@ impl Args for Options {
 
         Ok((
             Options {
-                urn: urn.ok_or_else(|| {
-                    anyhow!("a URN to clone must be provided; see `rad clone --help`")
+                urn_url: urn_url.ok_or_else(|| {
+                    anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
                 })?,
                 seed,
             },
@@ -70,52 +78,69 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let urn = &options.urn;
+    match options.urn_url {
+        UrnUrl::Urn(urn) => {
+            rad_sync::run(rad_sync::Options {
+                fetch: true,
+                urn: Some(urn.clone()),
+                seed: options.seed.clone(),
+                identity: true,
+                push_self: false,
+                verbose: false,
+                force: false,
+            })?;
+            let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
 
-    rad_sync::run(rad_sync::Options {
-        fetch: true,
-        urn: Some(urn.clone()),
-        seed: options.seed.clone(),
-        identity: true,
-        push_self: false,
-        verbose: false,
-        force: false,
-    })?;
+            if let Some(seed_url) = options.seed.seed_url() {
+                seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
+                term::success!(
+                    "Local repository seed for {} set to {}",
+                    term::format::highlight(path.display()),
+                    term::format::highlight(seed_url)
+                );
+            }
 
-    let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
+            let profile = profile::default()?;
+            let sock = keys::ssh_auth_sock();
+            let (_, storage) = keys::storage(&profile, sock)?;
+            let cfg = tracking::config::Config::default();
+            let project = project::get(&storage, &urn)?
+                .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
-    if let Some(seed_url) = options.seed.seed_url() {
-        seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
-        term::success!(
-            "Local repository seed for {} set to {}",
-            term::format::highlight(path.display()),
-            term::format::highlight(seed_url)
-        );
+            // Track all project delegates.
+            for peer in project.remotes {
+                tracking::track(
+                    &storage,
+                    &urn,
+                    Some(peer),
+                    cfg.clone(),
+                    tracking::policy::Track::Any,
+                )??;
+            }
+            term::success!("Tracking for project delegates configured");
+
+            term::headline(&format!(
+                "🌱 Project clone successful under ./{}",
+                term::format::highlight(path.file_name().unwrap_or_default().to_string_lossy())
+            ));
+        }
+        UrnUrl::Url(url) => {
+            let proj = url
+                .path_segments()
+                .ok_or(anyhow!("Couldn't get segments of URL"))?
+                .last()
+                .ok_or(anyhow!("Couldn't get last segment of URL"))?;
+            let proj = proj.strip_suffix(".git").unwrap_or(proj);
+
+            let spinner = term::spinner(&format!("Cloning {} locally", term::format::bold(&proj)));
+            git::clone(url.as_str())?;
+            spinner.finish();
+
+            rad_init::run(rad_init::Options {
+                path: Some(std::env::current_dir()?.join(proj)),
+            })?;
+        }
     }
-
-    let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
-    let cfg = tracking::config::Config::default();
-    let project = project::get(&storage, urn)?
-        .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
-
-    // Track all project delegates.
-    for peer in project.remotes {
-        tracking::track(
-            &storage,
-            urn,
-            Some(peer),
-            cfg.clone(),
-            tracking::policy::Track::Any,
-        )??;
-    }
-    term::success!("Tracking for project delegates configured");
-
-    term::headline(&format!(
-        "🌱 Project clone successful under ./{}",
-        term::format::highlight(path.file_name().unwrap_or_default().to_string_lossy())
-    ));
 
     Ok(())
 }
