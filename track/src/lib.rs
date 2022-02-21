@@ -17,7 +17,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad track <peer-id> [--seed <host>] [--no-sync] [--no-remote] [--no-upstream] [--no-fetch]
+    rad track <peer-id> [--seed <host> | --seed-url <url>] [--no-sync] [--no-remote] [--no-upstream] [--no-fetch]
 
     Track a peer in the context of the current project. By default, a remote is created in the
     repository and an upstream tracking branch is setup.
@@ -25,6 +25,7 @@ Usage
 Options
 
     --seed <host>                Seed host to fetch refs from
+    --seed-url <url>             Seed URL to fetch refs from
     --remote, --no-remote        Setup a remote for the peer (default: yes)
     --upstream, --no-upstream    Setup a tracking branch for the remote (default: yes)
     --sync, --no-sync            Sync the peer's refs (default: yes)
