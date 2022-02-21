@@ -7,7 +7,7 @@ use librad::git::tracking;
 use librad::git::Urn;
 
 use rad_common::seed::{self, SeedOptions};
-use rad_common::{keys, profile};
+use rad_common::{keys, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -18,11 +18,10 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad clone <urn> [--no-track] [--seed <host>] [<option>...]
+    rad clone <urn> [--seed <host>] [<option>...]
 
 Options
 
-    --no-track      Don't track the project after syncing (default: false)
     --seed <host>   Seed to clone from
     --help          Print help
 
@@ -32,7 +31,6 @@ Options
 #[derive(Debug)]
 pub struct Options {
     urn: Urn,
-    track: bool,
     seed: SeedOptions,
 }
 
@@ -43,15 +41,11 @@ impl Args for Options {
         let (seed, unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut urn: Option<Urn> = None;
-        let mut track = true;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
-                }
-                Long("no-track") => {
-                    track = false;
                 }
                 Value(val) if urn.is_none() => {
                     let val = val.to_string_lossy();
@@ -68,7 +62,6 @@ impl Args for Options {
                 urn: urn.ok_or_else(|| {
                     anyhow!("a URN to clone must be provided; see `rad clone --help`")
                 })?,
-                track,
                 seed,
             },
             vec![],
@@ -77,32 +70,18 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    let urn = &options.urn;
+
     rad_sync::run(rad_sync::Options {
         fetch: true,
-        urn: Some(options.urn.clone()),
+        urn: Some(urn.clone()),
         seed: options.seed.clone(),
         identity: false,
         verbose: false,
         force: false,
     })?;
 
-    // Tracking influences the checkout (by creating additional remotes),
-    // so we run it first.
-    if options.track {
-        let profile = profile::default()?;
-        let sock = keys::ssh_auth_sock();
-        let (_, storage) = keys::storage(&profile, sock)?;
-        let cfg = tracking::config::Config::default();
-
-        tracking::track(
-            &storage,
-            &options.urn,
-            None,
-            cfg,
-            tracking::policy::Track::Any,
-        )??;
-    }
-    let path = rad_checkout::execute(rad_checkout::Options { urn: options.urn })?;
+    let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
 
     if let Some(seed_url) = options.seed.seed_url() {
         seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
@@ -112,6 +91,25 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             term::format::highlight(seed_url)
         );
     }
+
+    let profile = profile::default()?;
+    let sock = keys::ssh_auth_sock();
+    let (_, storage) = keys::storage(&profile, sock)?;
+    let cfg = tracking::config::Config::default();
+    let project = project::get(&storage, urn)?
+        .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
+
+    // Track all project delegates.
+    for peer in project.remotes {
+        tracking::track(
+            &storage,
+            urn,
+            Some(peer),
+            cfg.clone(),
+            tracking::policy::Track::Any,
+        )??;
+    }
+    term::success!("Tracking setup for project delegates");
 
     Ok(())
 }
