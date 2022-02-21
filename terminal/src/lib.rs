@@ -134,6 +134,11 @@ pub mod components {
             self::success!("{}", &self.message);
         }
 
+        pub fn done(self) {
+            self.progress.finish_and_clear();
+            self::info!("{}", &self.message);
+        }
+
         pub fn failed(self) {
             self.progress.finish_and_clear();
             self::eprintln(style("!!").red().reverse(), self.message);

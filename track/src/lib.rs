@@ -155,6 +155,12 @@ pub fn show(
     options: Options,
 ) -> anyhow::Result<()> {
     let peers = if options.local {
+        term::info!(
+            "{} {} {}",
+            term::format::highlight(&project.name),
+            &project.urn,
+            term::format::dim("(local)")
+        );
         show_local(&project, &profile, storage)?
     } else {
         let seed = &if let Some(seed_url) = options.seed.seed_url() {
@@ -165,14 +171,28 @@ pub fn show(
             anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");
         };
 
-        show_remote(&project, &repo, seed)?
-    };
+        let spinner = term::spinner(&format!(
+            "{} {} {}",
+            term::format::highlight(&project.name),
+            &project.urn,
+            term::format::dim(format!("({})", seed.host_str().unwrap_or("seed"))),
+        ));
+        let peers = show_remote(&project, &repo, seed)?;
 
-    for peer in peers {
+        spinner.done();
+
+        peers
+    };
+    if peers.is_empty() {
+        term::info!("{}", term::format::dim("No remotes found for project"));
+        return Ok(());
+    }
+
+    for (i, peer) in peers.iter().enumerate() {
         let you = &peer.id == storage.peer_id();
         let mut header = vec![term::format::bold(peer.id)];
 
-        if let Some(meta) = peer.meta {
+        if let Some(meta) = &peer.meta {
             header.push(term::format::tertiary(meta.name.to_string()));
             if meta.delegate {
                 header.push(term::format::badge_primary("delegate"));
@@ -181,18 +201,39 @@ pub fn show(
         if you {
             header.push(term::format::badge_secondary("you"));
         }
-        term::info!("{}", header.join(" "));
+
+        if i != peers.len() - 1 {
+            term::info!("├── {}", header.join(" "));
+        } else {
+            term::info!("└── {}", header.join(" "));
+        }
 
         let mut table = term::Table::default();
-        for branch in peer.branches {
+        for (j, branch) in peer.branches.iter().enumerate() {
+            let prefix = if j != peer.branches.len() - 1 {
+                " ├──"
+            } else {
+                " └──"
+            };
+
+            let prefix = if i != peers.len() - 1 {
+                format!("│  {}", prefix)
+            } else {
+                format!("   {}", prefix)
+            };
+
             table.push([
-                term::format::tertiary(branch.name),
+                prefix,
+                term::format::tertiary(&branch.name),
                 term::format::secondary(branch.head.to_string()),
-                term::format::italic(branch.message),
+                term::format::italic(&branch.message),
             ]);
         }
-        table.render_tree();
-        term::blank();
+        table.render();
+
+        if i != peers.len() - 1 {
+            term::info!("│");
+        }
     }
     Ok(())
 }
@@ -205,12 +246,6 @@ pub fn show_local(
     let tracked = project::tracked(project, storage)?;
     let monorepo = profile::monorepo(profile)?;
     let mut peers = Vec::new();
-
-    term::info!(
-        "Listing {} remotes on local device...",
-        term::format::highlight(&project.name),
-    );
-    term::blank();
 
     for (id, meta) in tracked {
         if let Some(head) =
@@ -236,11 +271,6 @@ pub fn show_remote(
     seed: &Url,
 ) -> anyhow::Result<Vec<Peer>> {
     let urn = &project.urn;
-    let spinner = term::spinner(&format!(
-        "Listing {} remotes on {}...",
-        term::format::highlight(&project.name),
-        term::format::highlight(seed.host_str().unwrap_or("seed"))
-    ));
     let remotes = git::list_remotes(repo, seed, urn)?;
     let mut commits: HashMap<_, String> = HashMap::new();
 
@@ -249,13 +279,10 @@ pub fn show_remote(
     } else {
         HashMap::new() // Support old seeds that don't have metadata.
     };
-    spinner.finish();
 
     if remotes.is_empty() {
-        term::info!("{}", term::format::dim("No remotes found."));
         return Ok(Vec::new());
     }
-    term::blank();
 
     let mut peers = Vec::new();
 
