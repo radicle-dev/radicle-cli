@@ -19,7 +19,6 @@ assets = [
     ["target/release/rad-init", "usr/bin/rad-init", "755"],
     ["target/release/rad-clone", "usr/bin/rad-clone", "755"],
     ["target/release/rad-checkout", "usr/bin/rad-checkout", "755"],
-    ["target/release/rad-tree", "usr/bin/rad-tree", "755"],
     ["target/release/rad-untrack", "usr/bin/rad-untrack", "755"],
     ["target/release/rad-remote", "usr/bin/rad-remote", "755"],
     ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
@@ -47,7 +46,6 @@ rad-sync = { path = "./sync" }
 rad-remote = { path = "./remote" }
 rad-ens = { path = "./ens" }
 rad-checkout = { path = "./checkout" }
-rad-tree = { path = "./tree" }
 rad-track = { path = "./track" }
 rad-untrack = { path = "./untrack" }
 rad-help = { path = "./help" }
@@ -68,7 +66,6 @@ members = [
   "terminal",
   "common",
   "checkout",
-  "tree",
   "ens",
   "auth",
   "help",

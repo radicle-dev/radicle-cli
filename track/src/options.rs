@@ -12,11 +12,11 @@ use rad_terminal::args::{Args, Error};
 /// Tool options.
 #[derive(Debug)]
 pub struct Options {
-    pub peer: PeerId,
-    pub remote: bool,
+    pub peer: Option<PeerId>,
     pub upstream: bool,
     pub sync: bool,
     pub fetch: bool,
+    pub local: bool,
     pub seed: SeedOptions,
 }
 
@@ -27,7 +27,7 @@ impl Args for Options {
         let (seed, unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut peer: Option<PeerId> = None;
-        let mut remote = true;
+        let mut local: Option<bool> = None;
         let mut upstream = true;
         let mut sync = true;
         let mut fetch = true;
@@ -42,11 +42,8 @@ impl Args for Options {
                             .context("invalid value specified for '--peer'")?,
                     );
                 }
-                Long("remote") => remote = true,
-                Long("upstream") => upstream = true,
-                Long("sync") => sync = true,
-                Long("fetch") => fetch = true,
-                Long("no-remote") => remote = false,
+                Long("local") => local = Some(true),
+                Long("remote") => local = Some(false),
                 Long("no-upstream") => upstream = false,
                 Long("no-sync") => sync = false,
                 Long("no-fetch") => fetch = false,
@@ -69,13 +66,21 @@ impl Args for Options {
             }
         }
 
+        // If a seed is specified, and `--local` isn't, we assume remote.
+        // Otherwise, we assume local.
+        let local = if let Some(local) = local {
+            local
+        } else {
+            seed.seed_url().is_none()
+        };
+
         Ok((
             Options {
-                peer: peer.ok_or(Error::Usage)?,
-                remote,
+                peer,
                 sync,
                 fetch,
                 upstream,
+                local,
                 seed,
             },
             vec![],

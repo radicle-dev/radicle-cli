@@ -4970,7 +4970,6 @@ dependencies = [
  "rad-sync",
  "rad-terminal",
  "rad-track",
- "rad-tree",
  "rad-untrack",
 ]
 
@@ -5128,17 +5127,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rad-tree"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
-]
-
-[[package]]
 name = "rad-untrack"
 version = "0.1.0"
 dependencies = [
@@ -5272,7 +5260,6 @@ dependencies = [
  "rad-sync",
  "rad-terminal",
  "rad-track",
- "rad-tree",
  "rad-untrack",
  "radicle-git-helpers",
  "tokio",

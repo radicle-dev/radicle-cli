@@ -23,7 +23,6 @@ rad-auth = { path = "../auth" }
 rad-clone = { path = "../clone" }
 rad-account = { path = "../account" }
 rad-checkout = { path = "../checkout" }
-rad-tree = { path = "../tree" }
 rad-remote = { path = "../remote" }
 rad-push = { path = "../push" }
 rad-sync = { path = "../sync" }
