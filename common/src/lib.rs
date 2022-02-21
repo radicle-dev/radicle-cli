@@ -7,6 +7,7 @@ pub mod project;
 pub mod seed;
 
 pub use rad_identities as identities;
+pub use url::Url;
 
 pub mod fmt {
     use librad::PeerId;

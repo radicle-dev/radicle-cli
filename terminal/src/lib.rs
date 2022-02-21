@@ -398,8 +398,12 @@ pub mod components {
             style(input).green().bright().to_string()
         }
 
-        pub fn badge<D: std::fmt::Display>(input: D) -> String {
+        pub fn badge_primary<D: std::fmt::Display>(input: D) -> String {
             style(input).magenta().reverse().to_string()
+        }
+
+        pub fn badge_secondary<D: std::fmt::Display>(input: D) -> String {
+            style(input).blue().reverse().to_string()
         }
 
         pub fn bold<D: std::fmt::Display>(input: D) -> String {

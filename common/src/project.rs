@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::iter;
 
@@ -11,7 +11,9 @@ use librad::git::identities::{self, project, Project};
 use librad::git::local::transport;
 use librad::git::local::url::LocalUrl;
 use librad::git::storage::{ReadOnly, Storage};
+use librad::git::tracking;
 use librad::git::types::remote::Remote;
+use librad::git::types::{Namespace, Reference};
 use librad::git::Urn;
 use librad::git_ext::RefLike;
 use librad::identities::payload::{self, ProjectPayload};
@@ -25,7 +27,7 @@ use rad_identities;
 use rad_terminal::components as term;
 
 /// Project delegate.
-#[derive(serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub struct RemoteMetadata {
     pub id: PeerId,
@@ -171,9 +173,10 @@ where
     Ok(meta)
 }
 
-pub fn person(storage: &Storage, urn: &Urn, peer: &PeerId) -> anyhow::Result<Option<Person>> {
-    use librad::git::types::{Namespace, Reference};
-
+pub fn person<S>(storage: &S, urn: &Urn, peer: &PeerId) -> anyhow::Result<Option<Person>>
+where
+    S: AsRef<ReadOnly>,
+{
     let urn = Urn::try_from(Reference::rad_self(Namespace::from(urn.clone()), *peer))
         .map_err(|e| anyhow!(e))?;
 
@@ -210,6 +213,53 @@ pub fn cwd() -> Result<(Urn, Repository), Error> {
     let urn = self::remote(&repo)?.url.urn;
 
     Ok((urn, repo))
+}
+
+pub fn tracked<S>(
+    project: &Metadata,
+    storage: &S,
+) -> anyhow::Result<HashMap<PeerId, RemoteMetadata>>
+where
+    S: AsRef<ReadOnly>,
+{
+    let entries = tracking::tracked(storage.as_ref(), Some(&project.urn))?;
+    let mut remotes = HashMap::new();
+
+    for tracked in entries {
+        let tracked = tracked?;
+        if let Some(peer) = tracked.peer_id() {
+            if let Some(person) = self::person(storage, &project.urn, &peer)? {
+                let delegate = project.remotes.contains(&peer);
+
+                remotes.insert(
+                    peer,
+                    RemoteMetadata {
+                        id: peer,
+                        name: person.subject().name.to_string(),
+                        delegate,
+                    },
+                );
+            }
+        }
+    }
+    Ok(remotes)
+}
+
+pub fn get_remote_head(
+    repo: &Repository,
+    urn: &Urn,
+    peer: &PeerId,
+    branch: &str,
+) -> Result<Option<git2::Oid>, Error> {
+    // Nb. `git2` doesn't handle namespaces properly, so we specify it manually.
+    let reference = repo.find_reference(&format!(
+        "refs/namespaces/{}/refs/remotes/{}/heads/{}",
+        urn.encode_id(),
+        peer,
+        branch
+    ))?;
+
+    Ok(reference.target())
 }
 
 pub struct SetupRemote<'a> {

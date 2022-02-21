@@ -14,6 +14,7 @@ use librad::git_ext::RefLike;
 use librad::profile::Profile;
 use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths, PeerId};
 
+pub use git2::Oid;
 pub use git2::Repository;
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;
