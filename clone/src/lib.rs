@@ -111,5 +111,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
     term::success!("Tracking for project delegates configured");
 
+    term::headline(&format!(
+        "🌱 Project clone successful under ./{}",
+        term::format::highlight(path.file_name().unwrap_or_default().to_string_lossy())
+    ));
+
     Ok(())
 }

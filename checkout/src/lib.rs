@@ -60,7 +60,14 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    execute(options).map(|_| ())
+    let path = execute(options)?;
+
+    term::headline(&format!(
+        "🌱 Project checkout successful under ./{}",
+        term::format::highlight(path.file_name().unwrap_or_default().to_string_lossy())
+    ));
+
+    Ok(())
 }
 
 pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
@@ -136,11 +143,6 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
             }
         }
     }
-
-    term::headline(&format!(
-        "🌱 Project checkout successful under ./{}",
-        term::format::highlight(project.name)
-    ));
 
     Ok(path)
 }
