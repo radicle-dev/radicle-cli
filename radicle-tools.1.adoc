@@ -57,7 +57,7 @@ the following command from within the repository:
 You will be asked to enter some basic information about the project. Note that
 the project name will be determined by the directory name. The newly created
 project id will be displayed, which is a *URN* starting with *'rad:git:'*. To
-show it at any time, run *rad show --project* from within a radicle project.
+display it at any time, run *rad .* from within a radicle project.
 You may also list all projects on your device with `rad ls`.
 
 Besides registering the project in your local radicle state, a new *remote*
