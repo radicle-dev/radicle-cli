@@ -62,7 +62,6 @@ futures = { version = "0.3" }
 members = [
   "anchor",
   "account",
-  "safe-transaction-client",
   "terminal",
   "common",
   "checkout",
@@ -78,9 +77,7 @@ members = [
   "sync",
   "show",
   "track",
-  "untrack",
-  "proof-generator",
-  "authorized-keys"
+  "untrack"
 ]
 
 [patch.crates-io.link-crypto]
