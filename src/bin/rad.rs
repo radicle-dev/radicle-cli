@@ -50,12 +50,16 @@ fn parse_args() -> anyhow::Result<Args> {
                 command = Some(Command::External(vec![String::from("help")]));
             }
             Value(val) if command.is_none() => {
-                let args = iter::once(val)
-                    .chain(iter::from_fn(|| parser.value().ok()))
-                    .map(|s| s.to_string_lossy().into_owned())
-                    .collect();
+                if val == *"." {
+                    command = Some(Command::External(vec![String::from("inspect")]));
+                } else {
+                    let args = iter::once(val)
+                        .chain(iter::from_fn(|| parser.value().ok()))
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .collect();
 
-                command = Some(Command::External(args))
+                    command = Some(Command::External(args))
+                }
             }
             _ => return Err(anyhow::anyhow!(arg.unexpected())),
         }

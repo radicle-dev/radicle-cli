@@ -4635,6 +4635,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-inspect"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-common",
+ "rad-profile",
+ "rad-terminal",
+ "serde_json",
+]
+
+[[package]]
 name = "rad-ls"
 version = "0.1.0"
 dependencies = [
@@ -4873,6 +4886,7 @@ dependencies = [
  "rad-exe",
  "rad-help",
  "rad-init",
+ "rad-inspect",
  "rad-ls",
  "rad-profile",
  "rad-pull",

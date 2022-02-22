@@ -7,6 +7,7 @@ edition = "2018"
 [package.metadata.deb]
 assets = [
     ["target/release/rad-show", "usr/bin/rad-show", "755"],
+    ["target/release/rad-inspect", "usr/bin/rad-inspect", "755"],
     ["target/release/rad-account", "usr/bin/rad-account", "755"],
     ["target/release/rad-sync", "usr/bin/rad-sync", "755"],
     ["target/release/rad-help", "usr/bin/rad-help", "755"],
@@ -42,6 +43,7 @@ rad-common = { path = "./common" }
 rad-terminal = { path = "./terminal" }
 rad-init = { path = "./init" }
 rad-show = { path = "./show" }
+rad-inspect = { path = "./inspect" }
 rad-push = { path = "./push" }
 rad-pull = { path = "./pull" }
 rad-sync = { path = "./sync" }
@@ -79,6 +81,7 @@ members = [
   "remote",
   "sync",
   "show",
+  "inspect",
   "track",
   "untrack"
 ]
