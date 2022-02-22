@@ -1,14 +1,14 @@
-= radicle-tools(1)
+= rad(1)
 The Radicle Team <dev@radicle.xyz>
 :doctype: manpage
 :revnumber: 0.1.0
 :revdate: 2022-02-01
-:mansource: radicle-tools {revnumber}
+:mansource: rad {revnumber}
 :manmanual: Radicle Tools Manual
 
 == Name
 
-radicle-tools - command-line tooling for Radicle.
+rad - command-line tooling for Radicle.
 
 == Synopsis
 
@@ -141,8 +141,10 @@ And push it to the seed:
 Your changes will be pushed to a sub-tree of the project on the seed node, which
 will be namespaced under your *Peer ID*. To check what your *Peer ID* is, run:
 
-  $ rad show --peer
-  hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
+  $ rad self
+  ...
+  Peer ID  hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
+  ...
 
 The remote seed now has two source trees: one by the project delegate, and one
 by you. Your `master` branch is further along the canonical branch by one
@@ -196,10 +198,6 @@ head:
   $ rad push
 
 And we're done!
-
-== See also
-
-*rad(1)*
 
 == Copyright
 

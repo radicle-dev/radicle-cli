@@ -24,7 +24,7 @@ the user's local device.
 When pushing, ie. when copying git refs from the local device's _monorepo_ to a
 remote seed, the following operations are conducted (from local device to seed):
 
-1. For each project delegate, the delegate identity is pushed:
+1. For __each__ project delegate, the delegate identity is pushed:
 
   refs/namespaces/<delegate>/refs/rad/* -> refs/namespaces/<delegate>/refs/remotes/<peer-id>/rad/*
 
@@ -38,7 +38,7 @@ remote seed, the following operations are conducted (from local device to seed):
   refs/namespaces/<project>/refs/rad/self -> refs/namespaces/<project>/refs/remotes/<peer-id>/rad/self
   refs/namespaces/<project>/refs/rad/signed_refs -> refs/namespaces/<project>/refs/remotes/<peer-id>/rad/signed_refs
 
-4. The project heads are pushed:
+4. The project local heads are pushed:
 
   +refs/namespaces/<project>/refs/heads/* -> refs/remotes/<peer-id>/heads/*
 
@@ -86,12 +86,13 @@ fetch operations (from seed to local device):
 
 2. Based on the fetched identity, the delegates are fetched next:
 
-  refs/namespaces/<delegate>/refs/rad/id* -> refs/namespaces/<delegate>/refs/rad/id*
+  refs/namespaces/<delegate>/refs/rad/id -> refs/namespaces/<delegate>/refs/rad/id
+  refs/namespaces/<delegate>/refs/rad/ids/* -> refs/namespaces/<delegate>/refs/rad/ids/*
 
 3. The project is then verified.
-4. The project heads are fetched:
+4. For __each__ tracked peer, the remote refs are fetched:
 
-  refs/namespaces/<project>/refs/heads/* -> refs/namespaces/<project>/refs/heads/*
+  refs/namespaces/<project>/refs/remotes/<remote>/* -> refs/namespaces/<project>/refs/remotes/<remote>/*
 
 == See also
 

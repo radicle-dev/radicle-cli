@@ -24,7 +24,8 @@ to succeed.
 
 The checkout command will setup git remotes in the working copy based on
 tracked peers: a remote will be configured for each tracking relationship under
-the project.
+the project. Additionally, a tracking branch per remote will be created, with
+the prefix *peer/*, followed by the peer name and branch, eg. *peer/bob/master*.
 
 Tracking relationships can be edited with the *rad-track(1)* and
 *rad-untrack(1)* commands.
