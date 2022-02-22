@@ -14,6 +14,7 @@ use anyhow::Context as _;
 use url::Url;
 
 use std::collections::HashSet;
+use std::convert::TryInto;
 use std::ffi::OsString;
 use std::iter;
 use std::path::Path;
@@ -27,14 +28,15 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch] [--identity]
+    rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch] [--self]
 
 Options
 
     --seed <host>       Use the given seed node for syncing
     --seed-url <url>    Use the given seed node URL for syncing
-    -i, --identity      Sync your local identity to a seed
+    --identity          Sync identity refs (default: true)
     --fetch             Fetch updates (default: false)
+    --self              Sync your local identity (default: false)
     --help              Print help
 "#,
 };
@@ -46,6 +48,7 @@ pub struct Options {
     pub fetch: bool,
     pub force: bool,
     pub identity: bool,
+    pub push_self: bool,
     pub seed: SeedOptions,
 }
 
@@ -59,7 +62,8 @@ impl Args for Options {
         let mut fetch = false;
         let mut urn: Option<Urn> = None;
         let mut force = false;
-        let mut identity = false;
+        let mut push_self = false;
+        let mut identity = true;
         let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
@@ -73,8 +77,14 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Long("identity") | Short('i') => {
+                Long("self") => {
+                    push_self = true;
+                }
+                Long("identity") => {
                     identity = true;
+                }
+                Long("no-identity") => {
+                    identity = false;
                 }
                 Long("force") | Short('f') => {
                     force = true;
@@ -95,8 +105,8 @@ impl Args for Options {
             }
         }
 
-        if fetch && identity {
-            anyhow::bail!("'--fetch' and '--identity' cannot be used together");
+        if fetch && push_self {
+            anyhow::bail!("'--fetch' and '--self' cannot be used together");
         }
 
         Ok((
@@ -104,6 +114,7 @@ impl Args for Options {
                 seed,
                 fetch,
                 force,
+                push_self,
                 identity,
                 urn,
                 verbose,
@@ -171,7 +182,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if options.fetch {
         fetch(project_urn, &profile, seed, storage, options)?;
-    } else if options.identity {
+    } else if options.push_self {
         push_identity(&profile, seed, storage)?;
     } else {
         push_project(project_urn, &profile, seed, storage, options)?;
@@ -371,38 +382,11 @@ pub fn fetch(
     }
 
     let monorepo = profile.paths().git_dir();
-    let spinner = term::spinner("Fetching project identity...");
-    match seed::fetch_identity(monorepo, seed, &project_urn) {
-        Ok(output) => {
-            spinner.finish();
 
-            if options.verbose {
-                term::blob(output);
-            }
-        }
-        Err(err) => {
-            spinner.failed();
-            term::blank();
-
-            return Err(err).with_context(|| {
-                format!(
-                    "project {} was not found on {}",
-                    project_urn,
-                    seed.host_str().unwrap_or("seed")
-                )
-            });
-        }
-    }
-
-    let proj =
-        project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
-
-    for delegate in proj.delegates {
-        let spinner = term::spinner(&format!(
-            "Fetching project delegate {}...",
-            delegate.encode_id()
-        ));
-        match seed::fetch_identity(monorepo, seed, &delegate) {
+    // Sync identity and delegates.
+    if options.identity {
+        let spinner = term::spinner("Fetching project identity...");
+        match seed::fetch_identity(monorepo, seed, &project_urn) {
             Ok(output) => {
                 spinner.finish();
 
@@ -413,27 +397,62 @@ pub fn fetch(
             Err(err) => {
                 spinner.failed();
                 term::blank();
-                return Err(err);
+
+                return Err(err).with_context(|| {
+                    format!(
+                        "project {} was not found on {}",
+                        project_urn,
+                        seed.host_str().unwrap_or("seed")
+                    )
+                });
+            }
+        }
+
+        let proj =
+            project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
+
+        for delegate in &proj.delegates {
+            let spinner = term::spinner(&format!(
+                "Fetching project delegate {}...",
+                delegate.encode_id()
+            ));
+            match seed::fetch_identity(monorepo, seed, delegate) {
+                Ok(output) => {
+                    spinner.finish();
+
+                    if options.verbose {
+                        term::blob(output);
+                    }
+                }
+                Err(err) => {
+                    spinner.failed();
+                    term::blank();
+                    return Err(err);
+                }
             }
         }
     }
 
     let spinner = term::spinner("Verifying...");
-    match identities::project::verify(&storage, &project_urn) {
-        Ok(Some(_)) => {
+    let proj: project::Metadata = match identities::project::verify(&storage, &project_urn) {
+        Ok(Some(proj)) => {
             spinner.finish();
+            proj.into_inner().try_into()?
         }
         Ok(None) => {
             spinner.failed();
             term::blank();
-            return Err(anyhow!("project {} could not be loaded", project_urn));
+            return Err(anyhow!(
+                "project {} could not be found on local device",
+                project_urn
+            ));
         }
         Err(err) => {
             spinner.failed();
             term::blank();
             return Err(err.into());
         }
-    }
+    };
 
     // Start with the default set of remotes that should always be tracked.
     // These are the remotes of the project delegates.

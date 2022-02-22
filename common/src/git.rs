@@ -261,6 +261,14 @@ pub fn set_upstream(repo: &Path, name: &str, branch: &str) -> anyhow::Result<Str
     Ok(branch_name)
 }
 
+pub fn pull(repo: &Path, force: bool) -> anyhow::Result<String> {
+    let mut args = vec!["-c", "color.diff=always", "pull", "-v"];
+    if force {
+        args.push("--force");
+    }
+    git(repo, args)
+}
+
 pub fn list_remotes(
     repo: &git2::Repository,
     url: &url::Url,

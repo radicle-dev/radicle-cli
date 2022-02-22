@@ -4661,6 +4661,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-pull"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-common",
+ "rad-sync",
+ "rad-terminal",
+]
+
+[[package]]
 name = "rad-push"
 version = "0.1.0"
 dependencies = [
@@ -4863,6 +4875,7 @@ dependencies = [
  "rad-init",
  "rad-ls",
  "rad-profile",
+ "rad-pull",
  "rad-push",
  "rad-remote",
  "rad-rm",
