@@ -182,17 +182,17 @@ we can start by tracking the remote peer from our working copy:
   $ rad track hybgwwnx3x94rk6afxygj35jh3fktnwirs44a1t5emdh4uxmiku18q
 
 This will setup a remote in our working copy, as well as a tracking branch
-named after the peer and project default branch, eg. *bob/master*.
+named after the peer and project default branch, eg. *peers/bob/master*.
 
 To see what changes were contributed, we can diff the remote branch against our
 master:
 
-  $ git diff master..bob/master
+  $ git diff master..peers/bob/master
 
 If we're happy with these changes, we can merge them and publish our new
 head:
 
-  $ git merge bob/master
+  $ git merge peers/bob/master
   $ rad push
 
 And we're done!

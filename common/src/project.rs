@@ -279,7 +279,7 @@ impl<'a> SetupRemote<'a> {
 
         // TODO: Handle conflicts in remote name.
         if let Some(person) = self::person(storage, urn, peer)? {
-            let name = person.subject().name.to_string();
+            let name = format!("peer/{}", person.subject().name);
             let mut remote = git::remote(urn, peer, &name)?;
 
             // Configure the remote in the repository.
