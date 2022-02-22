@@ -4,7 +4,6 @@ use librad::{canonical::Cstring, git::identities::local::LocalIdentity};
 
 use librad::git::identities::Person;
 use librad::git::storage::Storage;
-use librad::git::Urn;
 
 use librad::crypto::BoxedSigner;
 use librad::identities::payload;
@@ -15,6 +14,7 @@ use rad_identities::{self, local, person};
 use rad_terminal::components as term;
 
 pub use librad::git::identities::person::verify;
+pub use person::get;
 
 lazy_static::lazy_static! {
     static ref ENS_NAMESPACE: url::Url = "https://radicle.xyz/ethereum/ens/v1"
@@ -30,13 +30,6 @@ pub struct Ens {
 impl HasNamespace for Ens {
     fn namespace() -> &'static url::Url {
         &ENS_NAMESPACE
-    }
-}
-
-pub fn get(storage: &Storage, urn: &Urn) -> Option<Person> {
-    match person::get(storage, urn) {
-        Ok(person) => person,
-        Err(_) => None,
     }
 }
 

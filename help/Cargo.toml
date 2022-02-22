@@ -14,7 +14,8 @@ rad-clib = "0"
 rad-profile = "0"
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
-rad-show = { path = "../show" }
+rad-self = { path = "../self" }
+rad-inspect = { path = "../inspect" }
 rad-ls = { path = "../ls" }
 rad-track = { path = "../track" }
 rad-untrack = { path = "../untrack" }

@@ -4585,11 +4585,12 @@ dependencies = [
  "rad-common",
  "rad-ens",
  "rad-init",
+ "rad-inspect",
  "rad-ls",
  "rad-profile",
  "rad-push",
  "rad-remote",
- "rad-show",
+ "rad-self",
  "rad-sync",
  "rad-terminal",
  "rad-track",
@@ -4639,8 +4640,10 @@ name = "rad-inspect"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "colored_json",
  "lexopt",
  "librad",
+ "link-identities",
  "rad-common",
  "rad-profile",
  "rad-terminal",
@@ -4720,18 +4723,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "rad-show"
+name = "rad-self"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "colored_json",
  "lexopt",
  "librad",
- "link-identities",
  "rad-common",
  "rad-profile",
  "rad-terminal",
- "serde_json",
 ]
 
 [[package]]
@@ -4893,7 +4893,7 @@ dependencies = [
  "rad-push",
  "rad-remote",
  "rad-rm",
- "rad-show",
+ "rad-self",
  "rad-sync",
  "rad-terminal",
  "rad-track",

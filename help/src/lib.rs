@@ -13,7 +13,8 @@ pub const HELP: Help = Help {
 const COMMANDS: &[Help] = &[
     rad_auth::HELP,
     rad_init::HELP,
-    rad_show::HELP,
+    rad_self::HELP,
+    rad_inspect::HELP,
     rad_account::HELP,
     rad_clone::HELP,
     rad_ls::HELP,
