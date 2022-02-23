@@ -4,7 +4,7 @@ The Radicle Team <dev@radicle.xyz>
 :revnumber: 0.1.0
 :revdate: 2022-02-01
 :mansource: rad-sync {revnumber}
-:manmanual: Radicle Tools Manual
+:manmanual: Radicle CLI Manual
 
 == Name
 

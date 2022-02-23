@@ -63,21 +63,21 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          staging="radicle-tools-${{ matrix.target }}"
+          staging="radicle-cli-${{ matrix.target }}"
           mkdir -p "$staging"
           find ./target/release -maxdepth 1 -name 'rad*' -executable | xargs --replace cp '{}' "$staging"/
           cp ./target/release/git-remote-rad "$staging"/
-          cp radicle-tools.1.gz "$staging"/
+          cp radicle-cli.1.gz "$staging"/
           tar czf "$staging.tar.gz" "$staging"
       - name: Build the release archive (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
-          staging="radicle-tools-${{ matrix.target }}"
+          staging="radicle-cli-${{ matrix.target }}"
           mkdir -p "$staging"
           find ./target/release -maxdepth 1 -name 'rad*' -perm +111 -type f | xargs -J '{}' -n 1 cp '{}' "$staging"/
           cp ./target/release/git-remote-rad "$staging"/
-          cp radicle-tools.1.gz "$staging"/
+          cp radicle-cli.1.gz "$staging"/
           tar czf "$staging.tar.gz" "$staging"
       - name: Release (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -85,7 +85,7 @@ jobs:
         with:
           fail_on_unmatched_files: true
           files: |
-            radicle-tools-*.tar.gz
+            radicle-cli-*.tar.gz
             target/debian/*.deb
       - uses: actions/upload-artifact@v2
         if: matrix.os == 'ubuntu-latest'
@@ -98,7 +98,7 @@ jobs:
         with:
           fail_on_unmatched_files: true
           files: |
-            radicle-tools-*.tar.gz
+            radicle-cli-*.tar.gz
 
   upload-deb:
     needs: create-artifacts
@@ -120,4 +120,4 @@ jobs:
         with:
           install_components: beta
       - name: Upload .deb package to an APT repo
-        run: gcloud --quiet beta artifacts apt upload radicle-tools --location=us-central1 --source *.deb
+        run: gcloud --quiet beta artifacts apt upload radicle-cli --location=us-central1 --source *.deb

@@ -9,7 +9,7 @@ use anyhow::Context as _;
 use coins_bip32::path::DerivationPath;
 
 use rad_anchor as anchor;
-use radicle_tools::logger;
+use radicle_cli::logger;
 
 use anchor::{Address, Urn};
 
