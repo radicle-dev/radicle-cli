@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "Git remote helper for radicle"
 
 [dependencies]
-radicle-tools = { path = "../" }
+radicle-cli = { path = "../" }
 async-trait = { version = "0.1" }
 log = { version = "0.4" }
 lexopt = { version = "0.2" }

@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use coins_bip32::path::DerivationPath;
 use proof_generator as proof;
-use radicle_tools::logger;
+use radicle_cli::logger;
 use std::env;
 use std::io::Write;
 use std::path::PathBuf;

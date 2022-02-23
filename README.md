@@ -3,7 +3,8 @@
 > ✨ Command-line client tooling for Radicle.
 
 ## Installation
-### By building from source code
+
+### From source
 
 You can install the radicle tools by running the following command from inside
 this repository:
@@ -18,14 +19,14 @@ Or directly from our seed node:
 
 ```
 curl https://europe-north1.pkg.dev/doc/repo-signing-key.gpg | sudo apt-key add -
-echo 'deb https://us-central1-apt.pkg.dev/projects/radicle-services radicle-tools main' | sudo tee -a  /etc/apt/sources.list.d/artifact-registry.list
+echo 'deb https://us-central1-apt.pkg.dev/projects/radicle-services radicle-cli main' | sudo tee -a  /etc/apt/sources.list.d/artifact-registry.list
 sudo apt update
-sudo apt install radicle-tools
+sudo apt install radicle-cli
 ```
 
-### From Homebrew on macOS
+### From Homebrew
 
 ```
-brew tap radicle/client-tools https://seed.alt-clients.radicle.xyz/hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo
-brew install radicle/client-tools/radicle-tools
+brew tap radicle/cli https://seed.alt-clients.radicle.xyz/radicle-cli-homebrew.git
+brew install radicle/cli/core
 ```

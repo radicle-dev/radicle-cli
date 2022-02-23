@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-radicle-tools = { path = "../" }
+radicle-cli = { path = "../" }
 safe-transaction-client = { path = "../safe-transaction-client" }
 log = { version = "0.4" }
 lexopt = { version = "0.2" }

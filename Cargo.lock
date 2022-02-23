@@ -4444,7 +4444,7 @@ dependencies = [
  "link-identities",
  "log",
  "multihash 0.14.0",
- "radicle-tools",
+ "radicle-cli",
  "rpassword 5.0.1",
  "safe-transaction-client",
  "serde_json",
@@ -4787,6 +4787,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "radicle-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atty",
+ "colored 1.9.3",
+ "ethers",
+ "futures",
+ "lexopt",
+ "librad",
+ "link-identities",
+ "log",
+ "rad-account",
+ "rad-auth",
+ "rad-checkout",
+ "rad-clone",
+ "rad-common",
+ "rad-ens",
+ "rad-exe",
+ "rad-help",
+ "rad-init",
+ "rad-inspect",
+ "rad-ls",
+ "rad-profile",
+ "rad-pull",
+ "rad-push",
+ "rad-remote",
+ "rad-rm",
+ "rad-self",
+ "rad-sync",
+ "rad-terminal",
+ "rad-track",
+ "rad-untrack",
+ "radicle-git-helpers",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "radicle-data"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-02-15#913817739e1c021d8ad142e7ea38272839d6bc5c"
@@ -4863,45 +4902,6 @@ dependencies = [
 name = "radicle-std-ext"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-02-15#913817739e1c021d8ad142e7ea38272839d6bc5c"
-
-[[package]]
-name = "radicle-tools"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "atty",
- "colored 1.9.3",
- "ethers",
- "futures",
- "lexopt",
- "librad",
- "link-identities",
- "log",
- "rad-account",
- "rad-auth",
- "rad-checkout",
- "rad-clone",
- "rad-common",
- "rad-ens",
- "rad-exe",
- "rad-help",
- "rad-init",
- "rad-inspect",
- "rad-ls",
- "rad-profile",
- "rad-pull",
- "rad-push",
- "rad-remote",
- "rad-rm",
- "rad-self",
- "rad-sync",
- "rad-terminal",
- "rad-track",
- "rad-untrack",
- "radicle-git-helpers",
- "tokio",
- "url",
-]
 
 [[package]]
 name = "radium"
