@@ -26,5 +26,6 @@ rad-account = { path = "../account" }
 rad-checkout = { path = "../checkout" }
 rad-remote = { path = "../remote" }
 rad-push = { path = "../push" }
+rad-pull = { path = "../pull" }
 rad-sync = { path = "../sync" }
 rad-ens = { path = "../ens" }

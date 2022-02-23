@@ -4588,6 +4588,7 @@ dependencies = [
  "rad-inspect",
  "rad-ls",
  "rad-profile",
+ "rad-pull",
  "rad-push",
  "rad-remote",
  "rad-self",
