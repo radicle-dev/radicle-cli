@@ -27,5 +27,5 @@ sudo apt install radicle-tools
 
 ```
 brew tap radicle/client-tools https://github.com/radicle-dev/homebrew-client-tools
-brew install radicle/client-tools/radicle-tools
+brew install radicle/client-tools/core
 ```
