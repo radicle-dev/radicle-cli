@@ -26,6 +26,6 @@ sudo apt install radicle-tools
 ### From Homebrew on macOS
 
 ```
-brew tap radicle/client-tools https://seed.alt-clients.radicle.xyz/hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo
+brew tap radicle/client-tools https://github.com/radicle-dev/homebrew-client-tools
 brew install radicle/client-tools/radicle-tools
 ```
