@@ -4866,7 +4866,7 @@ source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-02-15#9
 
 [[package]]
 name = "radicle-tools"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "atty",
