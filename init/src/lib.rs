@@ -98,7 +98,7 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
                 "Your project id is {}. You can show it any time by running:",
                 term::format::highlight(&urn.to_string())
             );
-            term::indented(&term::format::secondary("rad show --project"));
+            term::indented(&term::format::secondary("rad ."));
 
             term::blank();
             term::info!("To publish your project to the network, run:");
