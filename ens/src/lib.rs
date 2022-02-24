@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use ethers::prelude::{Address, Http, Provider, Signer, SignerMiddleware};
+use ethers::prelude::{Address, Http, Provider, Signer as _, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 

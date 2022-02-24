@@ -4516,13 +4516,11 @@ dependencies = [
  "base64 0.13.0",
  "byteorder",
  "coins-bip32 0.6.0",
- "dialoguer",
  "either",
  "ethers",
  "git-repository",
  "git2",
  "hex",
- "indicatif",
  "lazy_static",
  "lexopt",
  "librad",
@@ -4533,7 +4531,7 @@ dependencies = [
  "radicle-git-ext",
  "serde",
  "serde_json",
- "sha2 0.10.1",
+ "sha2 0.10.2",
  "thiserror",
  "ureq",
  "url",
@@ -4789,7 +4787,7 @@ dependencies = [
 
 [[package]]
 name = "radicle-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "atty",
@@ -5554,9 +5552,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99c3bd8169c58782adad9290a9af5939994036b76187f7b4f0e6de91dbbfc0ec"
+checksum = "55deaec60f81eefe3cce0dc50bda92d6d8e88f2a27df7c5033b42afeb1ed2676"
 dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",

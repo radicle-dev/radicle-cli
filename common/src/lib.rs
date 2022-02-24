@@ -1,10 +1,12 @@
-pub mod ethereum;
 pub mod git;
 pub mod keys;
 pub mod person;
 pub mod profile;
 pub mod project;
 pub mod seed;
+
+#[cfg(feature = "ethereum")]
+pub mod ethereum;
 
 pub use rad_identities as identities;
 pub use url::Url;
