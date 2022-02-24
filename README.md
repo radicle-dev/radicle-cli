@@ -4,7 +4,7 @@
 
 ## Installation
 
-### From source
+### 📦 From source
 
 You can install the Radicle CLI by running the following command from inside
 this repository:
@@ -15,7 +15,7 @@ Or directly from our seed node:
 
     cargo install --force --locked --git https://seed.alt-clients.radicle.xyz/radicle-cli.git radicle-cli
 
-### From an APT repository on Debian/Ubuntu
+### 🐧 From APT (Debian/Ubuntu)
 
 First, download the package signing key:
 
@@ -31,7 +31,7 @@ Then update the package list and install `radicle-cli`:
     sudo apt update
     sudo apt install radicle-cli
 
-### From Homebrew (x86_64)
+### 🍺 From Homebrew (x86_64)
 
     brew tap radicle/cli https://seed.alt-clients.radicle.xyz/radicle-cli-homebrew.git
     brew install radicle/cli/core
