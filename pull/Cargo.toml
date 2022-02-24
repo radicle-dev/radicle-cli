@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-description = "Pull radicle projects"
+description = "Pull radicle project refs into a working copy"
 
 [dependencies]
 anyhow = "1.0"
