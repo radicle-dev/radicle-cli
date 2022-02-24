@@ -110,10 +110,9 @@ pub fn track(
     let existing = matches!(result.err(), Some(tracking::PreviousError::DidExist));
 
     term::success!(
-        "Tracking relationship {} {} for {}",
+        "Tracking relationship {} {}",
         term::format::tertiary(peer),
         if existing { "exists" } else { "established" },
-        term::format::highlight(&urn)
     );
 
     let seed = options
@@ -125,7 +124,7 @@ pub fn track(
         if options.sync {
             // Fetch refs from seed...
             let spinner = term::spinner(&format!(
-                "Syncing peer refs from {}",
+                "Syncing peer refs from {}...",
                 term::format::highlight(seed.host_str().unwrap_or("seed"))
             ));
             seed::fetch_peers(profile.paths().git_dir(), &seed, urn, [peer])?;
