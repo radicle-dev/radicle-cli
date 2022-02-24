@@ -1,52 +1,47 @@
-use ethers::abi::{Detokenize, ParamType};
-use ethers::contract::abigen;
-use ethers::prelude::*;
-use ethers::types::{Address, NameOrAddress};
-
 use link_identities::git::Urn;
 use radicle_git_helpers::remote_helper;
 
 use rad_common::{keys, profile};
 
 use anyhow::anyhow;
-use anyhow::bail;
-use anyhow::Context as _;
 
-use std::convert::TryFrom;
 use std::env;
-use std::future;
 use std::process;
-use std::process::Command;
-use std::process::Stdio;
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 enum Remote {
-    Org { org: NameOrAddress, urn: Urn },
-    Project { urn: Urn },
+    #[cfg(feature = "ethereum")]
+    Org {
+        org: ethers::types::NameOrAddress,
+        urn: Urn,
+    },
+    Project {
+        urn: Urn,
+    },
 }
 
-/// Text record key that holds the Git server address.
-const ENS_SEED_HOST: &str = "eth.radicle.seed.host";
-/// URL scheme supported.
-const URL_SCHEME: &str = "rad";
-/// Ethereum TLD.
-const ETH_TLD: &str = ".eth";
 /// Failure exit code.
 const EXIT_FAILURE: i32 = 1;
-
-// Generated contract to query ENS resolver.
-abigen!(
-    EnsTextResolver,
-    "[function text(bytes32,string) external view returns (string)]",
-);
 
 impl FromStr for Remote {
     type Err = anyhow::Error;
 
+    #[cfg(not(feature = "ethereum"))]
     fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let urn = Urn::from_str(&format!("rad:git:{}", input))?;
+
+        Ok(Self::Project { urn })
+    }
+
+    #[cfg(feature = "ethereum")]
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        use anyhow::bail;
+        use anyhow::Context as _;
+        use ethers::types::{Address, NameOrAddress};
+
         if let Ok(url) = url::Url::parse(input) {
-            if url.scheme() != URL_SCHEME {
+            if url.scheme() != ethereum::URL_SCHEME {
                 bail!("Invalid URL scheme {:?}", url.scheme());
             }
             if url.cannot_be_a_base() {
@@ -117,8 +112,12 @@ fn main() {
 
 fn run(remote: Remote) -> anyhow::Result<()> {
     match remote {
+        #[cfg(feature = "ethereum")]
         Remote::Org { org, urn } => {
-            let domain = futures::executor::block_on(resolve(org))?;
+            use std::process::Command;
+            use std::process::Stdio;
+
+            let domain = futures::executor::block_on(ethereum::resolve(org))?;
             let http_url = format!("https://{}/{}", domain, urn.encode_id());
 
             // TODO: Use `exec` here.
@@ -146,47 +145,75 @@ fn run(remote: Remote) -> anyhow::Result<()> {
     }
 }
 
-async fn resolve(org: NameOrAddress) -> anyhow::Result<String> {
-    // Only resolve ENS names.
-    if let NameOrAddress::Name(ref domain) = org {
-        if !domain.ends_with(ETH_TLD) {
-            return Ok(domain.clone());
+#[cfg(feature = "ethereum")]
+pub mod ethereum {
+    use std::convert::TryFrom;
+    use std::env;
+    use std::future;
+
+    use anyhow::Context as _;
+    use ethers::abi::{Detokenize, ParamType};
+    use ethers::contract::abigen;
+    use ethers::prelude::*;
+    use ethers::types::{Address, NameOrAddress};
+
+    /// Text record key that holds the Git server address.
+    pub const ENS_SEED_HOST: &str = "eth.radicle.seed.host";
+    /// URL scheme supported.
+    pub const URL_SCHEME: &str = "rad";
+    /// Ethereum TLD.
+    pub const ETH_TLD: &str = ".eth";
+
+    // Generated contract to query ENS resolver.
+    abigen!(
+        EnsTextResolver,
+        "[function text(bytes32,string) external view returns (string)]",
+    );
+
+    pub async fn resolve(org: NameOrAddress) -> anyhow::Result<String> {
+        // Only resolve ENS names.
+        if let NameOrAddress::Name(ref domain) = org {
+            if !domain.ends_with(ETH_TLD) {
+                return Ok(domain.clone());
+            }
         }
-    }
 
-    let rpc_url = env::var("ETH_RPC_URL")
-        .ok()
-        .and_then(|url| if url.is_empty() { None } else { Some(url) })
-        .ok_or_else(|| anyhow::anyhow!("'ETH_RPC_URL' must be set to an Ethereum JSON-RPC URL"))?;
+        let rpc_url = env::var("ETH_RPC_URL")
+            .ok()
+            .and_then(|url| if url.is_empty() { None } else { Some(url) })
+            .ok_or_else(|| {
+                anyhow::anyhow!("'ETH_RPC_URL' must be set to an Ethereum JSON-RPC URL")
+            })?;
 
-    let provider =
-        Provider::<Http>::try_from(rpc_url.as_str()).context("JSON-RPC URL parsing failed")?;
+        let provider =
+            Provider::<Http>::try_from(rpc_url.as_str()).context("JSON-RPC URL parsing failed")?;
 
-    let (_address, name) = match org {
-        NameOrAddress::Name(name) => (provider.resolve_name(name.as_str()).await?, name),
-        NameOrAddress::Address(addr) => (
-            future::ready(addr).await,
-            provider.lookup_address(addr).await?,
-        ),
-    };
-    eprintln!("Resolving ENS record {} for {}", ENS_SEED_HOST, name);
+        let (_address, name) = match org {
+            NameOrAddress::Name(name) => (provider.resolve_name(name.as_str()).await?, name),
+            NameOrAddress::Address(addr) => (
+                future::ready(addr).await,
+                provider.lookup_address(addr).await?,
+            ),
+        };
+        eprintln!("Resolving ENS record {} for {}", ENS_SEED_HOST, name);
 
-    let resolver = {
-        let bytes = provider
-            .call(&ens::get_resolver(ens::ENS_ADDRESS, &name).into(), None)
+        let resolver = {
+            let bytes = provider
+                .call(&ens::get_resolver(ens::ENS_ADDRESS, &name).into(), None)
+                .await?;
+            let tokens = ethers::abi::decode(&[ParamType::Address], bytes.as_ref())?;
+
+            Address::from_tokens(tokens).unwrap()
+        };
+
+        let contract = EnsTextResolver::new(resolver, provider.into());
+        let host = contract
+            .text(ens::namehash(&name).0, ENS_SEED_HOST.to_owned())
+            .call()
             .await?;
-        let tokens = ethers::abi::decode(&[ParamType::Address], bytes.as_ref())?;
 
-        Address::from_tokens(tokens).unwrap()
-    };
+        eprintln!("Resolved {} to {}", ENS_SEED_HOST, host);
 
-    let contract = EnsTextResolver::new(resolver, provider.into());
-    let host = contract
-        .text(ens::namehash(&name).0, ENS_SEED_HOST.to_owned())
-        .call()
-        .await?;
-
-    eprintln!("Resolved {} to {}", ENS_SEED_HOST, host);
-
-    Ok(host)
+        Ok(host)
+    }
 }

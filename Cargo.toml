@@ -5,6 +5,10 @@ version = "0.1.2"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 
+[features]
+default = ["ethereum"]
+ethereum = ["rad-ens", "rad-account", "ethers", "tokio", "futures"]
+
 [package.metadata.deb]
 assets = [
     ["target/release/rad-self", "usr/bin/rad-self", "755"],
@@ -40,7 +44,6 @@ librad = { version = "0" }
 rad-exe = { version = "0" }
 rad-profile = { version = "0" }
 rad-clone = { path = "./clone" }
-rad-account = { path = "./account" }
 rad-auth = { path = "./auth" }
 rad-common = { path = "./common" }
 rad-terminal = { path = "./terminal" }
@@ -51,19 +54,31 @@ rad-push = { path = "./push" }
 rad-pull = { path = "./pull" }
 rad-sync = { path = "./sync" }
 rad-remote = { path = "./remote" }
-rad-ens = { path = "./ens" }
 rad-checkout = { path = "./checkout" }
 rad-track = { path = "./track" }
 rad-untrack = { path = "./untrack" }
 rad-help = { path = "./help" }
 rad-ls = { path = "./ls" }
 rad-rm = { path = "./rm" }
-ethers = { version = "0.6.2" }
 link-identities = { version = "0" }
 radicle-git-helpers = { version = "0" }
-url = { version = "*" }
-tokio = { version = "1.10", features = ["rt"] }
-futures = { version = "0.3" }
+url = { version = "2" }
+
+# Ethereum functionality
+
+ethers = { version = "0.6.2", optional = true }
+rad-account = { path = "./account", optional = true }
+rad-ens = { path = "./ens", optional = true }
+tokio = { version = "1.10", features = ["rt"], optional = true }
+futures = { version = "0.3", optional = true }
+
+[[bin]]
+name = "rad-account"
+required-features = ["ethereum"]
+
+[[bin]]
+name = "rad-ens"
+required-features = ["ethereum"]
 
 [workspace]
 members = [
