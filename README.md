@@ -19,7 +19,7 @@ Or directly from our seed node:
 
 First, download the package signing key:
 
-    curl https://europe-west6.pkg.dev/doc/repo-signing-key.gpg | sudo apt-key add -
+    curl https://europe-west6-apt.pkg.dev/doc/repo-signing-key.gpg | sudo apt-key add -
 
 Then update your sources list by creating a registry file for the Radicle APT repository:
 
