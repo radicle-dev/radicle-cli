@@ -249,13 +249,14 @@ pub fn push_project(
     );
     term::blank();
 
+    let mut spinner = term::spinner("Syncing...");
+
     // Sync project delegates to seed.
     for delegate in proj.delegates.iter() {
-        let spinner = term::spinner(&format!("Syncing delegate {}...", &delegate.encode_id()));
+        spinner.message(format!("Syncing delegate {}...", &delegate.encode_id()));
+
         match seed::push_delegate(monorepo, seed, delegate, peer_id) {
             Ok(output) => {
-                spinner.finish();
-
                 if options.verbose {
                     term::blob(output);
                 }
@@ -268,11 +269,9 @@ pub fn push_project(
         }
     }
 
-    let spinner = term::spinner("Syncing project identity...");
+    spinner.message("Syncing project identity...".to_owned());
     match seed::push_identity(monorepo, seed, &project_urn, &peer_id) {
         Ok(output) => {
-            spinner.finish();
-
             if options.verbose {
                 term::blob(output);
             }
@@ -284,11 +283,9 @@ pub fn push_project(
         }
     }
 
-    let spinner = term::spinner("Syncing project refs...");
+    spinner.message("Syncing project refs...".to_owned());
     match seed::push_refs(monorepo, seed, &project_urn, peer_id) {
         Ok(output) => {
-            spinner.finish();
-
             if options.verbose {
                 term::blob(output);
             }
@@ -300,7 +297,9 @@ pub fn push_project(
         }
     }
 
-    term::success!("Project synced.");
+    spinner.message("Project synced.".to_owned());
+    spinner.finish();
+
     term::blank();
 
     if let Some(host) = seed.host() {
@@ -313,7 +312,7 @@ pub fn push_project(
         let project_id = project_urn.encode_id();
         let git_url = seed.join(&project_id)?;
 
-        term::info!("🌱 Your project is synced and available at:");
+        term::info!("🪴 Your project is available at:");
         term::blank();
 
         if is_routable {

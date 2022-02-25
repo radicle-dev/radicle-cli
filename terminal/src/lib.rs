@@ -147,6 +147,11 @@ pub mod components {
         pub fn clear(self) {
             self.progress.finish_and_clear();
         }
+
+        pub fn message(&mut self, msg: String) {
+            self.progress.set_message(msg.clone());
+            self.message = msg;
+        }
     }
 
     pub fn headline(headline: &str) {
