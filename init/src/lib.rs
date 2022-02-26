@@ -1,4 +1,5 @@
 use std::ffi::OsString;
+use std::path::PathBuf;
 
 use anyhow::{anyhow, bail};
 
@@ -17,7 +18,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad init [<option>...]
+    rad init [<path>] [<option>...]
 
 Options
 
@@ -25,33 +26,49 @@ Options
 "#,
 };
 
-pub struct Options {}
+pub struct Options {
+    path: Option<PathBuf>,
+}
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
+        let mut path: Option<PathBuf> = None;
 
         if let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
+                Value(val) if path.is_none() => {
+                    path = Some(val.into());
+                }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
 
-        Ok((Options {}, vec![]))
+        Ok((Options { path }, vec![]))
     }
 }
 
-pub fn run(_options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options) -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
-    let path = cwd.as_path();
-    let name = path.file_name().unwrap().to_string_lossy().to_string();
+    let path = options.path.unwrap_or_else(|| cwd.clone());
+    let path = path.as_path().canonicalize()?;
+    let name = path.file_name().map(|f| f.to_string_lossy().to_string());
 
-    let repo = project::repository()?;
+    term::headline(&format!(
+        "Initializing local 🌱 project in {}",
+        if path == cwd {
+            term::format::highlight(".")
+        } else {
+            term::format::highlight(&path.display())
+        }
+    ));
+
+    let repo = git::Repository::open(path)?;
     if let Ok(remote) = project::remote(&repo) {
         bail!(
             "repository is already initialized with remote {}",
@@ -64,17 +81,12 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
     let (signer, storage) = keys::storage(&profile, sock)?;
     let identity = person::local(&storage)?;
 
-    term::headline(&format!(
-        "Initializing local 🌱 project in {}",
-        term::format::highlight(&path.display())
-    ));
-
     let head: String = repo
         .head()
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .ok_or_else(|| anyhow!("error: current branch has no commits"))?;
-    let name: String = term::text_input("Name", Some(name))?;
+    let name: String = term::text_input("Name", name)?;
     let description: String = term::text_input("Description", None)?;
     let branch = term::text_input("Default branch", Some(head))?;
     let spinner = term::spinner("Initializing...");
