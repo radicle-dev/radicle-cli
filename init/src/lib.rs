@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 
 use librad::canonical::Cstring;
 use librad::identities::payload::{self};
@@ -65,15 +65,16 @@ pub fn run(_options: Options) -> anyhow::Result<()> {
     let identity = person::local(&storage)?;
 
     term::headline(&format!(
-        "Initializing local 🌱 project {}",
-        term::format::highlight(&name)
+        "Initializing local 🌱 project in {}",
+        term::format::highlight(&path.display())
     ));
 
     let head: String = repo
         .head()
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
-        .unwrap_or_else(|| String::from("master"));
+        .ok_or_else(|| anyhow!("error: current branch has no commits"))?;
+    let name: String = term::text_input("Name", Some(name))?;
     let description: String = term::text_input("Description", None)?;
     let branch = term::text_input("Default branch", Some(head))?;
     let spinner = term::spinner("Initializing...");
