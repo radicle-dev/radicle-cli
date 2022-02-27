@@ -105,8 +105,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 pub fn clone_project(urn: Urn, seed: Option<seed::Addr>) -> anyhow::Result<()> {
     rad_sync::run(rad_sync::Options {
         fetch: true,
-        urn: Some(urn.clone()),
-        seed: SeedOptions { seed: seed.clone() },
+        origin: Some(project::Origin {
+            urn: urn.clone(),
+            seed: seed.clone(),
+        }),
         identity: true,
         push_self: false,
         verbose: false,

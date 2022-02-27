@@ -3,6 +3,7 @@ use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 use librad::PeerId;
 
+use rad_common::project::Origin;
 use rad_common::seed::SeedOptions;
 use rad_common::{git, keys, person, profile, project, seed, seed::Scope};
 use rad_terminal::args;
@@ -32,6 +33,10 @@ Usage
     rad sync <urn> [--seed <host>] [--fetch] [--self]
     rad sync <url> [--fetch] [--self]
 
+    If a <urn> is specified, a seed may be given via the `--seed` option.
+    If a <url> is specified, the seed is implied.
+    If neither is specified, the URN and seed of the current project is used.
+
 Options
 
     --seed <host>       Use the given seed node for syncing
@@ -44,13 +49,12 @@ Options
 
 #[derive(Default, Debug)]
 pub struct Options {
-    pub urn: Option<Urn>,
+    pub origin: Option<Origin>,
     pub verbose: bool,
     pub fetch: bool,
     pub force: bool,
     pub identity: bool,
     pub push_self: bool,
-    pub seed: SeedOptions,
 }
 
 impl Args for Options {
@@ -61,7 +65,7 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut verbose = false;
         let mut fetch = false;
-        let mut urn: Option<Urn> = None;
+        let mut origin: Option<Origin> = None;
         let mut force = false;
         let mut push_self = false;
         let mut identity = true;
@@ -90,11 +94,11 @@ impl Args for Options {
                 Long("force") | Short('f') => {
                     force = true;
                 }
-                Value(val) if urn.is_none() => {
+                Value(val) if origin.is_none() => {
                     let val = val.to_string_lossy();
-                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
+                    let val = Origin::from_str(&val)?;
 
-                    urn = Some(val);
+                    origin = Some(val);
                 }
                 arg => {
                     unparsed = iter::once(args::format(arg))
@@ -110,14 +114,19 @@ impl Args for Options {
             anyhow::bail!("'--fetch' and '--self' cannot be used together");
         }
 
+        if let Some(origin) = &mut origin {
+            origin
+                .set_seed(seed.seed)
+                .map_err(|e| anyhow!("unexpected argument `--seed`, {}", e))?;
+        }
+
         Ok((
             Options {
-                seed,
                 fetch,
                 force,
                 push_self,
                 identity,
-                urn,
+                origin,
                 verbose,
             },
             unparsed,
@@ -144,8 +153,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
 
-    let project_urn = if let Some(urn) = &options.urn {
-        urn.clone()
+    let project_urn = if let Some(origin) = &options.origin {
+        origin.urn.clone()
     } else {
         project::urn()?
     };
@@ -160,8 +169,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    let seed = &if let Some(seed_url) = options.seed.seed_url() {
-        seed_url
+    let seed: &Url = &if let Some(seed) = options.origin.as_ref().and_then(|o| o.seed_url()) {
+        seed
     } else if let Ok(seed) = seed::get_seed(Scope::Any) {
         seed
     } else {

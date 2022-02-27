@@ -45,6 +45,19 @@ impl Origin {
     pub fn from_urn(urn: Urn) -> Self {
         Self { urn, seed: None }
     }
+
+    pub fn seed_url(&self) -> Option<Url> {
+        self.seed.as_ref().map(|s| s.url())
+    }
+
+    pub fn set_seed(&mut self, seed: Option<seed::Addr>) -> anyhow::Result<()> {
+        if let (Some(current), Some(_)) = (&self.seed, &seed) {
+            return Err(anyhow!("seed already set to '{}'", current.host));
+        }
+        self.seed = seed;
+
+        Ok(())
+    }
 }
 
 impl FromStr for Origin {
@@ -56,7 +69,7 @@ impl FromStr for Origin {
         } else if let Ok(url) = Url::from_str(s) {
             Self::try_from(url)
         } else {
-            return Err(anyhow!("invalid origin {:?}", s));
+            return Err(anyhow!("invalid origin '{}'", s));
         }
     }
 }

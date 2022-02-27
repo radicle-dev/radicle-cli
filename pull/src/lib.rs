@@ -58,8 +58,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     rad_sync::run(rad_sync::Options {
         fetch: true,
-        urn: Some(urn),
-        seed: options.seed,
+        origin: Some(project::Origin {
+            urn,
+            seed: options.seed.seed,
+        }),
         identity: false,
         push_self: false,
         verbose: false,
