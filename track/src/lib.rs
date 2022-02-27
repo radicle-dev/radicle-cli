@@ -117,7 +117,8 @@ pub fn track(
 
     let seed = options
         .seed
-        .seed_url()
+        .as_ref()
+        .map(|s| s.url())
         .or_else(|| seed::get_seed(seed::Scope::Any).ok());
 
     if let Some(seed) = seed {
@@ -130,7 +131,7 @@ pub fn track(
             seed::fetch_peers(profile.paths().git_dir(), &seed, urn, [peer])?;
 
             spinner.finish();
-        } else if options.seed.seed.is_some() {
+        } else if options.seed.is_some() {
             term::warning("Ignoring `--seed` argument");
         }
     }
@@ -167,7 +168,7 @@ pub fn show(
         );
         show_local(&project, &profile, storage)?
     } else {
-        let seed = &if let Some(seed_url) = options.seed.seed_url() {
+        let seed = &if let Some(seed_url) = options.seed.as_ref().map(|s| s.url()) {
             seed_url
         } else if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
             seed

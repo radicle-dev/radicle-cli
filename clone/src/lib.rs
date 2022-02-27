@@ -76,7 +76,7 @@ impl Args for Options {
             anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
         })?;
 
-        match (&origin, seed.seed_url()) {
+        match (&origin, seed.seed) {
             (Origin::Radicle(o), Some(_)) if o.seed.is_some() => {
                 anyhow::bail!("`--seed` cannot be specified when a URL is given as origin");
             }

@@ -99,14 +99,6 @@ pub struct SeedOptions {
     pub seed: Option<Addr>,
 }
 
-impl SeedOptions {
-    pub fn seed_url(&self) -> Option<Url> {
-        self.seed
-            .as_ref()
-            .map(|seed| Url::parse(&format!("https://{}", seed)).unwrap())
-    }
-}
-
 impl Args for SeedOptions {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;

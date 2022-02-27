@@ -6,7 +6,7 @@ use anyhow::Context as _;
 
 use librad::PeerId;
 
-use rad_common::seed::SeedOptions;
+use rad_common::seed::{Addr, SeedOptions};
 use rad_terminal::args::{Args, Error};
 
 /// Tool options.
@@ -17,7 +17,7 @@ pub struct Options {
     pub sync: bool,
     pub fetch: bool,
     pub local: bool,
-    pub seed: SeedOptions,
+    pub seed: Option<Addr>,
 }
 
 impl Args for Options {
@@ -71,7 +71,7 @@ impl Args for Options {
         let local = if let Some(local) = local {
             local
         } else {
-            seed.seed_url().is_none()
+            seed.seed.is_none()
         };
 
         Ok((
@@ -81,7 +81,7 @@ impl Args for Options {
                 fetch,
                 upstream,
                 local,
-                seed,
+                seed: seed.seed,
             },
             vec![],
         ))
