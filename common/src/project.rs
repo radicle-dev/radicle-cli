@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::iter;
-use std::path::Path;
 
 use anyhow::{anyhow, Context as _, Error, Result};
 use either::Either;
@@ -191,13 +190,6 @@ pub fn repository() -> Result<Repository, Error> {
     match Repository::open(".") {
         Ok(repo) => Ok(repo),
         Err(err) => Err(err).context("the current working directory is not a git repository"),
-    }
-}
-
-pub fn repository_from(path: &Path) -> Result<Repository, Error> {
-    match Repository::open(path) {
-        Ok(repo) => Ok(repo),
-        Err(err) => Err(err).context(format!("{} is not a git repository", path.display())),
     }
 }
 

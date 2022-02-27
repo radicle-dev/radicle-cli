@@ -311,8 +311,8 @@ pub fn fetch_remote(
     Ok(())
 }
 
-pub fn clone(url: &str) -> Result<String, anyhow::Error> {
-    git(PathBuf::from(".").as_path(), ["clone", url])
+pub fn clone(url: &str, path: &Path) -> Result<String, anyhow::Error> {
+    git(Path::new("."), ["clone", url, &path.to_string_lossy()])
 }
 
 fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {

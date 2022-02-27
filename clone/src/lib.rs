@@ -127,17 +127,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         UrnUrl::Url(url) => {
             let proj = url
                 .path_segments()
-                .ok_or(anyhow!("Couldn't get segments of URL"))?
+                .ok_or(anyhow!("couldn't get segments of URL"))?
                 .last()
-                .ok_or(anyhow!("Couldn't get last segment of URL"))?;
+                .ok_or(anyhow!("couldn't get last segment of URL"))?;
             let proj = proj.strip_suffix(".git").unwrap_or(proj);
+            let destination = std::env::current_dir()?.join(proj);
 
             let spinner = term::spinner(&format!("Cloning {} locally", term::format::bold(&proj)));
-            git::clone(url.as_str())?;
+            git::clone(url.as_str(), &destination)?;
             spinner.finish();
 
             rad_init::run(rad_init::Options {
-                path: Some(std::env::current_dir()?.join(proj)),
+                path: Some(destination),
             })?;
         }
     }
