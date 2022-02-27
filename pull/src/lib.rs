@@ -4,6 +4,7 @@ use anyhow::anyhow;
 
 use rad_common::git;
 use rad_common::project;
+use rad_common::seed;
 use rad_common::seed::SeedOptions;
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
@@ -29,14 +30,14 @@ Options
 
 #[derive(Debug)]
 pub struct Options {
-    seed: SeedOptions,
+    seed: Option<seed::Address>,
 }
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (seed, unparsed) = SeedOptions::from_args(args)?;
+        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
 
         if let Some(arg) = parser.next()? {
@@ -60,7 +61,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         fetch: true,
         origin: Some(project::Origin {
             urn,
-            seed: options.seed.seed,
+            seed: options.seed,
         }),
         identity: false,
         push_self: false,

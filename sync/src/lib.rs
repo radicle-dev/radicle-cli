@@ -61,7 +61,7 @@ impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (seed, unparsed) = SeedOptions::from_args(args)?;
+        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut verbose = false;
         let mut fetch = false;
@@ -116,7 +116,7 @@ impl Args for Options {
 
         if let Some(origin) = &mut origin {
             origin
-                .set_seed(seed.seed)
+                .set_seed(seed)
                 .map_err(|e| anyhow!("unexpected argument `--seed`, {}", e))?;
         }
 

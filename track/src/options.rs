@@ -6,7 +6,7 @@ use anyhow::Context as _;
 
 use librad::PeerId;
 
-use rad_common::seed::{Addr, SeedOptions};
+use rad_common::seed::{Address, SeedOptions};
 use rad_terminal::args::{Args, Error};
 
 /// Tool options.
@@ -17,14 +17,14 @@ pub struct Options {
     pub sync: bool,
     pub fetch: bool,
     pub local: bool,
-    pub seed: Option<Addr>,
+    pub seed: Option<Address>,
 }
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (seed, unparsed) = SeedOptions::from_args(args)?;
+        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut peer: Option<PeerId> = None;
         let mut local: Option<bool> = None;
@@ -71,7 +71,7 @@ impl Args for Options {
         let local = if let Some(local) = local {
             local
         } else {
-            seed.seed.is_none()
+            seed.is_none()
         };
 
         Ok((
@@ -81,7 +81,7 @@ impl Args for Options {
                 fetch,
                 upstream,
                 local,
-                seed: seed.seed,
+                seed,
             },
             vec![],
         ))

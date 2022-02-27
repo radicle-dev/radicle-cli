@@ -38,7 +38,7 @@ pub const URL_SCHEME: &str = "rad";
 #[derive(Debug)]
 pub struct Origin {
     pub urn: Urn,
-    pub seed: Option<seed::Addr>,
+    pub seed: Option<seed::Address>,
 }
 
 impl Origin {
@@ -50,7 +50,7 @@ impl Origin {
         self.seed.as_ref().map(|s| s.url())
     }
 
-    pub fn set_seed(&mut self, seed: Option<seed::Addr>) -> anyhow::Result<()> {
+    pub fn set_seed(&mut self, seed: Option<seed::Address>) -> anyhow::Result<()> {
         if let (Some(current), Some(_)) = (&self.seed, &seed) {
             return Err(anyhow!("seed already set to '{}'", current.host));
         }
@@ -90,7 +90,7 @@ impl TryFrom<Url> for Origin {
 
         let host = url.host();
         let port = url.port();
-        let seed = host.map(|host| seed::Addr {
+        let seed = host.map(|host| seed::Address {
             host: host.to_owned(),
             port,
         });
@@ -405,7 +405,7 @@ mod test {
         );
         assert_eq!(
             origin.seed,
-            Some(seed::Addr {
+            Some(seed::Address {
                 host: url::Host::Domain("willow.radicle.garden".to_owned()),
                 port: None
             })

@@ -37,23 +37,23 @@ pub struct Commit {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Addr {
+pub struct Address {
     pub host: Host,
     pub port: Option<u16>,
 }
 
-impl Addr {
+impl Address {
     /// ```
     /// use std::str::FromStr;
     /// use rad_common::seed as seed;
     ///
-    /// let addr = seed::Addr::from_str("willow.radicle.garden").unwrap();
+    /// let addr = seed::Address::from_str("willow.radicle.garden").unwrap();
     /// assert_eq!(addr.url().to_string(), "https://willow.radicle.garden/");
     ///
-    /// let addr = seed::Addr::from_str("localhost").unwrap();
+    /// let addr = seed::Address::from_str("localhost").unwrap();
     /// assert_eq!(addr.url().to_string(), "https://localhost/");
     ///
-    /// let addr = seed::Addr::from_str("127.0.0.1").unwrap();
+    /// let addr = seed::Address::from_str("127.0.0.1").unwrap();
     /// assert_eq!(addr.url().to_string(), "http://127.0.0.1/");
     /// ```
     pub fn url(&self) -> Url {
@@ -64,7 +64,7 @@ impl Addr {
     }
 }
 
-impl std::fmt::Display for Addr {
+impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(port) = self.port {
             write!(f, "{}:{}", self.host, port)
@@ -74,7 +74,7 @@ impl std::fmt::Display for Addr {
     }
 }
 
-impl FromStr for Addr {
+impl FromStr for Address {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -95,16 +95,14 @@ impl FromStr for Addr {
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct SeedOptions {
-    pub seed: Option<Addr>,
-}
+pub struct SeedOptions(pub Option<Address>);
 
 impl Args for SeedOptions {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut seed: Option<Addr> = None;
+        let mut seed: Option<Address> = None;
         let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
@@ -114,14 +112,14 @@ impl Args for SeedOptions {
                     let value = value.to_string_lossy();
                     let value = value.as_ref();
                     let addr =
-                        Addr::from_str(value).context("invalid host specified for `--seed`")?;
+                        Address::from_str(value).context("invalid host specified for `--seed`")?;
 
                     seed = Some(addr);
                 }
                 _ => unparsed.push(args::format(arg)),
             }
         }
-        Ok((SeedOptions { seed }, unparsed))
+        Ok((SeedOptions(seed), unparsed))
     }
 }
 

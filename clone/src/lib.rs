@@ -44,7 +44,7 @@ impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (seed, unparsed) = SeedOptions::from_args(args)?;
+        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut origin: Option<Origin> = None;
 
@@ -76,7 +76,7 @@ impl Args for Options {
             anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
         })?;
 
-        match (&origin, seed.seed) {
+        match (&origin, seed) {
             (Origin::Radicle(o), Some(_)) if o.seed.is_some() => {
                 anyhow::bail!("`--seed` cannot be specified when a URL is given as origin");
             }
@@ -102,7 +102,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn clone_project(urn: Urn, seed: Option<seed::Addr>) -> anyhow::Result<()> {
+pub fn clone_project(urn: Urn, seed: Option<seed::Address>) -> anyhow::Result<()> {
     rad_sync::run(rad_sync::Options {
         fetch: true,
         origin: Some(project::Origin {
