@@ -240,7 +240,7 @@ pub mod components {
     pub fn confirm<D: fmt::Display>(prompt: D) -> bool {
         dialoguer::Confirm::new()
             .with_prompt(format!("{} {}", style(" ⤷".to_owned()).cyan(), prompt))
-            .wait_for_newline(true)
+            .wait_for_newline(false)
             .default(false)
             .interact()
             .unwrap_or_default()
