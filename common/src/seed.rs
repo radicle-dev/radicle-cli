@@ -43,8 +43,24 @@ pub struct Addr {
 }
 
 impl Addr {
+    /// ```
+    /// use std::str::FromStr;
+    /// use rad_common::seed as seed;
+    ///
+    /// let addr = seed::Addr::from_str("willow.radicle.garden").unwrap();
+    /// assert_eq!(addr.url().to_string(), "https://willow.radicle.garden/");
+    ///
+    /// let addr = seed::Addr::from_str("localhost").unwrap();
+    /// assert_eq!(addr.url().to_string(), "https://localhost/");
+    ///
+    /// let addr = seed::Addr::from_str("127.0.0.1").unwrap();
+    /// assert_eq!(addr.url().to_string(), "http://127.0.0.1/");
+    /// ```
     pub fn url(&self) -> Url {
-        Url::parse(&format!("https://{}", self)).unwrap()
+        match self.host {
+            url::Host::Domain(_) => Url::parse(&format!("https://{}", self)).unwrap(),
+            _ => Url::parse(&format!("http://{}", self)).unwrap(),
+        }
     }
 }
 
