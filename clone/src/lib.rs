@@ -80,68 +80,78 @@ impl Args for Options {
 pub fn run(options: Options) -> anyhow::Result<()> {
     match options.urn_url {
         UrnUrl::Urn(urn) => {
-            rad_sync::run(rad_sync::Options {
-                fetch: true,
-                urn: Some(urn.clone()),
-                seed: options.seed.clone(),
-                identity: true,
-                push_self: false,
-                verbose: false,
-                force: false,
-            })?;
-            let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
-
-            if let Some(seed_url) = options.seed.seed_url() {
-                seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
-                term::success!(
-                    "Local repository seed for {} set to {}",
-                    term::format::highlight(path.display()),
-                    term::format::highlight(seed_url)
-                );
-            }
-
-            let profile = profile::default()?;
-            let sock = keys::ssh_auth_sock();
-            let (_, storage) = keys::storage(&profile, sock)?;
-            let cfg = tracking::config::Config::default();
-            let project = project::get(&storage, &urn)?
-                .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
-
-            // Track all project delegates.
-            for peer in project.remotes {
-                tracking::track(
-                    &storage,
-                    &urn,
-                    Some(peer),
-                    cfg.clone(),
-                    tracking::policy::Track::Any,
-                )??;
-            }
-            term::success!("Tracking for project delegates configured");
-
-            term::headline(&format!(
-                "🌱 Project clone successful under ./{}",
-                term::format::highlight(path.file_name().unwrap_or_default().to_string_lossy())
-            ));
+            clone_project(urn, options.seed)?;
         }
         UrnUrl::Url(url) => {
-            let proj = url
-                .path_segments()
-                .ok_or(anyhow!("couldn't get segments of URL"))?
-                .last()
-                .ok_or(anyhow!("couldn't get last segment of URL"))?;
-            let proj = proj.strip_suffix(".git").unwrap_or(proj);
-            let destination = std::env::current_dir()?.join(proj);
-
-            let spinner = term::spinner(&format!("Cloning {} locally", term::format::bold(&proj)));
-            git::clone(url.as_str(), &destination)?;
-            spinner.finish();
-
-            rad_init::run(rad_init::Options {
-                path: Some(destination),
-            })?;
+            clone_repository(url)?;
         }
     }
+    Ok(())
+}
 
+pub fn clone_project(urn: Urn, seed: SeedOptions) -> anyhow::Result<()> {
+    rad_sync::run(rad_sync::Options {
+        fetch: true,
+        urn: Some(urn.clone()),
+        seed: seed.clone(),
+        identity: true,
+        push_self: false,
+        verbose: false,
+        force: false,
+    })?;
+    let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
+
+    if let Some(seed_url) = seed.seed_url() {
+        seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
+        term::success!(
+            "Local repository seed for {} set to {}",
+            term::format::highlight(path.display()),
+            term::format::highlight(seed_url)
+        );
+    }
+
+    let profile = profile::default()?;
+    let sock = keys::ssh_auth_sock();
+    let (_, storage) = keys::storage(&profile, sock)?;
+    let cfg = tracking::config::Config::default();
+    let project = project::get(&storage, &urn)?
+        .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
+
+    // Track all project delegates.
+    for peer in project.remotes {
+        tracking::track(
+            &storage,
+            &urn,
+            Some(peer),
+            cfg.clone(),
+            tracking::policy::Track::Any,
+        )??;
+    }
+    term::success!("Tracking for project delegates configured");
+
+    term::headline(&format!(
+        "🌱 Project clone successful under ./{}",
+        term::format::highlight(path.file_name().unwrap_or_default().to_string_lossy())
+    ));
+
+    Ok(())
+}
+
+pub fn clone_repository(url: Url) -> anyhow::Result<()> {
+    let proj = url
+        .path_segments()
+        .ok_or(anyhow!("couldn't get segments of URL"))?
+        .last()
+        .ok_or(anyhow!("couldn't get last segment of URL"))?;
+    let proj = proj.strip_suffix(".git").unwrap_or(proj);
+    let destination = std::env::current_dir()?.join(proj);
+
+    let spinner = term::spinner(&format!("Cloning {} locally", term::format::bold(&proj)));
+    git::clone(url.as_str(), &destination)?;
+    spinner.finish();
+
+    rad_init::run(rad_init::Options {
+        path: Some(destination),
+    })?;
     Ok(())
 }
