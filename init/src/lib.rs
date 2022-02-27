@@ -85,7 +85,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .head()
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
-        .ok_or_else(|| anyhow!("error: current branch has no commits"))?;
+        .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
     let name: String = term::text_input("Name", name)?;
     let description: String = term::text_input("Description", None)?;
     let branch = term::text_input("Default branch", Some(head))?;
