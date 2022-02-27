@@ -132,8 +132,6 @@ pub fn track(
             spinner.finish();
         } else if options.seed.seed.is_some() {
             term::warning("Ignoring `--seed` argument");
-        } else if options.seed.seed_url.is_some() {
-            term::warning("Ignoring `--seed-url` argument");
         }
     }
 
@@ -174,7 +172,7 @@ pub fn show(
         } else if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
             seed
         } else {
-            anyhow::bail!("a seed node must be specified with `--seed` or `--seed-url`");
+            anyhow::bail!("a seed node must be specified with `--seed`");
         };
 
         let spinner = term::spinner(&format!(

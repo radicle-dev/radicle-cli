@@ -36,10 +36,16 @@ pub struct Commit {
     pub header: CommitHeader,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Addr {
     pub host: Host,
     pub port: Option<u16>,
+}
+
+impl Addr {
+    pub fn url(&self) -> Url {
+        Url::parse(&format!("https://{}", self)).unwrap()
+    }
 }
 
 impl std::fmt::Display for Addr {
@@ -75,16 +81,13 @@ impl FromStr for Addr {
 #[derive(Default, Debug, Clone)]
 pub struct SeedOptions {
     pub seed: Option<Addr>,
-    pub seed_url: Option<Url>,
 }
 
 impl SeedOptions {
     pub fn seed_url(&self) -> Option<Url> {
-        if let Some(seed) = &self.seed {
-            Some(Url::parse(&format!("https://{}", seed)).unwrap())
-        } else {
-            self.seed_url.as_ref().cloned()
-        }
+        self.seed
+            .as_ref()
+            .map(|seed| Url::parse(&format!("https://{}", seed)).unwrap())
     }
 }
 
@@ -94,12 +97,11 @@ impl Args for SeedOptions {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut seed: Option<Addr> = None;
-        let mut seed_url: Option<Url> = None;
         let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("seed") if seed_url.is_none() => {
+                Long("seed") if seed.is_none() => {
                     let value = parser.value()?;
                     let value = value.to_string_lossy();
                     let value = value.as_ref();
@@ -108,19 +110,10 @@ impl Args for SeedOptions {
 
                     seed = Some(addr);
                 }
-                Long("seed-url") if seed.is_none() => {
-                    let value = parser.value()?;
-                    let value = value.to_string_lossy();
-                    let value = value.as_ref();
-                    let url =
-                        Url::from_str(value).context("invalid URL specified for `--seed-url`")?;
-
-                    seed_url = Some(url);
-                }
                 _ => unparsed.push(args::format(arg)),
             }
         }
-        Ok((SeedOptions { seed, seed_url }, unparsed))
+        Ok((SeedOptions { seed }, unparsed))
     }
 }
 

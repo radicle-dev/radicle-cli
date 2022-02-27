@@ -7,13 +7,12 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad push [--seed <host> | --seed-url <url>] [-f | --force]
+    rad push [--seed <host>] [-f | --force]
 
 Options
 
     --force, -f         Force push (default: false)
     --seed <host>       Use the given seed node for syncing
-    --seed-url <url>    Use the given seed node URL for syncing
     --help              Print help
 "#,
 };

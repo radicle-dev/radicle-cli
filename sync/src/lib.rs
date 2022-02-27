@@ -28,12 +28,13 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad sync [<urn>] [--seed <host> | --seed-url <url>] [--fetch] [--self]
+    rad sync [--seed <host>] [--fetch] [--self]
+    rad sync <urn> [--seed <host>] [--fetch] [--self]
+    rad sync <url> [--fetch] [--self]
 
 Options
 
     --seed <host>       Use the given seed node for syncing
-    --seed-url <url>    Use the given seed node URL for syncing
     --identity          Sync identity refs (default: true)
     --fetch             Fetch updates (default: false)
     --self              Sync your local identity (default: false)

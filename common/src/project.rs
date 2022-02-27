@@ -1,10 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::iter;
+use std::str::FromStr;
 
 use anyhow::{anyhow, Context as _, Error, Result};
 use either::Either;
 use git2::Repository;
+use url::Url;
 
 use librad::crypto::BoxedSigner;
 use librad::git::identities::{self, project, Project};
@@ -25,6 +27,73 @@ use librad::PeerId;
 
 use rad_identities;
 use rad_terminal::components as term;
+
+use crate::seed;
+
+/// URL scheme for radicle resources.
+pub const URL_SCHEME: &str = "rad";
+
+/// Project origin.
+/// Represents a location from which a project can be accessed.
+#[derive(Debug)]
+pub struct Origin {
+    pub urn: Urn,
+    pub seed: Option<seed::Addr>,
+}
+
+impl Origin {
+    pub fn from_urn(urn: Urn) -> Self {
+        Self { urn, seed: None }
+    }
+}
+
+impl FromStr for Origin {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(urn) = Urn::from_str(s) {
+            Ok(Self { urn, seed: None })
+        } else if let Ok(url) = Url::from_str(s) {
+            Self::try_from(url)
+        } else {
+            return Err(anyhow!("invalid origin {:?}", s));
+        }
+    }
+}
+
+impl TryFrom<Url> for Origin {
+    type Error = anyhow::Error;
+
+    fn try_from(url: Url) -> Result<Self, Self::Error> {
+        let mut segments = if let Some(segments) = url.path_segments() {
+            segments
+        } else {
+            anyhow::bail!("invalid radicle URL '{}': missing path", url.to_string());
+        };
+
+        if url.scheme() != URL_SCHEME {
+            anyhow::bail!("not a radicle URL '{}'", url.to_string());
+        }
+
+        let host = url.host();
+        let port = url.port();
+        let seed = host.map(|host| seed::Addr {
+            host: host.to_owned(),
+            port,
+        });
+
+        let urn = if let Some(id) = segments.next() {
+            if id.is_empty() {
+                anyhow::bail!("invalid radicle URL '{}': empty path", url.to_string());
+            }
+            Urn::try_from_id(id)?
+        } else {
+            anyhow::bail!("invalid radicle URL '{}': missing path", url.to_string());
+        };
+
+        Ok(Self { urn, seed })
+    }
+}
 
 /// Project delegate.
 #[derive(Clone, Debug, serde::Deserialize)]
@@ -302,5 +371,41 @@ impl<'a> SetupRemote<'a> {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_origin_from_url() {
+        let url = Url::parse("rad://willow.radicle.garden/hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y")
+            .unwrap();
+
+        let origin = Origin::try_from(url).unwrap();
+
+        assert_eq!(
+            origin.urn,
+            Urn::try_from_id("hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap()
+        );
+        assert_eq!(
+            origin.seed,
+            Some(seed::Addr {
+                host: url::Host::Domain("willow.radicle.garden".to_owned()),
+                port: None
+            })
+        );
+    }
+
+    #[test]
+    fn test_origin_from_str() {
+        let origin = Origin::from_str("rad:git:hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap();
+        assert_eq!(
+            origin.urn,
+            Urn::try_from_id("hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap()
+        );
+        assert!(origin.seed.is_none());
     }
 }

@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::ffi::OsString;
 use std::str::FromStr;
 
@@ -29,15 +30,14 @@ Options
 };
 
 #[derive(Debug)]
-enum UrnUrl {
-    Urn(Urn),
-    Url(Url),
+enum Origin {
+    Radicle(project::Origin),
+    Git(Url),
 }
 
 #[derive(Debug)]
 pub struct Options {
-    urn_url: UrnUrl,
-    seed: SeedOptions,
+    origin: Origin,
 }
 
 impl Args for Options {
@@ -46,54 +46,67 @@ impl Args for Options {
 
         let (seed, unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
-        let mut urn_url: Option<UrnUrl> = None;
+        let mut origin: Option<Origin> = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Value(val) if urn_url.is_none() => {
+                Value(val) if origin.is_none() => {
                     let val = val.to_string_lossy();
-                    let val = Urn::from_str(&val)
-                        .map(UrnUrl::Urn)
-                        .or_else(|_| Url::parse(&val).map(UrnUrl::Url))?;
-
-                    urn_url = Some(val);
+                    match Url::parse(&val) {
+                        Ok(url) if url.scheme() == project::URL_SCHEME => {
+                            let o = project::Origin::try_from(url)?;
+                            origin = Some(Origin::Radicle(o));
+                        }
+                        Ok(url) => {
+                            origin = Some(Origin::Git(url));
+                        }
+                        Err(_) => {
+                            let urn = Urn::from_str(&val)?;
+                            origin = Some(Origin::Radicle(project::Origin::from_urn(urn)));
+                        }
+                    }
                 }
                 _ => return Err(anyhow!(arg.unexpected())),
             }
         }
+        let origin = origin.ok_or_else(|| {
+            anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
+        })?;
 
-        Ok((
-            Options {
-                urn_url: urn_url.ok_or_else(|| {
-                    anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
-                })?,
-                seed,
-            },
-            vec![],
-        ))
+        match (&origin, seed.seed_url()) {
+            (Origin::Radicle(o), Some(_)) if o.seed.is_some() => {
+                anyhow::bail!("`--seed` cannot be specified when a URL is given as origin");
+            }
+            (Origin::Git(_), Some(_)) => {
+                anyhow::bail!("`--seed` cannot be specified when a Git URL is given");
+            }
+            _ => {}
+        }
+
+        Ok((Options { origin }, vec![]))
     }
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    match options.urn_url {
-        UrnUrl::Urn(urn) => {
-            clone_project(urn, options.seed)?;
+    match options.origin {
+        Origin::Radicle(origin) => {
+            clone_project(origin.urn, origin.seed)?;
         }
-        UrnUrl::Url(url) => {
+        Origin::Git(url) => {
             clone_repository(url)?;
         }
     }
     Ok(())
 }
 
-pub fn clone_project(urn: Urn, seed: SeedOptions) -> anyhow::Result<()> {
+pub fn clone_project(urn: Urn, seed: Option<seed::Addr>) -> anyhow::Result<()> {
     rad_sync::run(rad_sync::Options {
         fetch: true,
         urn: Some(urn.clone()),
-        seed: seed.clone(),
+        seed: SeedOptions { seed: seed.clone() },
         identity: true,
         push_self: false,
         verbose: false,
@@ -101,7 +114,7 @@ pub fn clone_project(urn: Urn, seed: SeedOptions) -> anyhow::Result<()> {
     })?;
     let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
 
-    if let Some(seed_url) = seed.seed_url() {
+    if let Some(seed_url) = seed.map(|s| s.url()) {
         seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
         term::success!(
             "Local repository seed for {} set to {}",
