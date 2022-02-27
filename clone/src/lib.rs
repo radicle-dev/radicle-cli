@@ -146,12 +146,19 @@ pub fn clone_repository(url: Url) -> anyhow::Result<()> {
     let proj = proj.strip_suffix(".git").unwrap_or(proj);
     let destination = std::env::current_dir()?.join(proj);
 
-    let spinner = term::spinner(&format!("Cloning {} locally", term::format::bold(&proj)));
+    let spinner = term::spinner(&format!(
+        "Cloning git repository {}...",
+        term::format::highlight(&url)
+    ));
     git::clone(url.as_str(), &destination)?;
     spinner.finish();
 
-    rad_init::run(rad_init::Options {
-        path: Some(destination),
-    })?;
+    if term::confirm(format!(
+        "Initialize new 🌱 project in {}?",
+        term::format::highlight(destination.display())
+    )) {
+        term::blank();
+        rad_init::execute(destination.as_path())?;
+    }
     Ok(())
 }

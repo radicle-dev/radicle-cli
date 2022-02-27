@@ -1,5 +1,5 @@
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail};
 
@@ -57,7 +57,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
     let path = options.path.unwrap_or_else(|| cwd.clone());
     let path = path.as_path().canonicalize()?;
-    let name = path.file_name().map(|f| f.to_string_lossy().to_string());
 
     term::headline(&format!(
         "Initializing local 🌱 project in {}",
@@ -68,6 +67,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     ));
 
+    execute(path.as_path())
+}
+
+pub fn execute(path: &Path) -> anyhow::Result<()> {
+    let name = path.file_name().map(|f| f.to_string_lossy().to_string());
     let repo = git::Repository::open(path)?;
     if let Ok(remote) = project::remote(&repo) {
         bail!(
