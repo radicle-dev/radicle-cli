@@ -85,7 +85,7 @@ impl TryFrom<Url> for Origin {
         };
 
         if url.scheme() != URL_SCHEME {
-            anyhow::bail!("not a radicle URL '{}'", url.to_string());
+            anyhow::bail!("not a radicle URL '{}': invalid scheme", url.to_string());
         }
 
         let host = url.host();

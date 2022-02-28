@@ -394,11 +394,10 @@ pub fn fetch(
 
     // Sync identity and delegates.
     if options.identity {
-        let spinner = term::spinner("Fetching project identity...");
+        let mut spinner = term::spinner("Fetching project identity...");
+
         match seed::fetch_identity(monorepo, seed, &project_urn) {
             Ok(output) => {
-                spinner.finish();
-
                 if options.verbose {
                     term::blob(output);
                 }
@@ -421,14 +420,12 @@ pub fn fetch(
             project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
 
         for delegate in &proj.delegates {
-            let spinner = term::spinner(&format!(
+            spinner.message(format!(
                 "Fetching project delegate {}...",
                 delegate.encode_id()
             ));
             match seed::fetch_identity(monorepo, seed, delegate) {
                 Ok(output) => {
-                    spinner.finish();
-
                     if options.verbose {
                         term::blob(output);
                     }
@@ -440,9 +437,11 @@ pub fn fetch(
                 }
             }
         }
+        spinner.message("Project identity synced.".to_owned());
+        spinner.finish();
     }
 
-    let spinner = term::spinner("Verifying...");
+    let spinner = term::spinner("Verifying signatures...");
     let proj: project::Metadata = match identities::project::verify(&storage, &project_urn) {
         Ok(Some(proj)) => {
             spinner.finish();
