@@ -18,6 +18,10 @@ pub fn default() -> Result<Profile, Error> {
     }
 }
 
+pub fn list() -> Result<Vec<Profile>, Error> {
+    rad_profile::list(None).map_err(|e| e.into())
+}
+
 pub fn set(id: &ProfileId) -> Result<(), Error> {
     rad_profile::set(None, id.clone())?;
 
