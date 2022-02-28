@@ -241,7 +241,7 @@ pub mod components {
         dialoguer::Confirm::new()
             .with_prompt(format!("{} {}", style(" ⤷".to_owned()).cyan(), prompt))
             .wait_for_newline(false)
-            .default(false)
+            .default(true)
             .interact()
             .unwrap_or_default()
     }

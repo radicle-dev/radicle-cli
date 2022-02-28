@@ -151,13 +151,22 @@ pub fn execute(path: &Path) -> anyhow::Result<()> {
 /// Setup radicle key as commit signing key in repository.
 pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result<()> {
     let path = repo.workdir().unwrap_or_else(|| repo.path());
+    let key = keys::to_ssh_fingerprint(peer_id)?;
 
-    if !git::is_signing_configured(path)? {
+    let yes = if !git::is_signing_configured(path)? {
         term::headline(&format!(
-            "Configuring 🌱 key {}...",
-            term::format::tertiary(keys::to_ssh_fingerprint(peer_id)?)
+            "Configuring 🌱 signing key {}...",
+            term::format::tertiary(key)
         ));
+        true
+    } else {
+        term::confirm(&format!(
+            "Configure 🌱 signing key {} in local checkout?",
+            term::format::tertiary(key),
+        ))
+    };
 
+    if yes {
         match git::write_gitsigners([peer_id], path) {
             Ok(()) => {
                 term::success!("Created {} file", term::format::tertiary(".gitsigners"));
@@ -167,7 +176,10 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
                     "Found existing {} file",
                     term::format::tertiary(".gitsigners")
                 );
-                if term::confirm("Add radicle key to .gitsigners?") {
+                if term::confirm(&format!(
+                    "Add signing key to {}?",
+                    term::format::tertiary(".gitsigners")
+                )) {
                     git::add_gitsigners([peer_id], path)?;
                 }
             }
@@ -177,7 +189,7 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
         }
         git::configure_signing(repo, peer_id)?;
 
-        term::success!("Commit signing key configured");
+        term::success!("Signing key configured");
     }
     Ok(())
 }
