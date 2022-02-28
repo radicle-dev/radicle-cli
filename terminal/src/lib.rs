@@ -23,6 +23,7 @@ pub mod keys {
 
 pub mod components {
     use std::fmt;
+    use std::fmt::Write;
     use std::str::FromStr;
 
     use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
@@ -72,17 +73,32 @@ pub mod components {
     pub use success;
     pub use tip;
 
+    #[derive(Debug, Default)]
+    pub struct TableOptions {
+        pub overflow: bool,
+    }
+
     #[derive(Debug)]
     pub struct Table<const W: usize> {
         rows: Vec<[String; W]>,
         widths: [usize; W],
+        opts: TableOptions,
     }
 
     impl<const W: usize> Table<W> {
+        pub fn new(opts: TableOptions) -> Self {
+            Self {
+                rows: Vec::new(),
+                widths: [0; W],
+                opts,
+            }
+        }
+
         pub fn default() -> Self {
             Self {
                 rows: Vec::new(),
                 widths: [0; W],
+                opts: TableOptions::default(),
             }
         }
 
@@ -94,14 +110,25 @@ pub mod components {
         }
 
         pub fn render(self) {
+            let width = self::width(); // Terminal width.
+
             for row in &self.rows {
+                let mut output = String::new();
+                let cells = row.len();
+
                 for (i, cell) in row.iter().enumerate() {
-                    print!(
-                        "{} ",
-                        console::pad_str(cell, self.widths[i], console::Alignment::Left, None)
-                    );
+                    if i == cells - 1 || self.opts.overflow {
+                        write!(output, "{}", cell).ok();
+                    } else {
+                        write!(
+                            output,
+                            "{} ",
+                            console::pad_str(cell, self.widths[i], console::Alignment::Left, None)
+                        )
+                        .ok();
+                    }
                 }
-                println!();
+                println!("{}", console::truncate_str(&output, width - 1, "…"));
             }
         }
 
@@ -152,6 +179,11 @@ pub mod components {
             self.progress.set_message(msg.clone());
             self.message = msg;
         }
+    }
+
+    pub fn width() -> usize {
+        let (_, rows) = console::Term::stdout().size();
+        rows as usize
     }
 
     pub fn headline(headline: &str) {
