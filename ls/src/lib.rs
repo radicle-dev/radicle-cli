@@ -41,7 +41,7 @@ impl Args for Options {
 }
 
 pub fn run(_options: Options) -> anyhow::Result<()> {
-    let profile = profile::Profile::load()?;
+    let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (_, storage) = keys::storage(&profile, sock)?;
     let projs = project::list(&storage)?;

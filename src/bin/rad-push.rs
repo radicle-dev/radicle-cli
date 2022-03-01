@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rad_common::git;
+use rad_common::{git, profile};
 use rad_push::HELP;
 use rad_terminal::args;
 use rad_terminal::components as term;
@@ -10,6 +10,8 @@ fn main() {
 }
 
 fn run(options: rad_sync::Options) -> anyhow::Result<()> {
+    profile::default()?;
+
     if options.fetch {
         anyhow::bail!("option `--fetch` cannot be used when pushing");
     }
