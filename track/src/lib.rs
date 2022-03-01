@@ -193,12 +193,15 @@ pub fn show(
         return Ok(());
     }
 
+    // TODO: Deterministic ordering of peers when printed.
     for (i, peer) in peers.iter().enumerate() {
         let you = &peer.id == storage.peer_id();
         let mut header = vec![term::format::bold(peer.id)];
 
         if let Some(meta) = &peer.meta {
-            header.push(term::format::tertiary(meta.name.to_string()));
+            if let Some(name) = &meta.name {
+                header.push(term::format::tertiary(name));
+            }
             if meta.delegate {
                 header.push(term::format::badge_primary("delegate"));
             }
@@ -236,7 +239,7 @@ pub fn show(
         }
         table.render();
 
-        if i != peers.len() - 1 {
+        if i != peers.len() - 1 && !peer.branches.is_empty() {
             term::info!("│");
         }
     }
@@ -253,9 +256,11 @@ pub fn show_local(
     let mut peers = Vec::new();
 
     for (id, meta) in tracked {
-        if let Some(head) =
-            project::get_remote_head(&monorepo, &project.urn, &id, &project.default_branch)?
-        {
+        let head = project::get_remote_head(&monorepo, &project.urn, &id, &project.default_branch)
+            .ok()
+            .flatten();
+
+        if let Some(head) = head {
             peers.push(Peer {
                 id,
                 meta: Some(meta),
@@ -264,6 +269,12 @@ pub fn show_local(
                     head,
                     message: String::new(),
                 }],
+            });
+        } else {
+            peers.push(Peer {
+                id,
+                meta: Some(meta),
+                branches: vec![],
             });
         }
     }

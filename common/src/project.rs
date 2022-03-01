@@ -104,7 +104,7 @@ impl TryFrom<Url> for Origin {
 #[serde(rename_all = "camelCase", tag = "type")]
 pub struct RemoteMetadata {
     pub id: PeerId,
-    pub name: String,
+    pub name: Option<String>,
     pub delegate: bool,
 }
 
@@ -301,18 +301,18 @@ where
     for tracked in entries {
         let tracked = tracked?;
         if let Some(peer) = tracked.peer_id() {
-            if let Some(person) = self::person(storage, &project.urn, &peer)? {
-                let delegate = project.remotes.contains(&peer);
+            let person = self::person(storage, &project.urn, &peer)?;
+            let name = person.map(|p| p.subject().name.to_string());
+            let delegate = project.remotes.contains(&peer);
 
-                remotes.insert(
-                    peer,
-                    RemoteMetadata {
-                        id: peer,
-                        name: person.subject().name.to_string(),
-                        delegate,
-                    },
-                );
-            }
+            remotes.insert(
+                peer,
+                RemoteMetadata {
+                    id: peer,
+                    name,
+                    delegate,
+                },
+            );
         }
     }
     Ok(remotes)
