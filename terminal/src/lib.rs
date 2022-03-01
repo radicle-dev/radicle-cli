@@ -156,7 +156,7 @@ pub mod components {
     }
 
     impl Spinner {
-        pub fn finish(self) {
+        pub fn finish(&self) {
             self.progress.finish_and_clear();
             self::success!("{}", &self.message);
         }

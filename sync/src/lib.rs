@@ -409,6 +409,7 @@ pub fn fetch(
         match seed::fetch_identity(monorepo, seed, &project_urn) {
             Ok(output) => {
                 if options.verbose {
+                    spinner.finish();
                     term::blob(output);
                 }
             }
@@ -437,6 +438,7 @@ pub fn fetch(
             match seed::fetch_identity(monorepo, seed, delegate) {
                 Ok(output) => {
                     if options.verbose {
+                        spinner.finish();
                         term::blob(output);
                     }
                 }
@@ -447,7 +449,10 @@ pub fn fetch(
                 }
             }
         }
-        spinner.message("Project identity synced.".to_owned());
+
+        if !options.verbose {
+            spinner.message("Fetching project identity...".to_owned());
+        }
         spinner.finish();
     }
 
