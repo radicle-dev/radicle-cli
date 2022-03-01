@@ -12,6 +12,7 @@ use rad_terminal::args::{self, Args};
 use crate::{git, project};
 
 pub const CONFIG_SEED_KEY: &str = "rad.seed";
+pub const CONFIG_PEER_KEY: &str = "rad.peer";
 pub const DEFAULT_SEEDS: &[&str] = &[
     "pine.radicle.garden",
     "willow.radicle.garden",
@@ -155,12 +156,23 @@ pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
 pub fn set_peer_seed(seed: &Url, peer_id: &PeerId) -> Result<(), anyhow::Error> {
     let seed = seed.as_str();
     let path = Path::new(".");
-    let key = format!("rad.peer.{}.seed", peer_id.default_encoding());
+    let key = format!("{}.{}.seed", CONFIG_PEER_KEY, peer_id.default_encoding());
     let args = ["config", "--local", &key, seed];
 
     git::git(path, args)
         .map(|_| ())
         .context("failed to save seed configuration")
+}
+
+pub fn get_peer_seed(peer_id: &PeerId) -> Result<Url, anyhow::Error> {
+    let path = Path::new(".");
+    let key = format!("{}.{}.seed", CONFIG_PEER_KEY, peer_id.default_encoding());
+    let args = ["config", &key];
+
+    let output = git::git(path, args).context("failed to lookup seed configuration")?;
+    let url = Url::parse(&output).context(format!("`{}` is not set to a valid URL", key))?;
+
+    Ok(url)
 }
 
 pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {

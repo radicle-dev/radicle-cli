@@ -476,7 +476,7 @@ pub fn fetch(
     // These are the remotes of the project delegates.
     let mut remotes: HashSet<PeerId> = proj.remotes.clone();
     // Add the explicitly tracked peers.
-    remotes.extend(tracked);
+    remotes.extend(tracked.clone());
 
     let spinner = if remotes == proj.remotes {
         term::spinner("Fetching default remotes...")
@@ -486,16 +486,37 @@ pub fn fetch(
     match seed::fetch_peers(monorepo, seed, &project_urn, remotes) {
         Ok(output) => {
             spinner.finish();
-
             if options.verbose {
                 term::blob(output);
             }
         }
         Err(err) => {
-            spinner.failed();
-            term::blank();
-            return Err(err);
+            spinner.error(err);
         }
     }
+
+    // Fetch refs from peer seeds.
+    for peer in &tracked {
+        if let Ok(seed) = seed::get_peer_seed(peer) {
+            let spinner = term::spinner(&format!(
+                "Fetching {} from {}...",
+                term::format::tertiary(peer),
+                term::format::tertiary(&seed)
+            ));
+
+            match seed::fetch_peers(monorepo, &seed, &project_urn, [*peer]) {
+                Ok(output) => {
+                    spinner.finish();
+                    if options.verbose {
+                        term::blob(output);
+                    }
+                }
+                Err(err) => {
+                    spinner.error(err);
+                }
+            }
+        }
+    }
+
     Ok(())
 }

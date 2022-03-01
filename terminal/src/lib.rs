@@ -171,6 +171,12 @@ pub mod components {
             self::eprintln(style("!!").red().reverse(), self.message);
         }
 
+        pub fn error(self, err: anyhow::Error) {
+            self.progress.finish_and_clear();
+            self::eprintln(style("!!").red().reverse(), self.message);
+            self::eprintln("  ", style(err).red());
+        }
+
         pub fn clear(self) {
             self.progress.finish_and_clear();
         }
