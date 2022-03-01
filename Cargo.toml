@@ -8,7 +8,7 @@ rust-version = "1.59"
 
 [features]
 default = ["ethereum"]
-ethereum = ["rad-ens", "rad-account", "ethers", "tokio", "futures"]
+ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "ethers", "tokio", "futures"]
 
 [package.metadata.deb]
 assets = [

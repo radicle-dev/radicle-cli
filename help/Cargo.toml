@@ -6,6 +6,10 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Radicle CLI help"
 
+[features]
+default = []
+ethereum = ["rad-ens", "rad-account"]
+
 [dependencies]
 anyhow = "1.0"
 librad = "0"
@@ -22,10 +26,13 @@ rad-untrack = { path = "../untrack" }
 rad-init = { path = "../init" }
 rad-auth = { path = "../auth" }
 rad-clone = { path = "../clone" }
-rad-account = { path = "../account" }
 rad-checkout = { path = "../checkout" }
 rad-remote = { path = "../remote" }
 rad-push = { path = "../push" }
 rad-pull = { path = "../pull" }
 rad-sync = { path = "../sync" }
-rad-ens = { path = "../ens" }
+
+# Ethereum
+
+rad-ens = { path = "../ens", optional = true }
+rad-account = { path = "../account", optional = true }

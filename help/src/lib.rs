@@ -15,7 +15,6 @@ const COMMANDS: &[Help] = &[
     rad_init::HELP,
     rad_self::HELP,
     rad_inspect::HELP,
-    rad_account::HELP,
     rad_clone::HELP,
     rad_ls::HELP,
     rad_remote::HELP,
@@ -25,7 +24,10 @@ const COMMANDS: &[Help] = &[
     rad_track::HELP,
     rad_untrack::HELP,
     rad_sync::HELP,
+    #[cfg(feature = "ethereum")]
     rad_ens::HELP,
+    #[cfg(feature = "ethereum")]
+    rad_account::HELP,
     crate::HELP,
 ];
 
