@@ -4,6 +4,7 @@ description = "Radicle CLI"
 version = "0.2.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
+rust-version = "1.59"
 
 [features]
 default = ["ethereum"]
