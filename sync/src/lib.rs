@@ -3,7 +3,6 @@ use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 use librad::PeerId;
 
-use rad_common::project::Origin;
 use rad_common::seed::SeedOptions;
 use rad_common::{git, keys, person, profile, project, seed, seed::Scope};
 use rad_terminal::args;
@@ -49,7 +48,8 @@ Options
 
 #[derive(Default, Debug)]
 pub struct Options {
-    pub origin: Option<Origin>,
+    pub origin: Option<project::Origin>,
+    pub seed: Option<seed::Address>,
     pub verbose: bool,
     pub fetch: bool,
     pub force: bool,
@@ -65,7 +65,7 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut verbose = false;
         let mut fetch = false;
-        let mut origin: Option<Origin> = None;
+        let mut origin = None;
         let mut force = false;
         let mut push_self = false;
         let mut identity = true;
@@ -96,7 +96,7 @@ impl Args for Options {
                 }
                 Value(val) if origin.is_none() => {
                     let val = val.to_string_lossy();
-                    let val = Origin::from_str(&val)?;
+                    let val = project::Origin::from_str(&val)?;
 
                     origin = Some(val);
                 }
@@ -114,19 +114,27 @@ impl Args for Options {
             anyhow::bail!("'--fetch' and '--self' cannot be used together");
         }
 
-        if let Some(origin) = &mut origin {
-            origin
-                .set_seed(seed)
-                .map_err(|e| anyhow!("unexpected argument `--seed`, {}", e))?;
+        if let (
+            Some(_),
+            Some(project::Origin {
+                seed: Some(addr), ..
+            }),
+        ) = (&seed, &origin)
+        {
+            anyhow::bail!(
+                "unexpected argument `--seed`, seed already set to '{}'",
+                addr
+            );
         }
 
         Ok((
             Options {
+                origin,
+                seed,
                 fetch,
                 force,
                 push_self,
                 identity,
-                origin,
                 verbose,
             },
             unparsed,
@@ -171,6 +179,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     let seed: &Url = &if let Some(seed) = options.origin.as_ref().and_then(|o| o.seed_url()) {
         seed
+    } else if let Some(seed) = &options.seed {
+        seed.url()
     } else if let Ok(seed) = seed::get_seed(Scope::Any) {
         seed
     } else {

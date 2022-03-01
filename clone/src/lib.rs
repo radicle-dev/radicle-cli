@@ -109,6 +109,7 @@ pub fn clone_project(urn: Urn, seed: Option<seed::Address>) -> anyhow::Result<()
             urn: urn.clone(),
             seed: seed.clone(),
         }),
+        seed: None,
         identity: true,
         push_self: false,
         verbose: false,

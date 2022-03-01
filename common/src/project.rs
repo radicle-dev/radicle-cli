@@ -35,7 +35,7 @@ pub const URL_SCHEME: &str = "rad";
 
 /// Project origin.
 /// Represents a location from which a project can be accessed.
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Origin {
     pub urn: Urn,
     pub seed: Option<seed::Address>,
@@ -48,15 +48,6 @@ impl Origin {
 
     pub fn seed_url(&self) -> Option<Url> {
         self.seed.as_ref().map(|s| s.url())
-    }
-
-    pub fn set_seed(&mut self, seed: Option<seed::Address>) -> anyhow::Result<()> {
-        if let (Some(current), Some(_)) = (&self.seed, &seed) {
-            return Err(anyhow!("seed already set to '{}'", current.host));
-        }
-        self.seed = seed;
-
-        Ok(())
     }
 }
 

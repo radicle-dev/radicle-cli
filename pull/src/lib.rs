@@ -63,6 +63,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             urn,
             seed: options.seed,
         }),
+        seed: None,
         identity: false,
         push_self: false,
         verbose: false,
