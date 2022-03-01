@@ -278,6 +278,7 @@ pub fn push_project(
         match seed::push_delegate(monorepo, seed, delegate, peer_id) {
             Ok(output) => {
                 if options.verbose {
+                    spinner.finish();
                     term::blob(output);
                 }
             }
@@ -293,6 +294,7 @@ pub fn push_project(
     match seed::push_identity(monorepo, seed, &project_urn, &peer_id) {
         Ok(output) => {
             if options.verbose {
+                spinner.finish();
                 term::blob(output);
             }
         }
@@ -307,6 +309,7 @@ pub fn push_project(
     match seed::push_refs(monorepo, seed, &project_urn, peer_id) {
         Ok(output) => {
             if options.verbose {
+                spinner.finish();
                 term::blob(output);
             }
         }
@@ -317,7 +320,9 @@ pub fn push_project(
         }
     }
 
-    spinner.message("Project synced.".to_owned());
+    if !options.verbose {
+        spinner.message("Project synced.".to_owned());
+    }
     spinner.finish();
 
     term::blank();
