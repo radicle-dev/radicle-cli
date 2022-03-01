@@ -12,7 +12,7 @@ rad-sync - synchronize radicle projects with seeds
 
 == Synopsis
 
-*rad sync* [<urn>] [--seed <host>] [--fetch]
+*rad sync* [<urn | url>] [--seed <host>] [--fetch]
 
 == Description
 

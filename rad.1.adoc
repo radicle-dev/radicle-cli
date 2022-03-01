@@ -100,11 +100,14 @@ be shown on the project profile, when browsing on the web.
 You may then use *rad-clone(1)* to fetch a fresh copy of the project from the
 seed:
 
-  $ rad clone rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo --seed willow.radicle.garden
+  $ rad clone rad://willow.radicle.garden/hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo
 
   Syncing project rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo from https://willow.radicle.garden/
   Initializing local checkout for rad:git:hnrkyghsrokxzxpy9pww69xr11dr9q7edbxfo (radicle-cli)
   ...
+
+Note that when specifying a clone URL, the format is *rad://<seed-host>/<project-id>*. The
+project id is the URN without the *rad:git:* prefix.
 
 If the project is found, it will be fetched and a working copy will be created,
 with the canonical branch checked out. We can inspect the repository and see
