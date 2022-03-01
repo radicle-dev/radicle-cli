@@ -43,7 +43,8 @@ Usage
     rad track <peer-id> [--seed <host>] [--no-sync] [--no-upstream] [--no-fetch]
 
     If a peer id is supplied, track this peer in the context of the current project. By default,
-    a remote is created in the repository and an upstream tracking branch is setup.
+    a remote is created in the repository and an upstream tracking branch is setup. If a seed
+    is supplied as well, the seed will be associated with this peer in the local git configuration.
 
     If no peer id is supplied, show the local or remote tracking graph of the current project.
 
@@ -131,13 +132,24 @@ pub fn track(
             seed::fetch_peers(profile.paths().git_dir(), &seed, urn, [peer])?;
 
             spinner.finish();
-        } else if options.seed.is_some() {
-            term::warning("Ignoring `--seed` argument");
         }
+    }
+
+    // If a seed is explicitly specified, associate it with the peer being tracked.
+    if let Some(addr) = &options.seed {
+        seed::set_peer_seed(&addr.url(), &peer)?;
+        term::success!(
+            "Saving seed configuration for {} to local git config...",
+            term::format::tertiary(rad_common::fmt::peer(&peer))
+        );
     }
 
     // Don't setup remote if tracking relationship already existed, as the branch
     // probably already exists.
+    //
+    // TODO: We should allow this anyway if for eg. you want to update a checkout with a peer.
+    // There's no other way to setup a remote tracking branch right now..
+    //
     if !existing {
         project::SetupRemote {
             project: &project,

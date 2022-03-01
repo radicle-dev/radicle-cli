@@ -152,6 +152,17 @@ pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
         .context("failed to save seed configuration")
 }
 
+pub fn set_peer_seed(seed: &Url, peer_id: &PeerId) -> Result<(), anyhow::Error> {
+    let seed = seed.as_str();
+    let path = Path::new(".");
+    let key = format!("rad.peer.{}.seed", peer_id.default_encoding());
+    let args = ["config", "--local", &key, seed];
+
+    git::git(path, args)
+        .map(|_| ())
+        .context("failed to save seed configuration")
+}
+
 pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
     seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
     seed = seed.join("/v1/peer")?;
