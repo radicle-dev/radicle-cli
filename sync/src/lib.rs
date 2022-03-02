@@ -341,14 +341,16 @@ pub fn push_project(
         term::blank();
 
         if is_routable {
-            term::indented(&format!(
-                "{} {}",
-                term::format::dim("(web)"),
-                term::format::highlight(format!(
-                    "https://{}/seeds/{}/{}",
-                    GATEWAY_HOST, host, project_urn
-                ))
-            ));
+            if proj.remotes.contains(peer_id) {
+                term::indented(&format!(
+                    "{} {}",
+                    term::format::dim("(web)"),
+                    term::format::highlight(format!(
+                        "https://{}/seeds/{}/{}",
+                        GATEWAY_HOST, host, project_urn
+                    ))
+                ));
+            }
             term::indented(&format!(
                 "{} {}",
                 term::format::dim("(web)"),
