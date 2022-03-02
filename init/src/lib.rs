@@ -90,6 +90,9 @@ pub fn execute(path: &Path) -> anyhow::Result<()> {
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
+
+    git::check_version()?;
+
     let name: String = term::text_input("Name", name)?;
     let description: String = term::text_input("Description", None)?;
     let branch = term::text_input("Default branch", Some(head))?;

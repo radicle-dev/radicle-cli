@@ -315,6 +315,15 @@ pub fn clone(url: &str, path: &Path) -> Result<String, anyhow::Error> {
     git(Path::new("."), ["clone", url, &path.to_string_lossy()])
 }
 
+pub fn check_version() -> Result<Version, anyhow::Error> {
+    let git_version = self::version()?;
+
+    if git_version < VERSION_REQUIRED {
+        anyhow::bail!("a minimum git version of {} is required", VERSION_REQUIRED);
+    }
+    Ok(git_version)
+}
+
 fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
     refspec
         .strip_prefix("refs/remotes/")

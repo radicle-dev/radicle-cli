@@ -74,6 +74,14 @@ pub fn init(_options: Options) -> anyhow::Result<()> {
 
     term::headline("Initializing your 🌱 profile and identity");
 
+    if git::check_version().is_err() {
+        term::warning(&format!(
+            "Warning: Your git version is unsupported, please upgrade to {} or later",
+            git::VERSION_REQUIRED,
+        ));
+        term::blank();
+    }
+
     let username: String = term::text_input("Username", None)?;
     let pass = term::pwhash(term::secret_input_with_confirmation());
 

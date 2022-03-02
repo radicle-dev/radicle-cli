@@ -166,16 +166,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     } else {
         project::urn()?
     };
-    let git_version = git::version()?;
-
-    term::info!("Git version {}", git_version);
-
-    if git_version < git::VERSION_REQUIRED {
-        anyhow::bail!(
-            "a minimum git version of {} is required, please update your installation",
-            git::VERSION_REQUIRED
-        );
-    }
+    term::info!("Git version {}", git::check_version()?);
 
     let seed: &Url = &if let Some(seed) = options.origin.as_ref().and_then(|o| o.seed_url()) {
         seed
