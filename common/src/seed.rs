@@ -225,7 +225,7 @@ pub fn push_delegate(
     repo: &Path,
     seed: &Url,
     delegate: &Urn,
-    peer_id: PeerId,
+    peer_id: &PeerId,
 ) -> Result<String, anyhow::Error> {
     let delegate_id = delegate.encode_id();
     let url = seed.join(&delegate_id)?;
@@ -274,7 +274,7 @@ pub fn push_refs(
     repo: &Path,
     seed: &Url,
     project: &Urn,
-    peer_id: PeerId,
+    peer_id: &PeerId,
 ) -> Result<String, anyhow::Error> {
     let project_id = project.encode_id();
     let url = seed.join(&project_id)?;
@@ -300,6 +300,10 @@ pub fn push_refs(
             ),
             &format!(
                 "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
+                project_id, peer_id
+            ),
+            &format!(
+                "+refs/namespaces/{}/refs/tags/*:refs/remotes/{}/tags/*",
                 project_id, peer_id
             ),
         ],

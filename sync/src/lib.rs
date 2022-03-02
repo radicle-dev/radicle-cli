@@ -246,7 +246,7 @@ pub fn push_project(
     options: Options,
 ) -> anyhow::Result<()> {
     let monorepo = profile.paths().git_dir();
-    let peer_id = profile::peer_id(&storage)?;
+    let peer_id = storage.peer_id();
     let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
         .context("git signing key is not properly configured")?;
     let proj = project::get(&storage, &project_urn)?.ok_or_else(|| {
@@ -291,7 +291,7 @@ pub fn push_project(
     }
 
     spinner.message("Syncing project identity...".to_owned());
-    match seed::push_identity(monorepo, seed, &project_urn, &peer_id) {
+    match seed::push_identity(monorepo, seed, &project_urn, peer_id) {
         Ok(output) => {
             if options.verbose {
                 spinner.finish();
