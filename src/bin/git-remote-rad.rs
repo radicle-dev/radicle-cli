@@ -4,6 +4,7 @@ use radicle_git_helpers::remote_helper;
 use rad_common::{keys, profile};
 
 use anyhow::anyhow;
+use futures_lite::future;
 
 use std::env;
 use std::process;
@@ -117,7 +118,7 @@ fn run(remote: Remote) -> anyhow::Result<()> {
             use std::process::Command;
             use std::process::Stdio;
 
-            let domain = futures::executor::block_on(ethereum::resolve(org))?;
+            let domain = future::block_on(ethereum::resolve(org))?;
             let http_url = format!("https://{}/{}", domain, urn.encode_id());
 
             // TODO: Use `exec` here.

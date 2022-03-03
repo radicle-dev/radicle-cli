@@ -11,7 +11,6 @@ lexopt = { version = "0.2" }
 ethers = { version = "0", features = ["ledger"] }
 link-identities = { version = "0" }
 serde_json = { version = "1" }
-futures = { version = "*" }
 tokio = { version = "1.10", features = ["rt", "macros"] }
 anyhow = { version = "*" }
 multihash = { version = "0.14", features = ["sha1"] }

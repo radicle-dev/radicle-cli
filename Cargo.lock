@@ -4439,7 +4439,6 @@ dependencies = [
  "coins-bip32 0.6.0",
  "colored 1.9.3",
  "ethers",
- "futures",
  "lexopt",
  "link-identities",
  "log",
@@ -4545,7 +4544,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ethers",
- "futures",
  "lexopt",
  "librad",
  "rad-common",
@@ -4796,6 +4794,7 @@ dependencies = [
  "colored 1.9.3",
  "ethers",
  "futures",
+ "futures-lite",
  "lexopt",
  "librad",
  "link-identities",
