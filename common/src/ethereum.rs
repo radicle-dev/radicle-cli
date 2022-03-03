@@ -1,3 +1,4 @@
+//! Ethereum-related functionality.
 use std::convert::TryFrom;
 use std::env;
 use std::ffi::OsString;
@@ -17,6 +18,7 @@ use ethers::types::Chain;
 use rad_terminal::args;
 use rad_terminal::components as term;
 
+/// Radicle's ENS domain.
 pub const RADICLE_DOMAIN: &str = ".radicle.eth";
 
 pub const SIGNER_OPTIONS: &str = r#"
@@ -33,6 +35,7 @@ pub const ENVIRONMENT_VARIABLES: &str = r#"
     ETH_HDPATH   Hardware wallet derivation path (overwrite with '--ledger-hdpath')
 "#;
 
+/// Command-line ethereum signer options.
 #[derive(Default, Debug)]
 pub struct SignerOptions {
     /// Account derivation path when using a Ledger hardware wallet.
@@ -74,6 +77,7 @@ impl SignerOptions {
     }
 }
 
+/// Command-line ethereum provider options.
 #[derive(Default, Debug)]
 pub struct ProviderOptions {
     pub rpc_url: Option<String>,
@@ -101,6 +105,7 @@ impl ProviderOptions {
     }
 }
 
+/// Create a provider from provider options.
 pub fn provider(cfg: ProviderOptions) -> anyhow::Result<Provider<Http>> {
     let rpc_url = if let Some(url) = cfg.rpc_url {
         url
@@ -129,6 +134,7 @@ pub enum WalletError {
     NoWallet,
 }
 
+/// A wallet that can sign ethereum transactions.
 #[derive(Debug)]
 pub enum Wallet {
     Ledger(Ledger),
@@ -191,35 +197,39 @@ impl Signer for Wallet {
     }
 }
 
-pub async fn signer<P>(options: SignerOptions, provider: Provider<P>) -> anyhow::Result<Wallet>
-where
-    P: JsonRpcClient + Clone + 'static,
-{
-    let chain_id = provider.get_chainid().await?.as_u64();
+impl Wallet {
+    /// Open a wallet from the given options and provider.
+    pub async fn open<P>(options: SignerOptions, provider: Provider<P>) -> anyhow::Result<Wallet>
+    where
+        P: JsonRpcClient + Clone + 'static,
+    {
+        let chain_id = provider.get_chainid().await?.as_u64();
 
-    if let Some(keypath) = &options.keystore {
-        let password = term::secret_input_with_prompt("Keystore password");
-        let spinner = term::spinner("Decrypting keystore...");
-        let signer = LocalWallet::decrypt_keystore(keypath, password.unsecure())
-            // Nb. Can fail if the file isn't found.
-            .map_err(|e| anyhow!("keystore decryption failed: {}", e))?
-            .with_chain_id(chain_id);
+        if let Some(keypath) = &options.keystore {
+            let password = term::secret_input_with_prompt("Keystore password");
+            let spinner = term::spinner("Decrypting keystore...");
+            let signer = LocalWallet::decrypt_keystore(keypath, password.unsecure())
+                // Nb. Can fail if the file isn't found.
+                .map_err(|e| anyhow!("keystore decryption failed: {}", e))?
+                .with_chain_id(chain_id);
 
-        spinner.finish();
+            spinner.finish();
 
-        Ok(Wallet::Local(signer))
-    } else if let Some(path) = &options.ledger_hdpath {
-        let hdpath = path.derivation_string();
-        let signer = Ledger::new(HDPath::Other(hdpath), chain_id)
-            .await
-            .context("Could not connect to Ledger device")?;
+            Ok(Wallet::Local(signer))
+        } else if let Some(path) = &options.ledger_hdpath {
+            let hdpath = path.derivation_string();
+            let signer = Ledger::new(HDPath::Other(hdpath), chain_id)
+                .await
+                .context("Could not connect to Ledger device")?;
 
-        Ok(Wallet::Ledger(signer))
-    } else {
-        Err(WalletError::NoWallet.into())
+            Ok(Wallet::Ledger(signer))
+        } else {
+            Err(WalletError::NoWallet.into())
+        }
     }
 }
 
+/// Submit a transaction for signing and execution.
 pub async fn transaction<M, D>(call: ContractCall<M, D>) -> anyhow::Result<TransactionReceipt>
 where
     D: Detokenize,
@@ -261,6 +271,7 @@ where
     Ok(receipt)
 }
 
+/// Convert a chain-id to a [`Chain`].
 pub fn chain_from_id(id: u64) -> Option<Chain> {
     match id {
         1 => Some(Chain::Mainnet),
@@ -271,6 +282,7 @@ pub fn chain_from_id(id: u64) -> Option<Chain> {
     }
 }
 
+/// Hex-encode bytes into a `0x`-prefixed string.
 pub fn hex(bytes: impl AsRef<[u8]>) -> String {
     format!("0x{}", hex::encode(bytes))
 }

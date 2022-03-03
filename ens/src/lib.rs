@@ -167,7 +167,7 @@ async fn get_wallet(
     use ethereum::WalletError;
 
     term::tip!("Accessing your wallet...");
-    let signer = match ethereum::signer(signer_opts, provider.clone()).await {
+    let signer = match ethereum::Wallet::open(signer_opts, provider.clone()).await {
         Ok(signer) => signer,
         Err(err) => {
             if let Some(WalletError::NoWallet) = err.downcast_ref::<WalletError>() {
