@@ -87,9 +87,8 @@ pub fn init(_options: Options) -> anyhow::Result<()> {
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
     let (profile, peer_id) = rad_profile::create(None, pass.clone())?;
-    let monorepo = profile::monorepo(&profile)?;
 
-    git::configure_signing(&monorepo, &peer_id)?;
+    git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 
     spinner.finish();
     spinner = term::spinner("Adding to ssh-agent...");
@@ -183,9 +182,7 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
         term::success!("Signing key already in ssh-agent");
     }
 
-    let repo = profile::monorepo(selection)?;
-
-    git::configure_signing(&repo, &signer.peer_id())?;
+    git::configure_signing(selection.paths().git_dir(), &signer.peer_id())?;
     term::success!("Signing key configured in git");
 
     Ok(())

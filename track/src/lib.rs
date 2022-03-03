@@ -75,7 +75,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         track(peer, proj, repo, storage, profile, signer, options)?;
     } else {
         // Show tracking graph.
-        show(proj, repo, profile, storage.read_only(), options)?;
+        show(proj, repo, storage.read_only(), options)?;
     }
 
     Ok(())
@@ -167,7 +167,6 @@ pub fn track(
 pub fn show(
     project: project::Metadata,
     repo: git::Repository,
-    profile: Profile,
     storage: &ReadOnly,
     options: Options,
 ) -> anyhow::Result<()> {
@@ -178,7 +177,7 @@ pub fn show(
             &project.urn,
             term::format::dim("(local)")
         );
-        show_local(&project, &profile, storage)?
+        show_local(&project, storage)?
     } else {
         let seed = &if let Some(seed_url) = options.seed.as_ref().map(|s| s.url()) {
             seed_url
@@ -258,17 +257,12 @@ pub fn show(
     Ok(())
 }
 
-pub fn show_local(
-    project: &project::Metadata,
-    profile: &Profile,
-    storage: &ReadOnly,
-) -> anyhow::Result<Vec<Peer>> {
+pub fn show_local(project: &project::Metadata, storage: &ReadOnly) -> anyhow::Result<Vec<Peer>> {
     let tracked = project::tracked(project, storage)?;
-    let monorepo = profile::monorepo(profile)?;
     let mut peers = Vec::new();
 
     for (id, meta) in tracked {
-        let head = project::get_remote_head(&monorepo, &project.urn, &id, &project.default_branch)
+        let head = project::get_remote_head(&storage, &project.urn, &id, &project.default_branch)
             .ok()
             .flatten();
 
@@ -299,7 +293,7 @@ pub fn show_remote(
     seed: &Url,
 ) -> anyhow::Result<Vec<Peer>> {
     let urn = &project.urn;
-    let remotes = git::list_remotes(repo, seed, urn)?;
+    let remotes = project::list_remote_heads(repo, urn, seed)?;
     let mut commits: HashMap<_, String> = HashMap::new();
 
     let remote_metadata = if let Ok(meta) = seed::get_remotes(seed.clone(), urn) {

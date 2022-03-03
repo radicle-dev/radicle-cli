@@ -1,6 +1,7 @@
-use std::collections::HashMap;
-use std::convert::TryFrom as _;
+//! Git-related functions and types.
+use std::fs::OpenOptions;
 use std::io;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
@@ -9,29 +10,32 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::git::local::url::LocalUrl;
-use librad::git::types::{remote::Remote, Flat, Force, GenericRef, Reference, Refspec};
-use librad::git_ext::RefLike;
+use librad::git::types::remote::Remote;
+
 use librad::profile::Profile;
-use librad::{crypto::BoxedSigner, git::storage::ReadOnly, git::Urn, paths::Paths, PeerId};
+use librad::{crypto::BoxedSigner, PeerId};
 
 pub use git2::Oid;
 pub use git2::Repository;
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;
 
-use crate::{identities, keys};
+use crate::keys;
 
 pub const CONFIG_COMMIT_GPG_SIGN: &str = "commit.gpgsign";
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";
 pub const CONFIG_GPG_FORMAT: &str = "gpg.format";
 pub const CONFIG_GPG_SSH_PROGRAM: &str = "gpg.ssh.program";
 pub const CONFIG_GPG_SSH_ALLOWED_SIGNERS: &str = "gpg.ssh.allowedSignersFile";
+
+/// Minimum required git version.
 pub const VERSION_REQUIRED: Version = Version {
     major: 2,
     minor: 34,
     patch: 0,
 };
 
+/// A parsed git version.
 #[derive(PartialEq, Eq, Debug, PartialOrd, Ord)]
 pub struct Version {
     pub major: u8,
@@ -81,6 +85,7 @@ impl std::str::FromStr for Version {
     }
 }
 
+/// Get the system's git version.
 pub fn version() -> Result<Version, anyhow::Error> {
     let output = Command::new("git").arg("version").output()?;
 
@@ -95,32 +100,7 @@ pub fn version() -> Result<Version, anyhow::Error> {
     Err(anyhow!("failed to run `git version`"))
 }
 
-pub fn checkout<S>(
-    storage: &S,
-    paths: Paths,
-    signer: BoxedSigner,
-    urn: &Urn,
-    peer: Option<PeerId>,
-    path: PathBuf,
-) -> anyhow::Result<git2::Repository>
-where
-    S: AsRef<ReadOnly>,
-{
-    let repo = identities::project::checkout(storage, paths, signer, urn, peer, path)?;
-    // The checkout leaves a leftover config section sometimes, we clean it up here.
-    git(
-        repo.path(),
-        ["config", "--remove-section", "remote.__tmp_/rad"],
-    )
-    .ok();
-
-    Ok(repo)
-}
-
-pub fn repository(path: &Path) -> Result<git_repository::Repository, git_repository::open::Error> {
-    git_repository::Repository::open(path)
-}
-
+/// Execute a git command by spawning a child process.
 pub fn git<S: AsRef<std::ffi::OsStr>>(
     repo: &std::path::Path,
     args: impl IntoIterator<Item = S>,
@@ -142,19 +122,19 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
     )))
 }
 
-pub fn configure_signing(repo: &git2::Repository, peer_id: &PeerId) -> Result<(), anyhow::Error> {
+/// Configure SSH signing in the given git repo, for the given peer.
+pub fn configure_signing(repo: &Path, peer_id: &PeerId) -> Result<(), anyhow::Error> {
     let key = keys::to_ssh_key(peer_id)?;
-    let path = repo.path();
 
-    git(path, ["config", "--local", CONFIG_SIGNING_KEY, &key])?;
-    git(path, ["config", "--local", CONFIG_GPG_FORMAT, "ssh"])?;
-    git(path, ["config", "--local", CONFIG_COMMIT_GPG_SIGN, "true"])?;
+    git(repo, ["config", "--local", CONFIG_SIGNING_KEY, &key])?;
+    git(repo, ["config", "--local", CONFIG_GPG_FORMAT, "ssh"])?;
+    git(repo, ["config", "--local", CONFIG_COMMIT_GPG_SIGN, "true"])?;
     git(
-        path,
+        repo,
         ["config", "--local", CONFIG_GPG_SSH_PROGRAM, "ssh-keygen"],
     )?;
     git(
-        path,
+        repo,
         [
             "config",
             "--local",
@@ -166,38 +146,29 @@ pub fn configure_signing(repo: &git2::Repository, peer_id: &PeerId) -> Result<()
     Ok(())
 }
 
+/// Write a `.gitsigners` file in the given repository.
+/// Fails if the file already exists.
 pub fn write_gitsigners<'a>(
+    repo: &Path,
     signers: impl IntoIterator<Item = &'a PeerId>,
-    path: &Path,
-) -> Result<(), io::Error> {
-    use std::fs::OpenOptions;
-    use std::io::Write;
-
+) -> Result<PathBuf, io::Error> {
+    let path = Path::new(".gitsigners");
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(path.join(".gitsigners"))?;
+        .open(repo.join(path))?;
 
     for peer_id in signers.into_iter() {
         write_gitsigner(&mut file, peer_id)?;
     }
-
-    let mut ignore = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(path.join(".gitignore"))?;
-
-    writeln!(ignore, ".gitsigners")?;
-
-    Ok(())
+    Ok(path.to_path_buf())
 }
 
+/// Add signers to the repository's `.gitsigners` file.
 pub fn add_gitsigners<'a>(
-    signers: impl IntoIterator<Item = &'a PeerId>,
     path: &Path,
+    signers: impl IntoIterator<Item = &'a PeerId>,
 ) -> Result<(), io::Error> {
-    use std::fs::OpenOptions;
-
     let mut file = OpenOptions::new()
         .append(true)
         .open(path.join(".gitsigners"))?;
@@ -208,26 +179,23 @@ pub fn add_gitsigners<'a>(
     Ok(())
 }
 
-pub fn write_gitsigner(mut w: impl io::Write, signer: &PeerId) -> io::Result<()> {
-    writeln!(w, "{} {}", signer, keys::to_ssh_key(signer)?)
+/// Add a path to the repository's git ignore file. Creates the
+/// ignore file if it does not exist.
+pub fn ignore(repo: &Path, item: &Path) -> Result<(), io::Error> {
+    let mut ignore = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(repo.join(".gitignore"))?;
+
+    writeln!(ignore, "{}", item.display())
 }
 
-pub fn is_signing_configured(path: &Path) -> Result<bool, anyhow::Error> {
-    Ok(git(path, ["config", CONFIG_SIGNING_KEY]).is_ok())
+/// Check whether SSH or GPG signing is configured in the given repository.
+pub fn is_signing_configured(repo: &Path) -> Result<bool, anyhow::Error> {
+    Ok(git(repo, ["config", CONFIG_SIGNING_KEY]).is_ok())
 }
 
-pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, anyhow::Error> {
-    let name = RefLike::try_from(name)?;
-    let url = LocalUrl::from(urn.clone());
-    let remote = Remote::new(url, name.clone()).with_fetchspecs(vec![Refspec {
-        src: Reference::heads(Flat, *peer),
-        dst: GenericRef::heads(Flat, name),
-        force: Force::True,
-    }]);
-
-    Ok(remote)
-}
-
+/// Return the list of radicle remotes for the given repository.
 pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>> {
     let mut remotes = Vec::new();
 
@@ -246,21 +214,24 @@ pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>>
     Ok(remotes)
 }
 
-pub fn set_upstream(repo: &Path, name: &str, branch: &str) -> anyhow::Result<String> {
-    let branch_name = format!("{}/{}", name, branch);
+/// Set the upstream for the given remote and branch.
+/// Creates the tracking branch if it does not exist.
+pub fn set_upstream(repo: &Path, remote: &str, branch: &str) -> anyhow::Result<String> {
+    let branch_name = format!("{}/{}", remote, branch);
 
     git(
         repo,
         [
             "branch",
             &branch_name,
-            &format!("{}/heads/{}", name, branch),
+            &format!("{}/heads/{}", remote, branch),
         ],
     )?;
 
     Ok(branch_name)
 }
 
+/// Call `git pull`, optionally with `--force`.
 pub fn pull(repo: &Path, force: bool) -> anyhow::Result<String> {
     let mut args = vec!["-c", "color.diff=always", "pull", "-v"];
     if force {
@@ -269,31 +240,7 @@ pub fn pull(repo: &Path, force: bool) -> anyhow::Result<String> {
     git(repo, args)
 }
 
-pub fn list_remotes(
-    repo: &git2::Repository,
-    url: &url::Url,
-    urn: &Urn,
-) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
-    // TODO: Use `Remote::remote_heads`.
-    let url = url.join(&urn.encode_id())?;
-    let mut remote = repo.remote_anonymous(url.as_str())?;
-    let mut remotes = HashMap::new();
-
-    remote.connect(git2::Direction::Fetch)?;
-
-    let heads = remote.list()?;
-    for head in heads {
-        if let Some((peer, r)) = parse_remote(head.name()) {
-            if let Some(branch) = r.strip_prefix("heads/") {
-                let value = (branch.to_owned(), head.oid());
-                remotes.entry(peer).or_insert_with(Vec::new).push(value);
-            }
-        }
-    }
-    Ok(remotes)
-}
-
-/// Fetch refs into working copy.
+/// Fetch remote refs into working copy.
 pub fn fetch_remote(
     remote: &mut Remote<LocalUrl>,
     repo: &git2::Repository,
@@ -311,10 +258,15 @@ pub fn fetch_remote(
     Ok(())
 }
 
-pub fn clone(url: &str, path: &Path) -> Result<String, anyhow::Error> {
-    git(Path::new("."), ["clone", url, &path.to_string_lossy()])
+/// Clone the given repository via `git clone` into a directory.
+pub fn clone(repo: &str, destination: &Path) -> Result<String, anyhow::Error> {
+    git(
+        Path::new("."),
+        ["clone", repo, &destination.to_string_lossy()],
+    )
 }
 
+/// Check that the system's git version is supported. Returns an error otherwise.
 pub fn check_version() -> Result<Version, anyhow::Error> {
     let git_version = self::version()?;
 
@@ -324,11 +276,16 @@ pub fn check_version() -> Result<Version, anyhow::Error> {
     Ok(git_version)
 }
 
-fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
+/// Parse a remote refspec into a peer id and ref.
+pub fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
     refspec
         .strip_prefix("refs/remotes/")
         .and_then(|s| s.split_once('/'))
         .and_then(|(peer, r)| PeerId::from_str(peer).ok().map(|p| (p, r)))
+}
+
+fn write_gitsigner(mut w: impl io::Write, signer: &PeerId) -> io::Result<()> {
+    writeln!(w, "{} {}", signer, keys::to_ssh_key(signer)?)
 }
 
 #[cfg(test)]

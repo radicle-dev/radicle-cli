@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::iter;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context as _, Error, Result};
@@ -21,6 +22,7 @@ use librad::git_ext::RefLike;
 use librad::identities::payload::{self, ProjectPayload};
 use librad::identities::Person;
 use librad::identities::SomeIdentity;
+use librad::paths::Paths;
 use librad::profile::Profile;
 use librad::reflike;
 use librad::PeerId;
@@ -28,7 +30,7 @@ use librad::PeerId;
 use rad_identities;
 use rad_terminal::components as term;
 
-use crate::seed;
+use crate::{git, seed};
 
 /// URL scheme for radicle resources.
 pub const URL_SCHEME: &str = "rad";
@@ -198,17 +200,40 @@ pub fn create(
     Ok(project)
 }
 
-pub fn list(
-    storage: &Storage,
-) -> Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>, Error> {
-    let repo = git_repository::Repository::open(storage.path())?;
+/// Create a checkout of a radicle project.
+pub fn checkout<S>(
+    storage: &S,
+    paths: Paths,
+    signer: BoxedSigner,
+    urn: &Urn,
+    peer: Option<PeerId>,
+    path: PathBuf,
+) -> anyhow::Result<git2::Repository>
+where
+    S: AsRef<ReadOnly>,
+{
+    let repo = crate::identities::project::checkout(storage, paths, signer, urn, peer, path)?;
+    // The checkout leaves a leftover config section sometimes, we clean it up here.
+    git::git(
+        repo.path(),
+        ["config", "--remove-section", "remote.__tmp_/rad"],
+    )
+    .ok();
+
+    Ok(repo)
+}
+
+pub fn list<S>(storage: &S) -> Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>, Error>
+where
+    S: AsRef<ReadOnly>,
+{
     let objs = identities::any::list(storage)?
         .filter_map(|res| {
             res.map(|id| match id {
                 SomeIdentity::Project(project) => {
                     let urn = project.urn();
                     let meta: Metadata = project.try_into().ok()?;
-                    let head = get_local_head(&repo, &urn, &meta.default_branch)
+                    let head = get_local_head(&storage, &urn, &meta.default_branch)
                         .ok()
                         .flatten();
 
@@ -223,11 +248,40 @@ pub fn list(
     Ok(objs)
 }
 
-pub fn get_local_head<'r>(
-    repo: &'r git_repository::Repository,
+/// List the heads of a remote repository.
+pub fn list_remote_heads(
+    repo: &git2::Repository,
+    urn: &Urn,
+    url: &url::Url,
+) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
+    // TODO: Use `Remote::remote_heads`.
+    let url = url.join(&urn.encode_id())?;
+    let mut remote = repo.remote_anonymous(url.as_str())?;
+    let mut remotes = HashMap::new();
+
+    remote.connect(git2::Direction::Fetch)?;
+
+    let heads = remote.list()?;
+    for head in heads {
+        if let Some((peer, r)) = git::parse_remote(head.name()) {
+            if let Some(branch) = r.strip_prefix("heads/") {
+                let value = (branch.to_owned(), head.oid());
+                remotes.entry(peer).or_insert_with(Vec::new).push(value);
+            }
+        }
+    }
+    Ok(remotes)
+}
+
+pub fn get_local_head<S>(
+    storage: &S,
     urn: &Urn,
     branch: &str,
-) -> Result<Option<git_repository::ObjectId>, Error> {
+) -> Result<Option<git_repository::ObjectId>, Error>
+where
+    S: AsRef<ReadOnly>,
+{
+    let repo = git_repository::Repository::open(storage.as_ref().path())?;
     let mut repo = repo.to_easy();
     repo.set_namespace(urn.encode_id())?;
 
@@ -266,7 +320,7 @@ pub fn repository() -> Result<Repository, Error> {
     }
 }
 
-pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
+pub fn rad_remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
     match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
         Ok(Some(remote)) => Ok(remote),
         Ok(None) => Err(anyhow!(
@@ -276,14 +330,30 @@ pub fn remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
     }
 }
 
+/// Create a git remote for the given project and peer. This does not save the
+/// remote to the git configuration.
+pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, anyhow::Error> {
+    use librad::git::types::{Flat, Force, GenericRef, Refspec};
+
+    let name = RefLike::try_from(name)?;
+    let url = LocalUrl::from(urn.clone());
+    let remote = Remote::new(url, name.clone()).with_fetchspecs(vec![Refspec {
+        src: Reference::heads(Flat, *peer),
+        dst: GenericRef::heads(Flat, name),
+        force: Force::True,
+    }]);
+
+    Ok(remote)
+}
+
 pub fn urn() -> Result<Urn, Error> {
     let repo = self::repository()?;
-    Ok(self::remote(&repo)?.url.urn)
+    Ok(self::rad_remote(&repo)?.url.urn)
 }
 
 pub fn cwd() -> Result<(Urn, Repository), Error> {
     let repo = self::repository()?;
-    let urn = self::remote(&repo)?.url.urn;
+    let urn = self::rad_remote(&repo)?.url.urn;
 
     Ok((urn, repo))
 }
@@ -318,12 +388,18 @@ where
     Ok(remotes)
 }
 
-pub fn get_remote_head(
-    repo: &Repository,
+pub fn get_remote_head<S>(
+    storage: &S,
     urn: &Urn,
     peer: &PeerId,
     branch: &str,
-) -> Result<Option<git2::Oid>, Error> {
+) -> Result<Option<git2::Oid>, Error>
+where
+    S: AsRef<ReadOnly>,
+{
+    // Open the monorepo.
+    let repo = git2::Repository::open_bare(storage.as_ref().path())?;
+
     // Nb. `git2` doesn't handle namespaces properly, so we specify it manually.
     let reference = repo.find_reference(&format!(
         "refs/namespaces/{}/refs/remotes/{}/heads/{}",
@@ -345,15 +421,13 @@ pub struct SetupRemote<'a> {
 
 impl<'a> SetupRemote<'a> {
     pub fn run(&self, peer: &PeerId, profile: &Profile, storage: &Storage) -> anyhow::Result<()> {
-        use crate::git;
-
         let repo = self.repo;
         let urn = &self.project.urn;
 
         // TODO: Handle conflicts in remote name.
         if let Some(person) = self::person(storage, urn, peer)? {
             let name = format!("peer/{}", person.subject().name);
-            let mut remote = git::remote(urn, peer, &name)?;
+            let mut remote = self::remote(urn, peer, &name)?;
 
             // Configure the remote in the repository.
             remote.save(repo)?;

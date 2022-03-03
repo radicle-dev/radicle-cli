@@ -6,7 +6,7 @@ use anyhow::Context as _;
 
 use librad::git::Urn;
 
-use rad_common::{git, keys, profile, project};
+use rad_common::{keys, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -88,12 +88,13 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
         project.name,
     ));
 
-    let repo = git::repository(storage.path())?;
     // If we have a local head, we should checkout our local "fork", so we don't specify
     // a peer.
     // If we *don't* have a local head, we have to checkout a delegate's head. If there is
     // only one delegate, the choice is easy.
-    let peer = if project::get_local_head(&repo, &options.urn, &project.default_branch)?.is_some() {
+    let peer = if project::get_local_head(&storage, &options.urn, &project.default_branch)?
+        .is_some()
+    {
         term::success!("Local {} branch found...", project.default_branch);
         None
     } else if project.remotes.len() > 1 {
@@ -110,7 +111,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     };
 
     let spinner = term::spinner("Performing checkout...");
-    match git::checkout(
+    match project::checkout(
         &storage,
         profile.paths().clone(),
         signer.clone(),

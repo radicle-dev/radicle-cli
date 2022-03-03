@@ -73,7 +73,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 pub fn execute(path: &Path) -> anyhow::Result<()> {
     let name = path.file_name().map(|f| f.to_string_lossy().to_string());
     let repo = git::Repository::open(path)?;
-    if let Ok(remote) = project::remote(&repo) {
+    if let Ok(remote) = project::rad_remote(&repo) {
         bail!(
             "repository is already initialized with remote {}",
             remote.url
@@ -153,10 +153,9 @@ pub fn execute(path: &Path) -> anyhow::Result<()> {
 
 /// Setup radicle key as commit signing key in repository.
 pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result<()> {
-    let path = repo.workdir().unwrap_or_else(|| repo.path());
+    let repo = repo.workdir().unwrap_or_else(|| repo.path());
     let key = keys::to_ssh_fingerprint(peer_id)?;
-
-    let yes = if !git::is_signing_configured(path)? {
+    let yes = if !git::is_signing_configured(repo)? {
         term::headline(&format!(
             "Configuring 🌱 signing key {}...",
             term::format::tertiary(key)
@@ -170,9 +169,11 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
     };
 
     if yes {
-        match git::write_gitsigners([peer_id], path) {
-            Ok(()) => {
-                term::success!("Created {} file", term::format::tertiary(".gitsigners"));
+        match git::write_gitsigners(repo, [peer_id]) {
+            Ok(file) => {
+                git::ignore(repo, file.as_path())?;
+
+                term::success!("Created {} file", term::format::tertiary(file.display()));
             }
             Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
                 term::success!(
@@ -183,7 +184,7 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
                     "Add signing key to {}?",
                     term::format::tertiary(".gitsigners")
                 )) {
-                    git::add_gitsigners([peer_id], path)?;
+                    git::add_gitsigners(repo, [peer_id])?;
                 }
             }
             Err(err) => {

@@ -104,7 +104,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         let repo =
             git::Repository::open(options.path.unwrap_or_else(|| Path::new(".").to_path_buf()))?;
 
-        project::remote(&repo)?.url.urn
+        project::rad_remote(&repo)?.url.urn
     };
 
     if options.refs {

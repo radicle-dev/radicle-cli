@@ -74,9 +74,3 @@ pub fn peer_id(storage: &Storage) -> Result<PeerId, Error> {
         Err(err) => Err(anyhow::Error::new(err)),
     }
 }
-
-pub fn monorepo(profile: &Profile) -> Result<git2::Repository, Error> {
-    let repo = git2::Repository::open_bare(profile.paths().git_dir())?;
-
-    Ok(repo)
-}

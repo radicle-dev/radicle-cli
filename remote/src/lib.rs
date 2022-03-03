@@ -114,7 +114,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     match options.op {
         Operation::Add { name, peer, fetch } => {
-            let mut remote = git::remote(&urn, &peer, &name)?;
+            let mut remote = project::remote(&urn, &peer, &name)?;
             remote.save(&repo)?;
 
             tracking::track(
