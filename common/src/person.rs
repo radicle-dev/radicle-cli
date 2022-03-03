@@ -22,6 +22,7 @@ lazy_static::lazy_static! {
         .expect("static URL malformed");
 }
 
+/// ENS payload.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Ens {
     pub name: String,
@@ -33,6 +34,7 @@ impl HasNamespace for Ens {
     }
 }
 
+/// Create a personal identity.
 pub fn create(
     profile: &Profile,
     name: &str,
@@ -60,6 +62,7 @@ pub fn create(
     }
 }
 
+/// Set the local identity to the given person.
 pub fn set_local(storage: &Storage, person: &Person) -> Option<Person> {
     let urn = person.urn();
     match local::get(storage, urn) {
@@ -80,11 +83,14 @@ pub fn set_local(storage: &Storage, person: &Person) -> Option<Person> {
     }
 }
 
+/// Get the current local identity.
 pub fn local(storage: &Storage) -> Result<LocalIdentity, local::Error> {
     local::default(storage)
 }
 
-pub fn set_ens_payload(name: &str, storage: &Storage) -> Result<Person> {
+/// Set an ENS payload for the local identity.
+/// Returns the updated person.
+pub fn set_ens_payload(ens: Ens, storage: &Storage) -> Result<Person> {
     let id = local::default(storage)?;
     let payload = id.payload();
     let mut exts = payload
@@ -93,11 +99,8 @@ pub fn set_ens_payload(name: &str, storage: &Storage) -> Result<Person> {
         .map(|(namespace, val)| payload::Ext { namespace, val })
         .collect::<Vec<_>>();
 
-    let ens_ext = Ens {
-        name: name.to_string(),
-    };
     let namespace = Ens::namespace().clone();
-    let val = serde_json::to_value(ens_ext)?;
+    let val = serde_json::to_value(ens)?;
     let delegations = id.delegations().iter().cloned();
 
     exts.push(payload::Ext { namespace, val });

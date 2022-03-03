@@ -1,3 +1,4 @@
+//! SSH and key-related functions.
 use anyhow::{anyhow, Context as _, Error, Result};
 
 use librad::crypto::keystore::crypto::Pwhash;
@@ -14,6 +15,7 @@ use rad_clib::storage::ssh;
 
 use rad_terminal::keys::CachedPrompt;
 
+/// Get the radicle signer and storage.
 pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<(BoxedSigner, Storage), Error> {
     match ssh::storage(profile, sock) {
         Ok(result) => Ok(result),
@@ -24,6 +26,7 @@ pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<(BoxedSigner, Sto
     }
 }
 
+/// Add a profile's radicle signing key to ssh-agent.
 pub fn add(
     profile: &Profile,
     pass: Pwhash<CachedPrompt>,
@@ -33,6 +36,7 @@ pub fn add(
         .context("could not add ssh key")
 }
 
+/// Get the SSH auth socket and warn if ssh-agent is not running.
 pub fn ssh_auth_sock() -> SshAuthSock {
     if std::env::var("SSH_AGENT_PID").is_err() && std::env::var("SSH_AUTH_SOCK").is_err() {
         rad_terminal::components::warning("Warning: ssh-agent does not appear to be running!");
@@ -40,6 +44,7 @@ pub fn ssh_auth_sock() -> SshAuthSock {
     SshAuthSock::default()
 }
 
+/// Check whether the radicle signing key has been added to ssh-agent.
 pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
     rad_profile::ssh_ready(None, profile.id().clone(), sock)
         .context("could not lookup ssh key, is ssh-agent running?")
@@ -67,6 +72,7 @@ pub fn to_ssh_key(peer_id: &PeerId) -> Result<String, std::io::Error> {
 }
 
 /// Get the SSH key fingerprint from a peer id.
+/// This is the output of `ssh-add -l`.
 pub fn to_ssh_fingerprint(peer_id: &PeerId) -> Result<String, std::io::Error> {
     use byteorder::{BigEndian, WriteBytesExt};
     use sha2::Digest;

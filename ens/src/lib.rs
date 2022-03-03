@@ -200,9 +200,14 @@ fn set_ens_payload(name: &str, storage: &Storage) -> anyhow::Result<()> {
 
     if term::confirm(format!(
         "Associate local identity with ENS name {}?",
-        term::format::highlight(name)
+        term::format::highlight(&name)
     )) {
-        let doc = person::set_ens_payload(name, storage)?;
+        let doc = person::set_ens_payload(
+            person::Ens {
+                name: name.to_owned(),
+            },
+            storage,
+        )?;
 
         term::success!("Local identity successfully updated with ENS name {}", name);
         term::blob(serde_json::to_string(&doc.payload())?);
@@ -319,7 +324,12 @@ async fn setup(
     ethereum::transaction(call).await?;
 
     let spinner = term::spinner("Updating local identity...");
-    match person::set_ens_payload(name, storage) {
+    match person::set_ens_payload(
+        person::Ens {
+            name: name.to_owned(),
+        },
+        storage,
+    ) {
         Ok(doc) => {
             spinner.finish();
             term::blob(serde_json::to_string(&doc.payload())?);
