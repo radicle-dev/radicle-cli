@@ -181,7 +181,7 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     } else {
         term::success!("Signing key already in ssh-agent");
     }
-    let (signer, _) = keys::storage(&profile, sock)?;
+    let (signer, _) = keys::storage(selection, sock)?;
 
     git::configure_signing(selection.paths().git_dir(), &signer.peer_id())?;
     term::success!("Signing key configured in git");
