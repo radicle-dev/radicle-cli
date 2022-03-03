@@ -486,7 +486,7 @@ pub fn fetch(
     } else {
         term::spinner("Fetching tracked remotes...")
     };
-    match seed::fetch_peers(monorepo, seed, &project_urn, remotes) {
+    match seed::fetch_remotes(monorepo, seed, &project_urn, remotes) {
         Ok(output) => {
             spinner.finish();
             if options.verbose {
@@ -507,7 +507,7 @@ pub fn fetch(
                 term::format::tertiary(&seed)
             ));
 
-            match seed::fetch_peers(monorepo, &seed, &project_urn, [*peer]) {
+            match seed::fetch_remotes(monorepo, &seed, &project_urn, [*peer]) {
                 Ok(output) => {
                     spinner.finish();
                     if options.verbose {

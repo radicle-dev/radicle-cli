@@ -138,7 +138,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                     anyhow::bail!("a seed node must be specified with `--seed`");
                 };
 
-                seed::fetch_peers(profile.paths().git_dir(), &seed, &urn, [peer])?;
+                seed::fetch_remotes(profile.paths().git_dir(), &seed, &urn, [peer])?;
                 git::fetch_remote(&mut remote, &repo, signer, &profile)?;
             }
             term::success!(

@@ -20,10 +20,14 @@ pub const DEFAULT_SEEDS: &[&str] = &[
 ];
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 
+/// Git configuration scope.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Scope<'a> {
+    /// Local repository scope.
     Local(&'a Path),
+    /// Global (user) scope.
     Global,
+    /// Any (default) scope.
     Any,
 }
 
@@ -37,6 +41,7 @@ pub struct Commit {
     pub header: CommitHeader,
 }
 
+/// Seed address with optional port.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Address {
     pub host: Host,
@@ -95,6 +100,7 @@ impl FromStr for Address {
     }
 }
 
+/// Seed command-line options.
 #[derive(Default, Debug, Clone)]
 pub struct SeedOptions(pub Option<Address>);
 
@@ -124,6 +130,7 @@ impl Args for SeedOptions {
     }
 }
 
+/// Get the configured seed within a scope.
 pub fn get_seed(scope: Scope) -> Result<Url, anyhow::Error> {
     let (path, args) = match scope {
         Scope::Any => (Path::new("."), vec!["config", CONFIG_SEED_KEY]),
@@ -137,6 +144,7 @@ pub fn get_seed(scope: Scope) -> Result<Url, anyhow::Error> {
     Ok(url)
 }
 
+/// Set the configured seed within a scope.
 pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
     let seed = seed.as_str();
     let (path, args) = match scope {
@@ -153,6 +161,7 @@ pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
         .context("failed to save seed configuration")
 }
 
+/// Set the configured "peer" seed within the local repository.
 pub fn set_peer_seed(seed: &Url, peer_id: &PeerId) -> Result<(), anyhow::Error> {
     let seed = seed.as_str();
     let path = Path::new(".");
@@ -164,6 +173,7 @@ pub fn set_peer_seed(seed: &Url, peer_id: &PeerId) -> Result<(), anyhow::Error> 
         .context("failed to save seed configuration")
 }
 
+/// Get the configured "peer" seed within the local repository.
 pub fn get_peer_seed(peer_id: &PeerId) -> Result<Url, anyhow::Error> {
     let path = Path::new(".");
     let key = format!("{}.{}.seed", CONFIG_PEER_KEY, peer_id.default_encoding());
@@ -175,6 +185,7 @@ pub fn get_peer_seed(peer_id: &PeerId) -> Result<Url, anyhow::Error> {
     Ok(url)
 }
 
+/// Query a seed node for its [`PeerId`].
 pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
     seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
     seed = seed.join("/v1/peer")?;
@@ -192,6 +203,7 @@ pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
     Ok(id)
 }
 
+/// Query a seed node for a project commit.
 pub fn get_commit(
     mut seed: Url,
     project: &Urn,
@@ -207,6 +219,7 @@ pub fn get_commit(
     Ok(commit)
 }
 
+/// Query a seed node for a project's remotes.
 pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo>, anyhow::Error> {
     seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
     seed = seed.join(&format!("/v1/projects/{}/remotes", project))?;
@@ -218,6 +231,7 @@ pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo
     Ok(response)
 }
 
+/// Push a project delegate to a seed.
 pub fn push_delegate(
     repo: &Path,
     seed: &Url,
@@ -242,6 +256,7 @@ pub fn push_delegate(
     )
 }
 
+/// Push a project identity to a seed.
 pub fn push_identity(
     repo: &Path,
     seed: &Url,
@@ -267,6 +282,7 @@ pub fn push_identity(
     )
 }
 
+/// Push project refs to a seed.
 pub fn push_refs(
     repo: &Path,
     seed: &Url,
@@ -307,6 +323,7 @@ pub fn push_refs(
     )
 }
 
+/// Fetch a project or person from a seed.
 pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyhow::Error> {
     let id = urn.encode_id();
     let url = seed.join(&id)?;
@@ -324,7 +341,8 @@ pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyh
     )
 }
 
-pub fn fetch_peers(
+/// Fetch project remotes from a seed.
+pub fn fetch_remotes(
     repo: &Path,
     seed: &Url,
     project: &Urn,

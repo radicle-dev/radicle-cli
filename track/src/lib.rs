@@ -129,7 +129,7 @@ pub fn track(
                 "Syncing peer refs from {}...",
                 term::format::highlight(seed.host_str().unwrap_or("seed"))
             ));
-            seed::fetch_peers(profile.paths().git_dir(), &seed, urn, [peer])?;
+            seed::fetch_remotes(profile.paths().git_dir(), &seed, urn, [peer])?;
 
             spinner.finish();
         }
