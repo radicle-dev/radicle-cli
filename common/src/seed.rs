@@ -231,12 +231,12 @@ pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo
     Ok(response)
 }
 
-/// Push a project delegate to a seed.
+/// Push a project delegate to a seed's remote scope.
 pub fn push_delegate(
     repo: &Path,
     seed: &Url,
     delegate: &Urn,
-    peer_id: &PeerId,
+    remote: &PeerId,
 ) -> Result<String, anyhow::Error> {
     let delegate_id = delegate.encode_id();
     let url = seed.join(&delegate_id)?;
@@ -250,18 +250,18 @@ pub fn push_delegate(
             &format!(
                 "refs/namespaces/{}/refs/rad/*:refs/remotes/{}/rad/*",
                 delegate_id,
-                peer_id.default_encoding()
+                remote.default_encoding()
             ),
         ],
     )
 }
 
-/// Push a project identity to a seed.
+/// Push a project identity to a seed's remote scope.
 pub fn push_identity(
     repo: &Path,
     seed: &Url,
     urn: &Urn,
-    peer_id: &PeerId,
+    remote: &PeerId,
 ) -> Result<String, anyhow::Error> {
     let id = urn.encode_id();
     let url = seed.join(&id)?;
@@ -276,18 +276,18 @@ pub fn push_identity(
             &format!(
                 "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
                 id,
-                peer_id.default_encoding()
+                remote.default_encoding()
             ),
         ],
     )
 }
 
-/// Push project refs to a seed.
+/// Push project refs to a seed's remote scope.
 pub fn push_refs(
     repo: &Path,
     seed: &Url,
     project: &Urn,
-    peer_id: &PeerId,
+    remote: &PeerId,
 ) -> Result<String, anyhow::Error> {
     let project_id = project.encode_id();
     let url = seed.join(&project_id)?;
@@ -301,23 +301,23 @@ pub fn push_refs(
             url.as_str(),
             &format!(
                 "refs/namespaces/{}/refs/rad/ids/*:refs/remotes/{}/rad/ids/*",
-                project_id, peer_id
+                project_id, remote
             ),
             &format!(
                 "refs/namespaces/{}/refs/rad/self:refs/remotes/{}/rad/self",
-                project_id, peer_id
+                project_id, remote
             ),
             &format!(
                 "refs/namespaces/{}/refs/rad/signed_refs:refs/remotes/{}/rad/signed_refs",
-                project_id, peer_id
+                project_id, remote
             ),
             &format!(
                 "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
-                project_id, peer_id
+                project_id, remote
             ),
             &format!(
                 "+refs/namespaces/{}/refs/tags/*:refs/remotes/{}/tags/*",
-                project_id, peer_id
+                project_id, remote
             ),
         ],
     )
