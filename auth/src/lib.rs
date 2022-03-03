@@ -146,8 +146,8 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
         &profile
     };
 
-    let (signer, storage) = keys::storage(selection, sock.clone())?;
-    let config = storage.config_readonly()?;
+    let read_only = profile::read_only(selection)?;
+    let config = read_only.config()?;
 
     if let Some(user) = config.user()? {
         let username = config.user_name()?;
@@ -167,20 +167,21 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     }
 
     if !keys::is_ready(selection, sock.clone())? {
-        term::warning("Adding your radicle key to ssh-agent");
+        term::warning("Adding your radicle key to ssh-agent...");
 
         // TODO: We should show the spinner on the passphrase prompt,
         // otherwise it seems like the passphrase is valid even if it isn't.
         let pass = term::pwhash(term::secret_input());
         let spinner = term::spinner("Unlocking...");
 
-        keys::add(selection, pass, sock).context("invalid passphrase supplied")?;
+        keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
         spinner.finish();
 
         term::success!("Radicle key added to ssh-agent");
     } else {
         term::success!("Signing key already in ssh-agent");
     }
+    let (signer, _) = keys::storage(&profile, sock)?;
 
     git::configure_signing(selection.paths().git_dir(), &signer.peer_id())?;
     term::success!("Signing key configured in git");
