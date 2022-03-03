@@ -100,6 +100,14 @@ pub fn version() -> Result<Version, anyhow::Error> {
     Err(anyhow!("failed to run `git version`"))
 }
 
+/// Get the git repository in the current directory.
+pub fn repository() -> Result<Repository, anyhow::Error> {
+    match Repository::open(".") {
+        Ok(repo) => Ok(repo),
+        Err(err) => Err(err).context("the current working directory is not a git repository"),
+    }
+}
+
 /// Execute a git command by spawning a child process.
 pub fn git<S: AsRef<std::ffi::OsStr>>(
     repo: &std::path::Path,

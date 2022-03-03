@@ -1,3 +1,4 @@
+//! Project-related functions and types.
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::iter;
@@ -36,18 +37,25 @@ use crate::{git, seed};
 pub const URL_SCHEME: &str = "rad";
 
 /// Project origin.
-/// Represents a location from which a project can be accessed.
+///
+/// Represents a location from which a project can be fetched.
+/// To construct one, use the [`TryFrom<Url>`] or [`FromStr`]
+/// instances.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Origin {
+    /// Project URN.
     pub urn: Urn,
+    /// If available, the address of a seed which has this project.
     pub seed: Option<seed::Address>,
 }
 
 impl Origin {
+    /// Create an origin from a URN.
     pub fn from_urn(urn: Urn) -> Self {
         Self { urn, seed: None }
     }
 
+    /// Get the seed URL, if any, of this origin.
     pub fn seed_url(&self) -> Option<Url> {
         self.seed.as_ref().map(|s| s.url())
     }
@@ -101,16 +109,21 @@ impl TryFrom<Url> for Origin {
     }
 }
 
-/// Project delegate.
+/// Project peer information.
 #[derive(Clone, Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
-pub struct RemoteMetadata {
+pub struct PeerInfo {
+    /// Peer id.
     pub id: PeerId,
+    /// Peer name, if known.
     pub name: Option<String>,
+    /// Whether or not this peer belongs to a project delegate.
     pub delegate: bool,
 }
 
 /// Project metadata.
+///
+/// Can be constructed from a [`librad::identities::Project`].
 #[derive(Debug)]
 pub struct Metadata {
     /// Project URN.
@@ -168,6 +181,7 @@ impl TryFrom<librad::identities::Project> for Metadata {
     }
 }
 
+/// Create a new project identity.
 pub fn create(
     repo: &git2::Repository,
     identity: identities::local::LocalIdentity,
@@ -223,6 +237,7 @@ where
     Ok(repo)
 }
 
+/// List projects on the local device. Includes the project head if available.
 pub fn list<S>(storage: &S) -> Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>, Error>
 where
     S: AsRef<ReadOnly>,
@@ -273,6 +288,7 @@ pub fn list_remote_heads(
     Ok(remotes)
 }
 
+/// Get a local head of a project.
 pub fn get_local_head<S>(
     storage: &S,
     urn: &Urn,
@@ -290,6 +306,31 @@ where
     Ok(reference.map(|r| r.id().detach()))
 }
 
+/// Get the head of a project remote.
+pub fn get_remote_head<S>(
+    storage: &S,
+    urn: &Urn,
+    peer: &PeerId,
+    branch: &str,
+) -> Result<Option<git2::Oid>, Error>
+where
+    S: AsRef<ReadOnly>,
+{
+    // Open the monorepo.
+    let repo = git2::Repository::open_bare(storage.as_ref().path())?;
+
+    // Nb. `git2` doesn't handle namespaces properly, so we specify it manually.
+    let reference = repo.find_reference(&format!(
+        "refs/namespaces/{}/refs/remotes/{}/heads/{}",
+        urn.encode_id(),
+        peer,
+        branch
+    ))?;
+
+    Ok(reference.target())
+}
+
+/// Get project metadata.
 pub fn get<S>(storage: &S, urn: &Urn) -> Result<Option<Metadata>, Error>
 where
     S: AsRef<ReadOnly>,
@@ -300,6 +341,7 @@ where
     Ok(meta)
 }
 
+/// Get the personal identity associated with a project's peer.
 pub fn person<S>(storage: &S, urn: &Urn, peer: &PeerId) -> anyhow::Result<Option<Person>>
 where
     S: AsRef<ReadOnly>,
@@ -313,13 +355,7 @@ where
     Ok(person)
 }
 
-pub fn repository() -> Result<Repository, Error> {
-    match Repository::open(".") {
-        Ok(repo) => Ok(repo),
-        Err(err) => Err(err).context("the current working directory is not a git repository"),
-    }
-}
-
+/// Get the repository's "rad" remote.
 pub fn rad_remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
     match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
         Ok(Some(remote)) => Ok(remote),
@@ -346,22 +382,16 @@ pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, 
     Ok(remote)
 }
 
-pub fn urn() -> Result<Urn, Error> {
-    let repo = self::repository()?;
-    Ok(self::rad_remote(&repo)?.url.urn)
-}
-
+/// Get the project URN and repository of the current working directory.
 pub fn cwd() -> Result<(Urn, Repository), Error> {
-    let repo = self::repository()?;
+    let repo = git::repository()?;
     let urn = self::rad_remote(&repo)?.url.urn;
 
     Ok((urn, repo))
 }
 
-pub fn tracked<S>(
-    project: &Metadata,
-    storage: &S,
-) -> anyhow::Result<HashMap<PeerId, RemoteMetadata>>
+/// Get the tracked peers of a project, including information about these peers.
+pub fn tracked<S>(project: &Metadata, storage: &S) -> anyhow::Result<HashMap<PeerId, PeerInfo>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -377,7 +407,7 @@ where
 
             remotes.insert(
                 peer,
-                RemoteMetadata {
+                PeerInfo {
                     id: peer,
                     name,
                     delegate,
@@ -388,38 +418,22 @@ where
     Ok(remotes)
 }
 
-pub fn get_remote_head<S>(
-    storage: &S,
-    urn: &Urn,
-    peer: &PeerId,
-    branch: &str,
-) -> Result<Option<git2::Oid>, Error>
-where
-    S: AsRef<ReadOnly>,
-{
-    // Open the monorepo.
-    let repo = git2::Repository::open_bare(storage.as_ref().path())?;
-
-    // Nb. `git2` doesn't handle namespaces properly, so we specify it manually.
-    let reference = repo.find_reference(&format!(
-        "refs/namespaces/{}/refs/remotes/{}/heads/{}",
-        urn.encode_id(),
-        peer,
-        branch
-    ))?;
-
-    Ok(reference.target())
-}
-
+/// Setup a project remote and tracking branch.
 pub struct SetupRemote<'a> {
+    /// The project.
     pub project: &'a Metadata,
+    /// The repository in which to setup the remote.
     pub repo: &'a git2::Repository,
+    /// Radicle signer.
     pub signer: BoxedSigner,
+    /// Whether or not to fetch the remote immediately.
     pub fetch: bool,
+    /// Whether or not to setup an upstream tracking branch.
     pub upstream: bool,
 }
 
 impl<'a> SetupRemote<'a> {
+    /// Run the setup for the given peer.
     pub fn run(&self, peer: &PeerId, profile: &Profile, storage: &Storage) -> anyhow::Result<()> {
         let repo = self.repo;
         let urn = &self.project.urn;

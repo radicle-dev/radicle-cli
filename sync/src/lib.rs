@@ -164,7 +164,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let project_urn = if let Some(origin) = &options.origin {
         origin.urn.clone()
     } else {
-        project::urn()?
+        project::cwd().map(|(urn, _)| urn)?
     };
     term::info!("Git version {}", git::check_version()?);
 

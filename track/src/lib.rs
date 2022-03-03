@@ -9,7 +9,7 @@ use librad::git::tracking;
 use librad::profile::Profile;
 use librad::PeerId;
 
-use rad_common::project::RemoteMetadata;
+use rad_common::project::PeerInfo;
 use rad_common::Url;
 use rad_common::{git, keys, profile, project, seed};
 use rad_terminal::args::Help;
@@ -20,7 +20,7 @@ pub use options::Options;
 
 pub struct Peer {
     id: PeerId,
-    meta: Option<RemoteMetadata>,
+    meta: Option<PeerInfo>,
     branches: Vec<Branch>,
 }
 

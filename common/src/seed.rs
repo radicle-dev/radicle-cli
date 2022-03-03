@@ -207,10 +207,7 @@ pub fn get_commit(
     Ok(commit)
 }
 
-pub fn get_remotes(
-    mut seed: Url,
-    project: &Urn,
-) -> Result<Vec<project::RemoteMetadata>, anyhow::Error> {
+pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo>, anyhow::Error> {
     seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
     seed = seed.join(&format!("/v1/projects/{}/remotes", project))?;
 

@@ -75,7 +75,8 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let urn = project::urn().context("this command must be run in the context of a project")?;
+    let (urn, _) =
+        project::cwd().context("this command must be run in the context of a project")?;
 
     execute(&urn, options)
 }
