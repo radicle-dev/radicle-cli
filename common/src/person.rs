@@ -1,3 +1,4 @@
+//! Person-related functionality.
 use anyhow::{Error, Result};
 
 use librad::{canonical::Cstring, git::identities::local::LocalIdentity};

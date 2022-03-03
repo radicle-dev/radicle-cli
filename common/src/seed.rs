@@ -1,3 +1,4 @@
+//! Seed-related functionality.
 use std::ffi::OsString;
 use std::path::Path;
 use std::str::FromStr;
