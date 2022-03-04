@@ -13,16 +13,23 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad push [--seed <host>] [-f | --force] [--all] [--[no-]sync]
+    rad push [--seed <host>] [--all] [--[no-]sync] [<option>...]
+
+    By default, only the current branch is synced.
 
 Options
 
-    --force, -f         Force push (default: false)
     --seed <host>       Use the given seed node for syncing
     --all               Sync all heads (default: false)
     --sync              Sync after pushing to the "rad" remote (default: true)
     --no-sync           Do not sync after pushing to the "rad" remote
     --help              Print help
+
+Git options
+
+    -f, --force           Force push
+    -u, --set-upstream    Set upstream tracking branch
+
 "#,
 };
 
@@ -33,6 +40,7 @@ pub struct Options {
     pub force: bool,
     pub all: bool,
     pub identity: bool,
+    pub set_upstream: bool,
     pub sync: bool,
 }
 
@@ -47,6 +55,7 @@ impl Args for Options {
         let mut identity = true;
         let mut all = false;
         let mut sync = true;
+        let mut set_upstream = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -58,6 +67,9 @@ impl Args for Options {
                 }
                 Long("all") => {
                     all = true;
+                }
+                Long("set-upstream") | Short('u') => {
+                    set_upstream = true;
                 }
                 Long("sync") => {
                     sync = true;
@@ -85,6 +97,7 @@ impl Args for Options {
                 seed,
                 force,
                 all,
+                set_upstream,
                 identity,
                 sync,
                 verbose,

@@ -21,15 +21,19 @@ fn run(options: rad_push::Options) -> anyhow::Result<()> {
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()));
 
-    let mut args = if options.force {
-        vec!["push", "-u", "--force", "rad"]
-    } else {
-        vec!["push", "-u", "rad"]
-    };
+    let mut args = vec!["push"];
 
+    if options.force {
+        args.push("--force");
+    }
+    if options.set_upstream {
+        args.push("--set-upstream");
+    }
     if options.verbose {
         args.push("--verbose");
     }
+    args.push("rad"); // Push to "rad" remote.
+
     term::subcommand(&format!("git {}", args.join(" ")));
 
     // Push to monorepo.
