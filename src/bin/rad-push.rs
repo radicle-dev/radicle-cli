@@ -21,11 +21,15 @@ fn run(options: rad_push::Options) -> anyhow::Result<()> {
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()));
 
-    let args = if options.force {
+    let mut args = if options.force {
         vec!["push", "-u", "--force", "rad"]
     } else {
         vec!["push", "-u", "rad"]
     };
+
+    if options.verbose {
+        args.push("--verbose");
+    }
     term::subcommand(&format!("git {}", args.join(" ")));
 
     // Push to monorepo.
