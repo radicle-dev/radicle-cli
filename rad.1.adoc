@@ -65,15 +65,18 @@ location in your local state.
 
 It's now time to publish your project to the network. To accomplish this,
 you can use the *rad-push* command. The first time you run this command,
-it may ask you where you want your project published, ie. to which *seed*.
+it will ask you where you want your project published, ie. to which *seed*,
+and save that choice to your git configuration.
 
 Radicle seeds are peer-to-peer nodes that are accessible on the public internet.
-They function as replicas for radicle project data.
+They function as replicas for radicle project data. If you would like to use
+your own seed, specify it with the *--seed* flag followed by a host, eg.
+*rad push --seed seed.acme.com*.
 
-Once set, future projects will always be pushed to the same seed. Radicle
+Once set, this seed will always be used when pushing this project. Radicle
 stores your chosen seed in *git*, under the *'rad.seed'* key. You can view it
-or edit it with *git config rad.seed*, or by editing your git configuration
-file, eg. *~/.gitconfig*. See *git config --help* for more information.
+or edit it with *git config rad.seed*, or by editing your local git configuration
+file, *.git/config*. See *git config --help* for more information.
 
 With that said, we can run the *push* command:
 

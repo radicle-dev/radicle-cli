@@ -328,7 +328,7 @@ pub fn push_project(
         let project_id = project_urn.encode_id();
         let git_url = seed.join(&project_id)?;
 
-        term::info!("🪴 Your project is available at:");
+        term::info!("🍃 Your project is available at:");
         term::blank();
 
         if is_routable {
