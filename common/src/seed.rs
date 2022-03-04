@@ -283,45 +283,67 @@ pub fn push_identity(
     )
 }
 
+/// Push options.
+#[derive(Debug)]
+pub struct PushOptions {
+    /// Push a specific head.
+    pub head: Option<String>,
+    /// Push all heads.
+    pub all: bool,
+    /// Push tags.
+    pub tags: bool,
+}
+
 /// Push project refs to a seed's remote scope.
 pub fn push_refs(
     repo: &Path,
     seed: &Url,
     project: &Urn,
     remote: &PeerId,
+    options: PushOptions,
 ) -> Result<String, anyhow::Error> {
     let project_id = project.encode_id();
     let url = seed.join(&project_id)?;
 
-    git::git(
-        repo,
-        [
-            "push",
-            "--signed",
-            "--atomic",
-            url.as_str(),
-            &format!(
-                "refs/namespaces/{}/refs/rad/ids/*:refs/remotes/{}/rad/ids/*",
-                project_id, remote
-            ),
-            &format!(
-                "refs/namespaces/{}/refs/rad/self:refs/remotes/{}/rad/self",
-                project_id, remote
-            ),
-            &format!(
-                "refs/namespaces/{}/refs/rad/signed_refs:refs/remotes/{}/rad/signed_refs",
-                project_id, remote
-            ),
-            &format!(
-                "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
-                project_id, remote
-            ),
-            &format!(
-                "+refs/namespaces/{}/refs/tags/*:refs/remotes/{}/tags/*",
-                project_id, remote
-            ),
-        ],
-    )
+    let mut args = vec![
+        "push".to_owned(),
+        "--signed".to_owned(),
+        "--atomic".to_owned(),
+        url.to_string(),
+        format!(
+            "refs/namespaces/{}/refs/rad/ids/*:refs/remotes/{}/rad/ids/*",
+            project_id, remote
+        ),
+        format!(
+            "refs/namespaces/{}/refs/rad/self:refs/remotes/{}/rad/self",
+            project_id, remote
+        ),
+        format!(
+            "refs/namespaces/{}/refs/rad/signed_refs:refs/remotes/{}/rad/signed_refs",
+            project_id, remote
+        ),
+    ];
+
+    if let Some(head) = options.head {
+        args.push(format!(
+            "+refs/namespaces/{}/refs/heads/{head}:refs/remotes/{}/heads/{head}",
+            project_id, remote,
+        ));
+    } else if options.all {
+        args.push(format!(
+            "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
+            project_id, remote
+        ));
+    }
+
+    if options.tags {
+        args.push(format!(
+            "+refs/namespaces/{}/refs/tags/*:refs/remotes/{}/tags/*",
+            project_id, remote
+        ));
+    }
+
+    git::git(repo, args)
 }
 
 /// Fetch a project or person from a seed.

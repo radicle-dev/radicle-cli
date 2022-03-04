@@ -5,33 +5,49 @@ use rad_push::HELP;
 use rad_terminal::args;
 use rad_terminal::components as term;
 
+// TODO: Pass all options after `--` to git.
 fn main() {
-    args::run_command::<rad_sync::Options, _>(HELP, "Push", run);
+    args::run_command::<rad_push::Options, _>(HELP, "Push", run);
 }
 
-fn run(options: rad_sync::Options) -> anyhow::Result<()> {
+fn run(options: rad_push::Options) -> anyhow::Result<()> {
     profile::default()?;
 
-    if options.fetch {
-        anyhow::bail!("option `--fetch` cannot be used when pushing");
-    }
     term::info!("Pushing 🌱 to remote `rad`");
 
+    let repo = git::Repository::open(Path::new("."))?;
+    let head: Option<String> = repo
+        .head()
+        .ok()
+        .and_then(|head| head.shorthand().map(|h| h.to_owned()));
+
     let args = if options.force {
-        term::subcommand("git push --force rad");
-        vec!["push", "--force", "rad"]
+        vec!["push", "-u", "--force", "rad"]
     } else {
-        term::subcommand("git push rad");
-        vec!["push", "rad"]
+        vec!["push", "-u", "rad"]
     };
+    term::subcommand(&format!("git {}", args.join(" ")));
 
     // Push to monorepo.
     match git::git(Path::new("."), args) {
         Ok(output) => term::blob(output),
         Err(err) => return Err(err),
     }
-    // Sync monorepo to seed.
-    rad_sync::run(options)?;
+
+    if options.sync {
+        // Sync monorepo to seed.
+        rad_sync::run(rad_sync::Options {
+            head: if options.all { None } else { head },
+            all: options.all,
+            seed: options.seed,
+            identity: options.identity,
+            verbose: options.verbose,
+
+            fetch: false,
+            origin: None,
+            push_self: false,
+        })?;
+    }
 
     Ok(())
 }

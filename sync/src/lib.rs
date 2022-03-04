@@ -28,13 +28,16 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad sync [--seed <host>] [--fetch] [--self]
-    rad sync <urn> [--seed <host>] [--fetch] [--self]
-    rad sync <url> [--fetch] [--self]
+    rad sync [--seed <host>] [--fetch] [--self] [<options>...]
+    rad sync <urn> [--seed <host>] [--fetch] [--self] [<options>...]
+    rad sync <url> [--fetch] [--self] [<options>...]
 
     If a <urn> is specified, a seed may be given via the `--seed` option.
     If a <url> is specified, the seed is implied.
     If neither is specified, the URN and seed of the current project is used.
+
+    By default, only the project's *default* branch is synced. To sync all branches,
+    use the `--all` flag. To sync a specific branch, use the `--head` flag.
 
 Options
 
@@ -42,6 +45,8 @@ Options
     --identity          Sync identity refs (default: true)
     --fetch             Fetch updates (default: false)
     --self              Sync your local identity (default: false)
+    --all               Sync all branches, not just the default branch (default: false)
+    --head <name>       Sync only the given head
     --help              Print help
 "#,
 };
@@ -50,9 +55,10 @@ Options
 pub struct Options {
     pub origin: Option<project::Origin>,
     pub seed: Option<seed::Address>,
+    pub head: Option<String>,
     pub verbose: bool,
     pub fetch: bool,
-    pub force: bool,
+    pub all: bool,
     pub identity: bool,
     pub push_self: bool,
 }
@@ -66,9 +72,10 @@ impl Args for Options {
         let mut verbose = false;
         let mut fetch = false;
         let mut origin = None;
-        let mut force = false;
         let mut push_self = false;
         let mut identity = true;
+        let mut all = false;
+        let mut head = None;
         let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
@@ -85,14 +92,23 @@ impl Args for Options {
                 Long("self") => {
                     push_self = true;
                 }
+                Long("all") => {
+                    all = true;
+                }
+                Long("head") if head.is_none() => {
+                    let val = parser
+                        .value()?
+                        .to_str()
+                        .ok_or(anyhow!("invalid head specified with `--head`"))?
+                        .to_owned();
+
+                    head = Some(val);
+                }
                 Long("identity") => {
                     identity = true;
                 }
                 Long("no-identity") => {
                     identity = false;
-                }
-                Long("force") | Short('f') => {
-                    force = true;
                 }
                 Value(val) if origin.is_none() => {
                     let val = val.to_string_lossy();
@@ -111,7 +127,7 @@ impl Args for Options {
         }
 
         if fetch && push_self {
-            anyhow::bail!("'--fetch' and '--self' cannot be used together");
+            anyhow::bail!("`--fetch` and `--self` cannot be used together");
         }
 
         if let (
@@ -132,8 +148,9 @@ impl Args for Options {
                 origin,
                 seed,
                 fetch,
-                force,
                 push_self,
+                head,
+                all,
                 identity,
                 verbose,
             },
@@ -247,6 +264,15 @@ pub fn push_project(
             profile.id()
         )
     })?;
+    let push_opts = seed::PushOptions {
+        head: if options.all {
+            None
+        } else {
+            options.head.or(Some(proj.default_branch))
+        },
+        all: options.all,
+        tags: true,
+    };
 
     term::info!(
         "Radicle signing key {}",
@@ -297,7 +323,7 @@ pub fn push_project(
     }
 
     spinner.message("Syncing project refs...".to_owned());
-    match seed::push_refs(monorepo, seed, &project_urn, peer_id) {
+    match seed::push_refs(monorepo, seed, &project_urn, peer_id, push_opts) {
         Ok(output) => {
             if options.verbose {
                 spinner.finish();

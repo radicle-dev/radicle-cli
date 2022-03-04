@@ -65,9 +65,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }),
         seed: None,
         identity: false,
+        head: None, // TODO: pass the current head.
+        all: true, // TODO: If we don't pass 'all', the command won't behave as expected on non-default branches
         push_self: false,
         verbose: false,
-        force: false,
     })?;
 
     term::blank();
