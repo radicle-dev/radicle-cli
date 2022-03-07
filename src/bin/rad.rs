@@ -3,9 +3,14 @@ use std::{io::ErrorKind, iter, process};
 
 use anyhow::anyhow;
 
+pub const NAME: &str = "rad";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+
 #[derive(Debug)]
 enum Command {
     External(Vec<OsString>),
+    Help,
     Version,
 }
 
@@ -30,7 +35,7 @@ fn parse_args() -> anyhow::Result<Command> {
     while let Some(arg) = parser.next()? {
         match arg {
             Long("help") | Short('h') => {
-                command = Some(Command::External(vec![OsString::from("help")]));
+                command = Some(Command::Help);
             }
             Long("version") => {
                 command = Some(Command::Version);
@@ -53,17 +58,32 @@ fn parse_args() -> anyhow::Result<Command> {
     Ok(command.unwrap_or_else(|| Command::External(vec![])))
 }
 
+fn print_version() {
+    println!("{} {}", NAME, VERSION);
+}
+
+fn print_help() -> anyhow::Result<()> {
+    print_version();
+    println!("{}", DESCRIPTION);
+    println!();
+
+    rad_help::run(Default::default())
+}
+
 fn run(command: Command) -> Result<(), Option<anyhow::Error>> {
     match command {
         Command::Version => {
-            println!("rad {}", env!("CARGO_PKG_VERSION"));
+            print_version();
+        }
+        Command::Help => {
+            print_help()?;
         }
         Command::External(args) => {
             let exe = args.first();
 
             match exe {
                 Some(exe) => {
-                    let exe = format!("rad-{}", exe.to_string_lossy());
+                    let exe = format!("{}-{}", NAME, exe.to_string_lossy());
                     let status = process::Command::new(exe.clone()).args(&args[1..]).status();
 
                     match status {
@@ -82,7 +102,7 @@ fn run(command: Command) -> Result<(), Option<anyhow::Error>> {
                     }
                 }
                 None => {
-                    rad_help::run(Default::default())?;
+                    print_help()?;
                 }
             }
         }

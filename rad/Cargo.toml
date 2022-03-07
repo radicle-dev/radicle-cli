@@ -4,14 +4,12 @@ version = "0.1.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-description = "Radicle top-level command"
+description = "Radicle command line interface"
 
 [dependencies]
 anyhow = "1.0"
 librad = "0"
 lexopt = "0.2"
-rad-exe = "0"
-rad-profile = "0"
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
 rad-help = { path = "../help" }

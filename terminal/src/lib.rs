@@ -213,7 +213,7 @@ pub mod components {
     }
 
     pub fn help(name: &str, version: &str, description: &str, usage: &str) {
-        println!("rad-{} v{}\n{}\n{}", name, version, description, usage);
+        println!("rad-{} {}\n{}\n{}", name, version, description, usage);
     }
 
     pub fn usage(name: &str, usage: &str) {

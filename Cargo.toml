@@ -1,6 +1,6 @@
 [package]
 name = "radicle-cli"
-description = "Radicle CLI"
+description = "Radicle command line interface"
 version = "0.3.1"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
@@ -43,6 +43,7 @@ atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
 futures-lite = { version = "1.12" }
+rad = { path = "./rad" }
 rad-profile = { version = "0" }
 rad-clone = { path = "./clone" }
 rad-auth = { path = "./auth" }
@@ -126,10 +127,6 @@ git = "https://github.com/radicle-dev/radicle-link"
 tag = "cycle/2022-02-15"
 
 [patch.crates-io.rad-profile]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
-
-[patch.crates-io.rad-exe]
 git = "https://github.com/radicle-dev/radicle-link"
 tag = "cycle/2022-02-15"
 

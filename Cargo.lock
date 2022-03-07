@@ -4413,9 +4413,7 @@ dependencies = [
  "lexopt",
  "librad",
  "rad-common",
- "rad-exe",
  "rad-help",
- "rad-profile",
  "rad-terminal",
 ]
 
@@ -4552,20 +4550,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
-]
-
-[[package]]
-name = "rad-exe"
-version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-02-15#913817739e1c021d8ad142e7ea38272839d6bc5c"
-dependencies = [
- "anyhow",
- "librad",
- "rad-clib",
- "rad-identities",
- "rad-profile",
- "structopt",
- "thrussh-agent",
 ]
 
 [[package]]
@@ -4799,6 +4783,7 @@ dependencies = [
  "librad",
  "link-identities",
  "log",
+ "rad",
  "rad-account",
  "rad-auth",
  "rad-checkout",
