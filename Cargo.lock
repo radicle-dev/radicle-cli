@@ -4805,7 +4805,6 @@ dependencies = [
  "rad-clone",
  "rad-common",
  "rad-ens",
- "rad-exe",
  "rad-help",
  "rad-init",
  "rad-inspect",

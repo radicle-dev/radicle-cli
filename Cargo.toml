@@ -43,7 +43,6 @@ atty = { version = "0.2" }
 log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
 futures-lite = { version = "1.12" }
-rad-exe = { version = "0" }
 rad-profile = { version = "0" }
 rad-clone = { path = "./clone" }
 rad-auth = { path = "./auth" }

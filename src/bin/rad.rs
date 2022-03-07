@@ -1,15 +1,16 @@
+use std::ffi::OsString;
 use std::{io::ErrorKind, iter, process};
-
-use rad_exe::cli::args::Command;
-use rad_exe::cli::args::{self, Args};
 
 use anyhow::anyhow;
 
+#[derive(Debug)]
+enum Command {
+    External(Vec<OsString>),
+    Version,
+}
+
 fn main() {
-    match parse_args().map_err(Some).and_then(|args| {
-        let Args { global, command } = rad_exe::cli::args::sanitise_globals(args);
-        run(global, command)
-    }) {
+    match parse_args().map_err(Some).and_then(run) {
         Ok(_) => process::exit(0),
         Err(err) => {
             if let Some(err) = err {
@@ -20,42 +21,26 @@ fn main() {
     }
 }
 
-fn parse_args() -> anyhow::Result<Args> {
+fn parse_args() -> anyhow::Result<Command> {
     use lexopt::prelude::*;
 
     let mut parser = lexopt::Parser::from_env();
-    let mut global = args::Global {
-        rad_profile: None,
-        rad_ssh_auth_sock: Default::default(),
-        rad_quiet: false,
-        rad_verbose: false,
-    };
     let mut command = None;
 
     while let Some(arg) = parser.next()? {
         match arg {
-            Long("rad-profile") => {
-                global.rad_profile = Some(parser.value()?.parse()?);
-            }
-            Long("rad-ssh-auth-sock") => {
-                global.rad_ssh_auth_sock = parser.value()?.parse()?;
-            }
-            Long("rad-quiet") => {
-                global.rad_quiet = true;
-            }
-            Long("rad-verbose") => {
-                global.rad_verbose = true;
-            }
             Long("help") | Short('h') => {
-                command = Some(Command::External(vec![String::from("help")]));
+                command = Some(Command::External(vec![OsString::from("help")]));
+            }
+            Long("version") => {
+                command = Some(Command::Version);
             }
             Value(val) if command.is_none() => {
                 if val == *"." {
-                    command = Some(Command::External(vec![String::from("inspect")]));
+                    command = Some(Command::External(vec![OsString::from("inspect")]));
                 } else {
                     let args = iter::once(val)
                         .chain(iter::from_fn(|| parser.value().ok()))
-                        .map(|s| s.to_string_lossy().into_owned())
                         .collect();
 
                     command = Some(Command::External(args))
@@ -65,23 +50,20 @@ fn parse_args() -> anyhow::Result<Args> {
         }
     }
 
-    Ok(Args {
-        global,
-        command: command.unwrap_or_else(|| Command::External(vec![])),
-    })
+    Ok(command.unwrap_or_else(|| Command::External(vec![])))
 }
 
-fn run(_global: args::Global, command: Command) -> Result<(), Option<anyhow::Error>> {
+fn run(command: Command) -> Result<(), Option<anyhow::Error>> {
     match command {
-        Command::Identities(_) => unreachable!(),
-        Command::Profile(_) => unreachable!(),
-
+        Command::Version => {
+            println!("rad {}", env!("CARGO_PKG_VERSION"));
+        }
         Command::External(args) => {
             let exe = args.first();
 
             match exe {
                 Some(exe) => {
-                    let exe = format!("rad-{}", exe);
+                    let exe = format!("rad-{}", exe.to_string_lossy());
                     let status = process::Command::new(exe.clone()).args(&args[1..]).status();
 
                     match status {
