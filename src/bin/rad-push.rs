@@ -45,8 +45,13 @@ fn run(options: rad_push::Options) -> anyhow::Result<()> {
     if options.sync {
         // Sync monorepo to seed.
         rad_sync::run(rad_sync::Options {
-            head: if options.all { None } else { head },
-            all: options.all,
+            refs: if options.all {
+                rad_sync::Refs::All
+            } else if let Some(head) = head {
+                rad_sync::Refs::Head(head)
+            } else {
+                anyhow::bail!("You must be on a branch in order to push");
+            },
             seed: options.seed,
             identity: options.identity,
             verbose: options.verbose,

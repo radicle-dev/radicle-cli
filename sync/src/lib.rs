@@ -51,14 +51,29 @@ Options
 "#,
 };
 
+#[derive(Debug)]
+pub enum Refs {
+    /// Sync all branches.
+    All,
+    /// Sync only a specific branch.
+    Head(String),
+    /// Sync the default branch.
+    DefaultBranch,
+}
+
+impl Default for Refs {
+    fn default() -> Self {
+        Refs::DefaultBranch
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct Options {
     pub origin: Option<project::Origin>,
     pub seed: Option<seed::Address>,
-    pub head: Option<String>,
+    pub refs: Refs,
     pub verbose: bool,
     pub fetch: bool,
-    pub all: bool,
     pub identity: bool,
     pub push_self: bool,
 }
@@ -74,8 +89,7 @@ impl Args for Options {
         let mut origin = None;
         let mut push_self = false;
         let mut identity = true;
-        let mut all = false;
-        let mut head = None;
+        let mut refs = None;
         let mut unparsed = Vec::new();
 
         while let Some(arg) = parser.next()? {
@@ -92,17 +106,17 @@ impl Args for Options {
                 Long("self") => {
                     push_self = true;
                 }
-                Long("all") => {
-                    all = true;
+                Long("all") if refs.is_none() => {
+                    refs = Some(Refs::All);
                 }
-                Long("head") if head.is_none() => {
+                Long("head") if refs.is_none() => {
                     let val = parser
                         .value()?
                         .to_str()
                         .ok_or(anyhow!("invalid head specified with `--head`"))?
                         .to_owned();
 
-                    head = Some(val);
+                    refs = Some(Refs::Head(val));
                 }
                 Long("identity") => {
                     identity = true;
@@ -149,8 +163,7 @@ impl Args for Options {
                 seed,
                 fetch,
                 push_self,
-                head,
-                all,
+                refs: refs.unwrap_or(Refs::DefaultBranch),
                 identity,
                 verbose,
             },
@@ -265,12 +278,12 @@ pub fn push_project(
         )
     })?;
     let push_opts = seed::PushOptions {
-        head: if options.all {
-            None
-        } else {
-            options.head.or(Some(proj.default_branch))
+        head: match options.refs {
+            Refs::All => None,
+            Refs::DefaultBranch => Some(proj.default_branch),
+            Refs::Head(ref head) => Some(head.to_owned()),
         },
-        all: options.all,
+        all: matches!(options.refs, Refs::All),
         tags: true,
     };
 
