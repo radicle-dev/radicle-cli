@@ -48,7 +48,7 @@ fn run(options: rad_push::Options) -> anyhow::Result<()> {
             refs: if options.all {
                 rad_sync::Refs::All
             } else if let Some(head) = head {
-                rad_sync::Refs::Head(head)
+                rad_sync::Refs::Branch(head)
             } else {
                 anyhow::bail!("You must be on a branch in order to push");
             },

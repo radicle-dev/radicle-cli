@@ -37,7 +37,7 @@ Usage
     If neither is specified, the URN and seed of the current project is used.
 
     By default, only the project's *default* branch is synced. To sync all branches,
-    use the `--all` flag. To sync a specific branch, use the `--head` flag.
+    use the `--all` flag. To sync a specific branch, use the `--branch` flag.
 
 Options
 
@@ -46,7 +46,7 @@ Options
     --fetch             Fetch updates (default: false)
     --self              Sync your local identity (default: false)
     --all               Sync all branches, not just the default branch (default: false)
-    --head <name>       Sync only the given head
+    --branch <name>     Sync only the given branch
     --help              Print help
 "#,
 };
@@ -56,7 +56,7 @@ pub enum Refs {
     /// Sync all branches.
     All,
     /// Sync only a specific branch.
-    Head(String),
+    Branch(String),
     /// Sync the default branch.
     DefaultBranch,
 }
@@ -109,14 +109,17 @@ impl Args for Options {
                 Long("all") if refs.is_none() => {
                     refs = Some(Refs::All);
                 }
-                Long("head") if refs.is_none() => {
+                Long("branch") if refs.is_none() => {
                     let val = parser
                         .value()?
                         .to_str()
-                        .ok_or(anyhow!("invalid head specified with `--head`"))?
+                        .ok_or(anyhow!("invalid head specified with `--branch`"))?
                         .to_owned();
 
-                    refs = Some(Refs::Head(val));
+                    refs = Some(Refs::Branch(val));
+                }
+                Long("default-branch") if refs.is_none() => {
+                    refs = Some(Refs::DefaultBranch);
                 }
                 Long("identity") => {
                     identity = true;
@@ -140,8 +143,19 @@ impl Args for Options {
             }
         }
 
-        if fetch && push_self {
-            anyhow::bail!("`--fetch` and `--self` cannot be used together");
+        if fetch {
+            if push_self {
+                anyhow::bail!("`--fetch` and `--self` cannot be used together");
+            }
+            match refs {
+                Some(Refs::All) | None => {}
+                Some(Refs::Branch { .. }) => {
+                    anyhow::bail!("`--fetch` and `--branch` cannot be used together");
+                }
+                Some(Refs::DefaultBranch) => {
+                    anyhow::bail!("`--fetch` and `--default-branch` cannot be used together");
+                }
+            }
         }
 
         if let (
@@ -281,7 +295,7 @@ pub fn push_project(
         head: match options.refs {
             Refs::All => None,
             Refs::DefaultBranch => Some(proj.default_branch),
-            Refs::Head(ref head) => Some(head.to_owned()),
+            Refs::Branch(ref branch) => Some(branch.to_owned()),
         },
         all: matches!(options.refs, Refs::All),
         tags: true,

@@ -57,7 +57,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let (urn, repo) = project::cwd()
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
 
-    let head = repo
+    let _head = repo
         .head()
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
@@ -71,7 +71,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }),
         seed: None,
         identity: false,
-        refs: rad_sync::Refs::Head(head),
+        refs: rad_sync::Refs::All,
         push_self: false,
         verbose: false,
     })?;
