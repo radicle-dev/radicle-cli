@@ -238,7 +238,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if options.fetch {
         fetch(project_urn, &profile, seed, storage, options)?;
     } else if options.push_self {
-        push_identity(&profile, seed, storage)?;
+        push_identity(&profile, seed, storage, options)?;
     } else {
         push_project(project_urn, &profile, seed, storage, options)?;
     }
@@ -257,7 +257,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn push_identity(profile: &Profile, seed: &Url, storage: Storage) -> anyhow::Result<()> {
+pub fn push_identity(
+    profile: &Profile,
+    seed: &Url,
+    storage: Storage,
+    options: Options,
+) -> anyhow::Result<()> {
     let monorepo = profile.paths().git_dir();
     let identity = person::local(&storage)?;
     let urn = identity.urn();
@@ -268,7 +273,10 @@ pub fn push_identity(profile: &Profile, seed: &Url, storage: Storage) -> anyhow:
         term::format::highlight(seed)
     ));
 
-    seed::push_identity(monorepo, seed, &urn, storage.peer_id())?;
+    let output = seed::push_identity(monorepo, seed, &urn, storage.peer_id())?;
+    if options.verbose {
+        term::blob(output);
+    }
 
     Ok(())
 }
