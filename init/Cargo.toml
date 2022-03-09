@@ -10,6 +10,6 @@ description = "Initialize radicle projects from git repositories"
 anyhow = "1.0"
 librad = "0"
 lexopt = "0.2"
-rad-profile = "0"
+lnk-profile = "0"
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }

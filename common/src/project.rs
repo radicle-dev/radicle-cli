@@ -28,7 +28,7 @@ use librad::profile::Profile;
 use librad::reflike;
 use librad::PeerId;
 
-use rad_identities;
+use lnk_identities;
 use rad_terminal::components as term;
 
 use crate::{git, seed};
@@ -207,9 +207,9 @@ pub fn create(
             paths: paths.clone(),
             signer,
         };
-        rad_identities::git::setup_remote(repo, settings, url, &branch)?;
+        lnk_identities::git::setup_remote(repo, settings, url, &branch)?;
     }
-    rad_identities::git::include::update(storage, &paths, &project)?;
+    lnk_identities::git::include::update(storage, &paths, &project)?;
 
     Ok(project)
 }
@@ -335,7 +335,7 @@ pub fn get<S>(storage: &S, urn: &Urn) -> Result<Option<Metadata>, Error>
 where
     S: AsRef<ReadOnly>,
 {
-    let proj = rad_identities::project::get(storage, urn)?;
+    let proj = lnk_identities::project::get(storage, urn)?;
     let meta = proj.map(|p| p.try_into()).transpose()?;
 
     Ok(meta)

@@ -2,9 +2,9 @@
 use anyhow::{anyhow, Error, Result};
 
 use librad::git::storage::ReadOnly;
-pub use librad::profile::{Profile, ProfileId, RadHome};
+pub use librad::profile::{Profile, ProfileId};
 
-use rad_profile;
+use lnk_profile;
 
 /// Get the default profile. Fails if there is no profile.
 pub fn default() -> Result<Profile, Error> {
@@ -15,7 +15,7 @@ pub fn default() -> Result<Profile, Error> {
         hint: "To setup your radicle profile, run `rad auth`.",
     };
 
-    match rad_profile::get(None, None) {
+    match lnk_profile::get(None, None) {
         Ok(Some(profile)) => Ok(profile),
         Ok(None) | Err(_) => Err(error.into()),
     }
@@ -23,12 +23,12 @@ pub fn default() -> Result<Profile, Error> {
 
 /// List all profiles.
 pub fn list() -> Result<Vec<Profile>, Error> {
-    rad_profile::list(None).map_err(|e| e.into())
+    lnk_profile::list(None).map_err(|e| e.into())
 }
 
 /// Set the default profile.
 pub fn set(id: &ProfileId) -> Result<(), Error> {
-    rad_profile::set(None, id.clone())?;
+    lnk_profile::set(None, id.clone())?;
 
     Ok(())
 }

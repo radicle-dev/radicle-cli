@@ -11,7 +11,7 @@ use librad::identities::payload;
 use librad::identities::payload::HasNamespace;
 use librad::profile::Profile;
 
-use rad_identities::{self, local, person};
+use lnk_identities::{self, local, person};
 use rad_terminal::components as term;
 
 pub use librad::git::identities::person::verify;

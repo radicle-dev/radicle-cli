@@ -86,7 +86,7 @@ pub fn init(_options: Options) -> anyhow::Result<()> {
     let pass = term::pwhash(term::secret_input_with_confirmation());
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
-    let (profile, peer_id) = rad_profile::create(None, pass.clone())?;
+    let (profile, peer_id) = lnk_profile::create(None, pass.clone())?;
 
     git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 

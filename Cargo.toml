@@ -45,7 +45,7 @@ log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
 futures-lite = { version = "1.12" }
 rad = { path = "./rad" }
-rad-profile = { version = "0" }
+lnk-profile = { version = "0" }
 rad-clone = { path = "./clone" }
 rad-auth = { path = "./auth" }
 rad-common = { path = "./common" }
@@ -109,35 +109,35 @@ members = [
 
 [patch.crates-io.link-crypto]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
 [patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
 [patch.crates-io.radicle-git-helpers]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
 [patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
-[patch.crates-io.rad-clib]
+[patch.crates-io.lnk-clib]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
-[patch.crates-io.rad-profile]
+[patch.crates-io.lnk-profile]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
 [patch.crates-io.radicle-git-ext]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
-[patch.crates-io.rad-identities]
+[patch.crates-io.lnk-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-02-15"
+tag = "cycle/2022-03-01"
 
 [patch.crates-io.thrussh-encoding]
 git = "https://github.com/FintanH/thrussh.git"

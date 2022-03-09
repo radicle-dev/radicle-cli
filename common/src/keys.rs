@@ -8,10 +8,10 @@ use librad::git::storage::Storage;
 use librad::profile::{Profile, ProfileId};
 use librad::PeerId;
 
-use rad_clib::keys;
-use rad_clib::keys::ssh::SshAuthSock;
-use rad_clib::storage;
-use rad_clib::storage::ssh;
+use lnk_clib::keys;
+use lnk_clib::keys::ssh::SshAuthSock;
+use lnk_clib::storage;
+use lnk_clib::storage::ssh;
 
 use rad_terminal::keys::CachedPrompt;
 
@@ -32,7 +32,7 @@ pub fn add(
     pass: Pwhash<CachedPrompt>,
     sock: SshAuthSock,
 ) -> Result<ProfileId, Error> {
-    rad_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new())
+    lnk_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new())
         .context("could not add ssh key")
 }
 
@@ -46,7 +46,7 @@ pub fn ssh_auth_sock() -> SshAuthSock {
 
 /// Check whether the radicle signing key has been added to ssh-agent.
 pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
-    rad_profile::ssh_ready(None, profile.id().clone(), sock)
+    lnk_profile::ssh_ready(None, profile.id().clone(), sock)
         .context("could not lookup ssh key, is ssh-agent running?")
         .map(|(_, is_ready)| is_ready)
 }

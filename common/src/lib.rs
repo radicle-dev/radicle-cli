@@ -9,7 +9,7 @@ pub mod seed;
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
 
-pub use rad_identities as identities;
+pub use lnk_identities as identities;
 pub use url::Url;
 
 /// String formatting of various types.

@@ -19,9 +19,9 @@ serde_json = "1.0"
 serde = "1.0"
 lexopt = "0.2"
 librad = { version = "0" }
-rad-clib = { version = "0" }
-rad-profile = { version = "0" }
-rad-identities = { version = "0" }
+lnk-clib = { version = "0" }
+lnk-profile = { version = "0" }
+lnk-identities = { version = "0" }
 rad-terminal = { path = "../terminal" }
 radicle-git-ext = { version = "0" }
 url = { version = "2" }
