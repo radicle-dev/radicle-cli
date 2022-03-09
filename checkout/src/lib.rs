@@ -127,7 +127,11 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
         }
         Ok(repo) => {
             spinner.finish();
-            rad_init::setup_signing(storage.peer_id(), &repo)?;
+
+            // Setup signing.
+            if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo) {
+                term::error(&format!("Could not setup signing: {:#}", err));
+            }
 
             // Setup a remote and tracking branch for all project delegates except yourself.
             let setup = project::SetupRemote {

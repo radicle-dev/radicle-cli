@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, Context as _};
 
 use librad::canonical::Cstring;
 use librad::identities::payload::{self};
@@ -153,7 +153,9 @@ pub fn execute(path: &Path) -> anyhow::Result<()> {
 
 /// Setup radicle key as commit signing key in repository.
 pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result<()> {
-    let repo = repo.workdir().unwrap_or_else(|| repo.path());
+    let repo = repo
+        .workdir()
+        .ok_or(anyhow!("cannot setup signing in bare repository"))?;
     let key = keys::to_ssh_fingerprint(peer_id)?;
     let yes = if !git::is_signing_configured(repo)? {
         term::headline(&format!(
@@ -176,14 +178,15 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
                 term::success!("Created {} file", term::format::tertiary(file.display()));
             }
             Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-                term::success!(
-                    "Found existing {} file",
-                    term::format::tertiary(".gitsigners")
-                );
-                if term::confirm(&format!(
-                    "Add signing key to {}?",
-                    term::format::tertiary(".gitsigners")
-                )) {
+                let gitsigners = term::format::tertiary(".gitsigners");
+                term::success!("Found existing {} file", gitsigners);
+
+                let peer_ids =
+                    git::read_gitsigners(repo).context("error reading .gitsigners file")?;
+
+                if peer_ids.contains(peer_id) {
+                    term::success!("Signing key is already in {} file", gitsigners);
+                } else if term::confirm(&format!("Add signing key to {}?", gitsigners)) {
                     git::add_gitsigners(repo, [peer_id])?;
                 }
             }
@@ -193,7 +196,10 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
         }
         git::configure_signing(repo, peer_id)?;
 
-        term::success!("Signing key configured");
+        term::success!(
+            "Signing configured in {}",
+            term::format::tertiary(".git/config")
+        );
     }
     Ok(())
 }

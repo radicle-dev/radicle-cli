@@ -1,5 +1,6 @@
 //! Git-related functions and types.
-use std::fs::OpenOptions;
+use std::collections::HashSet;
+use std::fs::{File, OpenOptions};
 use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -185,6 +186,32 @@ pub fn add_gitsigners<'a>(
         write_gitsigner(&mut file, peer_id)?;
     }
     Ok(())
+}
+
+/// Read a `.gitsigners` file.
+pub fn read_gitsigners(path: &Path) -> Result<HashSet<PeerId>, io::Error> {
+    use std::io::BufRead;
+
+    let mut peers = HashSet::new();
+    let file = File::open(path.join(".gitsigners"))?;
+
+    for line in io::BufReader::new(file).lines() {
+        let line = line?;
+        if let Some((peer_id, key)) = line.split_once(' ') {
+            let peer = PeerId::from_str(peer_id)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+            let expected = keys::to_ssh_key(&peer)?;
+            if key != expected {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "key does not match peer id",
+                ));
+            }
+            peers.insert(peer);
+        }
+    }
+    Ok(peers)
 }
 
 /// Add a path to the repository's git ignore file. Creates the
