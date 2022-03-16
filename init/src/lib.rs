@@ -21,13 +21,18 @@ Usage
     rad init [<path>] [<option>...]
 
 Options
-
+    --name    Name of the project
+    --description    Description of the project
+    --default_branch    The default branch of the project
     --help    Print help
 "#,
 };
 
 pub struct Options {
     pub path: Option<PathBuf>,
+    name: String,
+    description: String,
+    branch: String,
 }
 
 impl Args for Options {
@@ -37,8 +42,30 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut path: Option<PathBuf> = None;
 
-        if let Some(arg) = parser.next()? {
+        let mut name = String::from("");
+        let mut description = String::from("");
+        let mut branch = String::from("");
+
+        while let Some(arg) = parser.next()? {
             match arg {
+                Long("name") => {
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+                    name = value.to_string();
+                }
+                Long("description") => {
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+                    description = value.to_string();
+                }
+                Long("branch") => {
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+                    branch = value.to_string();
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -49,7 +76,15 @@ impl Args for Options {
             }
         }
 
-        Ok((Options { path }, vec![]))
+        Ok((
+            Options {
+                path,
+                name: name.to_string(),
+                description: description.to_string(),
+                branch: branch.to_string(),
+            },
+            vec![],
+        ))
     }
 }
 
@@ -67,11 +102,14 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     ));
 
-    execute(path.as_path())
+    execute(path.as_path(), options)
 }
 
-pub fn execute(path: &Path) -> anyhow::Result<()> {
-    let name = path.file_name().map(|f| f.to_string_lossy().to_string());
+pub fn execute(path: &Path, _options: Options) -> anyhow::Result<()> {
+    let mut name = _options.name;
+    let mut description = _options.description;
+    let mut branch = _options.branch;
+
     let repo = git::Repository::open(path)?;
     if let Ok(remote) = project::rad_remote(&repo) {
         bail!(
@@ -85,17 +123,29 @@ pub fn execute(path: &Path) -> anyhow::Result<()> {
     let (signer, storage) = keys::storage(&profile, sock)?;
     let identity = person::local(&storage)?;
 
-    let head: String = repo
-        .head()
-        .ok()
-        .and_then(|head| head.shorthand().map(|h| h.to_owned()))
-        .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
+    // If input is not passed as CLI argument, get user input.
+    if name.is_empty() {
+        let cwd = std::env::current_dir()?;
+        let path = cwd.as_path();
+        name = path.file_name().map(|f| f.to_string_lossy().to_string());
+        name = term::text_input("Name", name)?;
+    }
 
-    git::check_version()?;
+    if description.is_empty() {
+        description = term::text_input("Description", None)?;
+    }
+    if branch.is_empty() {
+        let head: String = repo
+            .head()
+            .ok()
+            .and_then(|head| head.shorthand().map(|h| h.to_owned()))
+            .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
+        
+        git::check_version()?;
 
-    let name: String = term::text_input("Name", name)?;
-    let description: String = term::text_input("Description", None)?;
-    let branch = term::text_input("Default branch", Some(head))?;
+        branch = term::text_input("Default branch", Some(head))?;
+    }
+
     let spinner = term::spinner("Initializing...");
 
     let payload = payload::Project {
