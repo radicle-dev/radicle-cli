@@ -1,5 +1,5 @@
 use std::ffi::OsString;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context as _};
 
@@ -22,12 +22,19 @@ Usage
 
 Options
 
-    --help    Print help
+    --name               Name of the project
+    --description        Description of the project
+    --default-branch     The default branch of the project
+    --help               Print help
 "#,
 };
 
+#[derive(Default)]
 pub struct Options {
     pub path: Option<PathBuf>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub branch: Option<String>,
 }
 
 impl Args for Options {
@@ -37,8 +44,44 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut path: Option<PathBuf> = None;
 
-        if let Some(arg) = parser.next()? {
+        let mut name = None;
+        let mut description = None;
+        let mut branch = None;
+
+        while let Some(arg) = parser.next()? {
             match arg {
+                Long("name") if name.is_none() => {
+                    let value = parser
+                        .value()?
+                        .to_str()
+                        .ok_or(anyhow::anyhow!(
+                            "invalid project name specified with `--name`"
+                        ))?
+                        .to_owned();
+                    name = Some(value);
+                }
+                Long("description") if description.is_none() => {
+                    let value = parser
+                        .value()?
+                        .to_str()
+                        .ok_or(anyhow::anyhow!(
+                            "invalid project description specified with `--description`"
+                        ))?
+                        .to_owned();
+
+                    description = Some(value);
+                }
+                Long("default-branch") if branch.is_none() => {
+                    let value = parser
+                        .value()?
+                        .to_str()
+                        .ok_or(anyhow::anyhow!(
+                            "invalid branch specified with `--default-branch`"
+                        ))?
+                        .to_owned();
+
+                    branch = Some(value);
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -49,11 +92,30 @@ impl Args for Options {
             }
         }
 
-        Ok((Options { path }, vec![]))
+        Ok((
+            Options {
+                path,
+                name,
+                description,
+                branch,
+            },
+            vec![],
+        ))
     }
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
+    if git::check_version().is_err() {
+        term::warning(&format!(
+            "Warning: Your git version is unsupported, please upgrade to {} or later",
+            git::VERSION_REQUIRED,
+        ));
+        term::blank();
+    }
+    init(options)
+}
+
+pub fn init(options: Options) -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
     let path = options.path.unwrap_or_else(|| cwd.clone());
     let path = path.as_path().canonicalize()?;
@@ -67,11 +129,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     ));
 
-    execute(path.as_path())
-}
-
-pub fn execute(path: &Path) -> anyhow::Result<()> {
-    let name = path.file_name().map(|f| f.to_string_lossy().to_string());
     let repo = git::Repository::open(path)?;
     if let Ok(remote) = project::rad_remote(&repo) {
         bail!(
@@ -91,11 +148,16 @@ pub fn execute(path: &Path) -> anyhow::Result<()> {
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
 
-    git::check_version()?;
+    let name = options
+        .name
+        .unwrap_or_else(|| term::text_input("Name", None).unwrap());
+    let description = options
+        .description
+        .unwrap_or_else(|| term::text_input("Description", None).unwrap());
+    let branch = options
+        .branch
+        .unwrap_or_else(|| term::text_input("Default branch", Some(head)).unwrap());
 
-    let name: String = term::text_input("Name", name)?;
-    let description: String = term::text_input("Description", None)?;
-    let branch = term::text_input("Default branch", Some(head))?;
     let spinner = term::spinner("Initializing...");
 
     let payload = payload::Project {
