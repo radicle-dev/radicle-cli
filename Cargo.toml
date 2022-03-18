@@ -21,6 +21,7 @@ assets = [
     ["target/release/rad-push", "usr/bin/rad-push", "755"],
     ["target/release/rad", "usr/bin/rad", "755"],
     ["target/release/rad-auth", "usr/bin/rad-auth", "755"],
+    ["target/release/rad-rm", "usr/bin/rad-rm", "755"],
     ["target/release/rad-track", "usr/bin/rad-track", "755"],
     ["target/release/rad-ls", "usr/bin/rad-ls", "755"],
     ["target/release/rad-init", "usr/bin/rad-init", "755"],
