@@ -55,17 +55,29 @@ impl Args for Options {
                 }
                 Value(val) if origin.is_none() => {
                     let val = val.to_string_lossy();
-                    match Url::parse(&val) {
-                        Ok(url) if url.scheme() == project::URL_SCHEME => {
-                            let o = project::Origin::try_from(url)?;
-                            origin = Some(Origin::Radicle(o));
-                        }
-                        Ok(url) => {
-                            origin = Some(Origin::Git(url));
+                    match Urn::from_str(&val) {
+                        Ok(urn) => {
+                            origin = Some(Origin::Radicle(project::Origin {
+                                urn,
+                                seed: seed.clone(),
+                            }));
                         }
                         Err(_) => {
-                            let urn = Urn::from_str(&val)?;
-                            origin = Some(Origin::Radicle(project::Origin::from_urn(urn)));
+                            match Url::parse(&val) {
+                                Ok(_) if seed.is_some() => {
+                                    anyhow::bail!("`--seed` cannot be specified when a URL is given as origin");
+                                }
+                                Ok(url) if url.scheme() == project::URL_SCHEME => {
+                                    let o = project::Origin::try_from(url)?;
+                                    origin = Some(Origin::Radicle(o));
+                                }
+                                Ok(url) => {
+                                    origin = Some(Origin::Git(url));
+                                }
+                                Err(err) => {
+                                    return Err(err.into());
+                                }
+                            }
                         }
                     }
                 }
@@ -75,16 +87,6 @@ impl Args for Options {
         let origin = origin.ok_or_else(|| {
             anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
         })?;
-
-        match (&origin, seed) {
-            (Origin::Radicle(o), Some(_)) if o.seed.is_some() => {
-                anyhow::bail!("`--seed` cannot be specified when a URL is given as origin");
-            }
-            (Origin::Git(_), Some(_)) => {
-                anyhow::bail!("`--seed` cannot be specified when a Git URL is given");
-            }
-            _ => {}
-        }
 
         Ok((Options { origin }, vec![]))
     }
@@ -177,4 +179,66 @@ pub fn clone_repository(url: Url) -> anyhow::Result<()> {
         rad_init::execute(destination.as_path())?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rad_common::seed;
+
+    #[test]
+    fn test_args_ok() {
+        let tests = vec![
+            vec!["rad://willow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y"],
+            vec![
+                "rad:git:hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y",
+                "--seed",
+                "willow.radicle.garden",
+            ],
+        ];
+
+        for args in tests {
+            let args = args.into_iter().map(|a| a.into()).collect();
+
+            let (opts, leftover) = Options::from_args(args).unwrap();
+            assert!(leftover.is_empty());
+
+            if let Origin::Radicle(origin) = opts.origin {
+                assert_eq!(
+                    origin.urn.to_string(),
+                    "rad:git:hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y"
+                );
+                assert_eq!(
+                    origin.seed.unwrap(),
+                    seed::Address {
+                        host: url::Host::Domain("willow.radicle.garden".to_owned()),
+                        port: None
+                    }
+                );
+            } else {
+                panic!("invalid origin {:?}", opts.origin);
+            }
+        }
+    }
+
+    #[test]
+    fn test_args_error() {
+        let tests = vec![
+            vec![
+                "rad://willow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y",
+                "--seed",
+                "willow.radicle.garden",
+            ],
+            vec![
+                "https://willow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y.git",
+                "--seed",
+                "willow.radicle.garden",
+            ],
+        ];
+
+        for args in tests {
+            let args = args.into_iter().map(|a| a.into()).collect();
+            Options::from_args(args).unwrap_err();
+        }
+    }
 }
