@@ -36,6 +36,16 @@ pub fn add(
         .context("could not add ssh key")
 }
 
+/// Remove a profile's radicle signing key from the ssh-agent
+pub fn remove(
+    profile: &Profile,
+    pass: Pwhash<CachedPrompt>,
+    sock: SshAuthSock,
+) -> Result<ProfileId, Error> {
+    lnk_profile::ssh_remove(None, profile.id().clone(), sock, pass)
+        .context("could not remove ssh key")
+}
+
 /// Get the SSH auth socket and warn if ssh-agent is not running.
 pub fn ssh_auth_sock() -> SshAuthSock {
     if std::env::var("SSH_AGENT_PID").is_err() && std::env::var("SSH_AUTH_SOCK").is_err() {

@@ -64,7 +64,7 @@ impl Args for Options {
                             "invalid username specified with `--username`"
                         ))?
                         .to_owned();
-                    
+
                     username = Some(val);
                 }
                 Long("password") if init && password.is_none() => {
@@ -76,8 +76,10 @@ impl Args for Options {
                         ))?
                         .to_owned();
 
-                    term::warning("Passing a plain-text password is considered insecure. \
-                                Please only use for testing purposes.");
+                    term::warning(
+                        "Passing a plain-text password is considered insecure. \
+                        Please only use for testing purposes.",
+                    );
 
                     password = Some(val);
                 }
@@ -239,4 +241,56 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     term::success!("Signing key configured in git");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use tempdir::TempDir;
+
+    use super::*;
+    use librad::profile::LNK_HOME;
+
+    const PASSWORD: &str = "password";
+
+    fn create_auth_options(username: &str) -> Options {
+        Options {
+            active: false,
+            init: true,
+            username: Some(username.to_owned()),
+            password: Some(PASSWORD.to_owned()),
+        }
+    }
+
+    fn cleanup() -> Result<()> {
+        for profile in profile::list()? {
+            let pass = term::pwhash(SecUtf8::from(PASSWORD));
+            keys::remove(&profile, pass, keys::ssh_auth_sock())?;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn profile_can_be_initialized() -> Result<()> {
+        let tmp_dir = TempDir::new("lnk-home")?;
+        let home = tmp_dir.path().to_str().unwrap();
+
+        temp_env::with_var(LNK_HOME, Some(home), || {
+            let options = create_auth_options("user");
+
+            init(options).unwrap();
+
+            assert_eq!(profile::count().unwrap(), 1);
+            assert_eq!(profile::name(None).unwrap(), "user");
+        });
+
+        temp_env::with_var(LNK_HOME, Some(home), || {
+            cleanup().unwrap();
+        });
+
+        tmp_dir.close()?;
+
+        Ok(())
+    }
 }

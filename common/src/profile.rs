@@ -21,9 +21,25 @@ pub fn default() -> Result<Profile, Error> {
     }
 }
 
+/// Get a profile's name. If none is given, get the default profile's name.
+pub fn name(profile: Option<&Profile>) -> Result<String, Error> {
+    let default = default()?;
+    let read_only = read_only(profile.unwrap_or(&default))?;
+    let config = read_only.config()?;
+
+    Ok(config.user_name()?)
+}
+
 /// List all profiles.
 pub fn list() -> Result<Vec<Profile>, Error> {
     lnk_profile::list(None).map_err(|e| e.into())
+}
+
+/// Get the count of all profiles.
+pub fn count() -> Result<usize, Error> {
+    let profiles = list()?;
+
+    Ok(profiles.len())
 }
 
 /// Set the default profile.
