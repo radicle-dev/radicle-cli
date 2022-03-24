@@ -2,6 +2,8 @@ use std::ffi::OsString;
 
 use anyhow::Context as _;
 
+use librad::crypto::keystore::pinentry::SecUtf8;
+
 use rad_common::{git, keys, person, profile};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
@@ -13,13 +15,18 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad auth [--init | --active]
+    rad auth [--init | --active] [<options>...]
+
+    If `--init` is used, username and password may be given via the `--username`
+    and `--password` option. Using these disables the respective input prompt.
 
 Options
 
-    --init    Initialize a new identity
-    --active  Authenticate with the currently active profile
-    --help    Print help
+    --init                  Initialize a new identity
+    --active                Authenticate with the currently active profile
+    --username <username>   Use given username (default: none)
+    --password <password>   Use given password (default: none)
+    --help                  Print help
 "#,
 };
 
@@ -27,6 +34,8 @@ Options
 pub struct Options {
     pub init: bool,
     pub active: bool,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 impl Args for Options {
@@ -35,6 +44,8 @@ impl Args for Options {
 
         let mut init = false;
         let mut active = false;
+        let mut username = None;
+        let mut password = None;
         let mut parser = lexopt::Parser::from_args(args);
 
         while let Some(arg) = parser.next()? {
@@ -45,6 +56,31 @@ impl Args for Options {
                 Long("active") => {
                     active = true;
                 }
+                Long("username") if init && username.is_none() => {
+                    let val = parser
+                        .value()?
+                        .to_str()
+                        .ok_or(anyhow::anyhow!(
+                            "invalid username specified with `--username`"
+                        ))?
+                        .to_owned();
+                    
+                    username = Some(val);
+                }
+                Long("password") if init && password.is_none() => {
+                    let val = parser
+                        .value()?
+                        .to_str()
+                        .ok_or(anyhow::anyhow!(
+                            "invalid password specified with `--password`"
+                        ))?
+                        .to_owned();
+
+                    term::warning("Passing a plain-text password is considered insecure. \
+                                Please only use for testing purposes.");
+
+                    password = Some(val);
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -52,7 +88,15 @@ impl Args for Options {
             }
         }
 
-        Ok((Options { init, active }, vec![]))
+        Ok((
+            Options {
+                init,
+                active,
+                username,
+                password,
+            },
+            vec![],
+        ))
     }
 }
 
@@ -69,7 +113,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
 }
 
-pub fn init(_options: Options) -> anyhow::Result<()> {
+pub fn init(options: Options) -> anyhow::Result<()> {
     let sock = keys::ssh_auth_sock();
 
     term::headline("Initializing your 🌱 profile and identity");
@@ -82,8 +126,16 @@ pub fn init(_options: Options) -> anyhow::Result<()> {
         term::blank();
     }
 
-    let username: String = term::text_input("Username", None)?;
-    let pass = term::pwhash(term::secret_input_with_confirmation());
+    let username = options
+        .username
+        .unwrap_or_else(|| term::text_input("Username", None).unwrap());
+    let pass = term::pwhash(
+        options
+            .password
+            .map_or_else(term::secret_input_with_confirmation, |password| {
+                SecUtf8::from(password)
+            }),
+    );
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
     let (profile, peer_id) = lnk_profile::create(None, pass.clone())?;
