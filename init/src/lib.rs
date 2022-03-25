@@ -21,10 +21,11 @@ Usage
     rad init [<path>] [<option>...]
 
 Options
-    --name    Name of the project
-    --description    Description of the project
-    --default_branch    The default branch of the project
-    --help    Print help
+
+    --name               Name of the project
+    --description        Description of the project
+    --default-branch     The default branch of the project
+    --help               Print help
 "#,
 };
 
@@ -79,9 +80,9 @@ impl Args for Options {
         Ok((
             Options {
                 path,
-                name: name.to_string(),
-                description: description.to_string(),
-                branch: branch.to_string(),
+                name,
+                description,
+                branch,
             },
             vec![],
         ))
@@ -105,11 +106,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     execute(path.as_path(), options)
 }
 
-pub fn execute(path: &Path, _options: Options) -> anyhow::Result<()> {
-    let mut name = _options.name;
-    let mut description = _options.description;
-    let mut branch = _options.branch;
+pub fn execute(path: &Path, options: Options) -> anyhow::Result<()> {
+    let mut name = options.name;
+    let mut description = options.description;
+    let mut branch = options.branch;
 
+    git::check_version()?;
     let repo = git::Repository::open(path)?;
     if let Ok(remote) = project::rad_remote(&repo) {
         bail!(
@@ -130,7 +132,6 @@ pub fn execute(path: &Path, _options: Options) -> anyhow::Result<()> {
         name = path.file_name().map(|f| f.to_string_lossy().to_string());
         name = term::text_input("Name", name)?;
     }
-
     if description.is_empty() {
         description = term::text_input("Description", None)?;
     }
@@ -140,8 +141,6 @@ pub fn execute(path: &Path, _options: Options) -> anyhow::Result<()> {
             .ok()
             .and_then(|head| head.shorthand().map(|h| h.to_owned()))
             .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
-        
-        git::check_version()?;
 
         branch = term::text_input("Default branch", Some(head))?;
     }
