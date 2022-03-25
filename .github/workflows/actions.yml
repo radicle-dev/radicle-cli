@@ -17,7 +17,7 @@ jobs:
       - name: Update dependencies
         run: sudo apt-get update
       - name: Install dependencies
-        run: sudo apt-get install -y pkg-config libudev-dev
+        run: sudo apt-get install -y pkg-config libudev-dev openssh-client
       - uses: actions/checkout@v2
       - name: Configure build cache
         uses: actions/cache@v2
@@ -34,7 +34,13 @@ jobs:
         run: cargo build --verbose
         env:
           RUSTFLAGS: -D warnings
+      - name: Start ssh-agent
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: ssh-agent -a $SSH_AUTH_SOCK > /dev/null
       - name: Run tests
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: cargo test --all --verbose
 
   docs:
