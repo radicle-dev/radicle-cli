@@ -77,6 +77,10 @@ rad-gov = { path = "./gov", optional = true }
 tokio = { version = "1.10", features = ["rt"], optional = true }
 futures = { version = "0.3", optional = true }
 
+[dev-dependencies]
+assay = "0.1.0"
+pretty_assertions = "1.2.0"
+
 [[bin]]
 name = "rad-account"
 required-features = ["ethereum"]
