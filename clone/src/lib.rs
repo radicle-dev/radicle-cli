@@ -175,8 +175,13 @@ pub fn clone_repository(url: Url) -> anyhow::Result<()> {
         "Initialize new 🌱 project in {}?",
         term::format::highlight(destination.display())
     )) {
+        let options = rad_init::Options {
+            path: Some(destination.as_path().into()),
+            ..Default::default()
+        };
+
         term::blank();
-        rad_init::execute(destination.as_path())?;
+        rad_init::init(options)?;
     }
     Ok(())
 }
