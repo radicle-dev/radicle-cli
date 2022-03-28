@@ -430,6 +430,14 @@ pub mod components {
 
         use super::theme;
 
+        pub fn negative<D: std::fmt::Display>(msg: D) -> String {
+            style(msg).red().bright().to_string()
+        }
+
+        pub fn positive<D: std::fmt::Display>(msg: D) -> String {
+            style(msg).green().bright().to_string()
+        }
+
         pub fn secondary<D: std::fmt::Display>(msg: D) -> String {
             style(msg).blue().bright().to_string()
         }
