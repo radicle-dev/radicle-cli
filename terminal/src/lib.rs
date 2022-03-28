@@ -385,6 +385,7 @@ pub mod components {
     pub fn secret_input_with_prompt(prompt: &str) -> SecUtf8 {
         SecUtf8::from(
             Password::with_theme(&theme())
+                .allow_empty_password(true)
                 .with_prompt(prompt)
                 .interact()
                 .unwrap(),
