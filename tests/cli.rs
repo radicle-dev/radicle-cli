@@ -2,6 +2,7 @@ use std::process::Command;
 
 use anyhow::Result;
 use assay::assay;
+use assert_cmd::prelude::*;
 
 use rad_common::test;
 
@@ -17,7 +18,7 @@ mod auth {
         teardown = test::teardown::profiles()?,
     )]
     fn can_be_initialized() {
-        let status = Command::new("rad-auth")
+        let status = Command::cargo_bin("rad-auth")?
             .args([
                 "--init",
                 "--username",
@@ -31,7 +32,7 @@ mod auth {
 
     #[assay]
     fn username_missing() {
-        let output = Command::new("rad-auth")
+        let output = Command::cargo_bin("rad-auth")?
             .args(["--init", "--username"])
             .output()?;
         let result = String::from_utf8_lossy(&output.stderr);
@@ -41,7 +42,7 @@ mod auth {
 
     #[assay]
     fn password_missing() {
-        let output = Command::new("rad-auth")
+        let output = Command::cargo_bin("rad-auth")?
             .args(["--init", "--password"])
             .output()?;
         let result = String::from_utf8_lossy(&output.stderr);
@@ -51,7 +52,9 @@ mod auth {
 
     #[assay]
     fn init_missing() {
-        let output = Command::new("rad-auth").args(["--password"]).output()?;
+        let output = Command::cargo_bin("rad-auth")?
+            .args(["--password"])
+            .output()?;
         let result = String::from_utf8_lossy(&output.stderr);
 
         assert!(result.contains(INIT_MISSING), "{}", result);
