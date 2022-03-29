@@ -1,31 +1,9 @@
 use std::process::Command;
-use std::{env, error};
 
 use anyhow::Result;
 use assay::assay;
 
-use librad::crypto::keystore::pinentry::SecUtf8;
-use librad::profile::LNK_HOME;
-
-use rad_common::{keys, profile};
-use rad_terminal::components as term;
-
-const PASSWORD: &str = "password";
-
-type BoxedError = Box<dyn error::Error>;
-
-fn setup() -> Result<(), BoxedError> {
-    env::set_var(LNK_HOME, env::current_dir()?.join("lnk_home"));
-    Ok(())
-}
-
-fn teardown() -> Result<(), BoxedError> {
-    for profile in profile::list()? {
-        let pass = term::pwhash(SecUtf8::from(PASSWORD));
-        keys::remove(&profile, pass, keys::ssh_auth_sock())?;
-    }
-    Ok(())
-}
+use rad_common::test;
 
 mod auth {
     use super::*;
@@ -35,12 +13,18 @@ mod auth {
     const INIT_MISSING: &str = "invalid option '--password'";
 
     #[assay(
-        setup = setup()?,
-        teardown = teardown()?,
-      )]
+        setup = test::setup::lnk_home()?,
+        teardown = test::teardown::profiles()?,
+    )]
     fn can_be_initialized() {
         let status = Command::new("rad-auth")
-            .args(["--init", "--username", "user1", "--password", PASSWORD])
+            .args([
+                "--init",
+                "--username",
+                "user1",
+                "--password",
+                test::USER_PASS,
+            ])
             .status();
         assert!(status?.success());
     }

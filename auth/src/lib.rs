@@ -246,51 +246,31 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use tempdir::TempDir;
+    use assay::assay;
 
     use super::*;
-    use librad::profile::LNK_HOME;
 
-    const PASSWORD: &str = "password";
+    use rad_common::test;
 
     fn create_auth_options(username: &str) -> Options {
         Options {
             active: false,
             init: true,
             username: Some(username.to_owned()),
-            password: Some(PASSWORD.to_owned()),
+            password: Some(test::USER_PASS.to_owned()),
         }
     }
 
-    fn cleanup() -> Result<()> {
-        for profile in profile::list()? {
-            let pass = term::pwhash(SecUtf8::from(PASSWORD));
-            keys::remove(&profile, pass, keys::ssh_auth_sock())?;
-        }
+    #[assay(
+        setup = test::setup::lnk_home()?,
+        teardown = test::teardown::profiles()?,
+    )]
+    fn can_be_initialized() {
+        let options = create_auth_options("user");
 
-        Ok(())
-    }
+        init(options).unwrap();
 
-    #[test]
-    fn profile_can_be_initialized() -> Result<()> {
-        let tmp_dir = TempDir::new("lnk-home")?;
-        let home = tmp_dir.path().to_str().unwrap();
-
-        temp_env::with_var(LNK_HOME, Some(home), || {
-            let options = create_auth_options("user");
-
-            init(options).unwrap();
-
-            assert_eq!(profile::count().unwrap(), 1);
-            assert_eq!(profile::name(None).unwrap(), "user");
-        });
-
-        temp_env::with_var(LNK_HOME, Some(home), || {
-            cleanup().unwrap();
-        });
-
-        tmp_dir.close()?;
-
-        Ok(())
+        assert_eq!(profile::count().unwrap(), 1);
+        assert_eq!(profile::name(None).unwrap(), "user");
     }
 }
