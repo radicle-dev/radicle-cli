@@ -25,6 +25,7 @@ Usage
     rad ens               [<option>...]
     rad ens --setup       [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
     rad ens --setup       [<option>...] [--rpc-url <url>] --keystore <file>
+    rad ens --setup       [<option>...] [--rpc-url <url>] --walletconnect
     rad ens [<operation>] [<option>...]
 
     If no operation is specified, `--show` is implied.
@@ -44,6 +45,7 @@ Wallet options
     --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
     --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware device
     --keystore <file>            Keystore file containing encrypted private key (default: none)
+    --walletconnect              Use WalletConnect
 
 Environment variables
 
@@ -158,6 +160,41 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+async fn get_wallet(
+    signer_opts: SignerOptions,
+    provider: Provider<Http>,
+) -> anyhow::Result<(ethereum::Wallet, Provider<Http>)> {
+    use ethereum::WalletError;
+
+    term::tip!("Accessing your wallet...");
+    let signer = match ethereum::Wallet::open(signer_opts, provider.clone()).await {
+        Ok(signer) => signer,
+        Err(err) => {
+            if let Some(WalletError::NoWallet) = err.downcast_ref::<WalletError>() {
+                return Err(Error::WithHint {
+                    err,
+                    hint: "Use `--ledger-hdpath`, `--keystore`, or `--walletconnect` to specify a wallet.",
+                }
+                .into());
+            } else {
+                return Err(err);
+            }
+        }
+    };
+
+    let chain = ethereum::chain_from_id(signer.chain_id());
+    term::success!(
+        "Using {} network",
+        term::format::highlight(
+            chain
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| String::from("unknown"))
+        )
+    );
+
+    Ok((signer, provider))
 }
 
 fn set_ens_payload(name: &str, storage: &Storage) -> anyhow::Result<()> {
