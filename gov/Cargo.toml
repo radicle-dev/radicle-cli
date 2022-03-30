@@ -1,0 +1,19 @@
+[package]
+name = "rad-gov"
+version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Interact with Radicle governance contracts"
+
+[dependencies]
+anyhow = "1.0"
+librad = "0"
+lexopt = "0.2"
+rad-terminal = { path = "../terminal" }
+rad-common = { path = "../common", features = ["ethereum"] }
+ethers = "0.6"
+thiserror = "1.0"
+serde_json = "1"
+tokio = "1"
+regex = "1.5"

@@ -286,3 +286,39 @@ pub fn chain_from_id(id: u64) -> Option<Chain> {
 pub fn hex(bytes: impl AsRef<[u8]>) -> String {
     format!("0x{}", hex::encode(bytes))
 }
+
+/// Access the wallet specified in SignerOptions
+pub async fn get_wallet(
+    signer_opts: SignerOptions,
+    provider: Provider<Http>,
+) -> anyhow::Result<(Wallet, Provider<Http>)> {
+    use rad_terminal::args::Error;
+
+    term::tip!("Accessing your wallet...");
+    let signer = match Wallet::open(signer_opts, provider.clone()).await {
+        Ok(signer) => signer,
+        Err(err) => {
+            if let Some(WalletError::NoWallet) = err.downcast_ref::<WalletError>() {
+                return Err(Error::WithHint {
+                    err,
+                    hint: "Use `--ledger-hdpath` or `--keystore` to specify a wallet.",
+                }
+                .into());
+            } else {
+                return Err(err);
+            }
+        }
+    };
+
+    let chain = chain_from_id(signer.chain_id());
+    term::success!(
+        "Using {} network",
+        term::format::highlight(
+            chain
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| String::from("unknown"))
+        )
+    );
+
+    Ok((signer, provider))
+}

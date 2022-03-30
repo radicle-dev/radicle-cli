@@ -4588,6 +4588,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-gov"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethers",
+ "lexopt",
+ "librad",
+ "rad-common",
+ "rad-terminal",
+ "regex",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "rad-help"
 version = "0.1.0"
 dependencies = [
@@ -4785,6 +4801,7 @@ dependencies = [
  "rad-clone",
  "rad-common",
  "rad-ens",
+ "rad-gov",
  "rad-help",
  "rad-init",
  "rad-inspect",

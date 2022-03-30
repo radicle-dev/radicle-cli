@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use ethers::prelude::{Address, Http, Provider, Signer as _, SignerMiddleware};
+use ethers::prelude::{Address, Http, Provider, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
@@ -151,48 +151,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let name = term::text_input("ENS name", name)?;
             let provider = ethereum::provider(options.provider)?;
             let signer_opts = options.signer;
-            let (wallet, provider) = rt.block_on(get_wallet(signer_opts, provider))?;
+            let (wallet, provider) = rt.block_on(ethereum::get_wallet(signer_opts, provider))?;
             rt.block_on(setup(&name, id, provider, wallet, &storage))?;
         }
         Operation::SetLocal(name) => set_ens_payload(&name, &storage)?,
     }
 
     Ok(())
-}
-
-async fn get_wallet(
-    signer_opts: SignerOptions,
-    provider: Provider<Http>,
-) -> anyhow::Result<(ethereum::Wallet, Provider<Http>)> {
-    use ethereum::WalletError;
-
-    term::tip!("Accessing your wallet...");
-    let signer = match ethereum::Wallet::open(signer_opts, provider.clone()).await {
-        Ok(signer) => signer,
-        Err(err) => {
-            if let Some(WalletError::NoWallet) = err.downcast_ref::<WalletError>() {
-                return Err(Error::WithHint {
-                    err,
-                    hint: "Use `--ledger-hdpath` or `--keystore` to specify a wallet.",
-                }
-                .into());
-            } else {
-                return Err(err);
-            }
-        }
-    };
-
-    let chain = ethereum::chain_from_id(signer.chain_id());
-    term::success!(
-        "Using {} network",
-        term::format::highlight(
-            chain
-                .map(|c| c.to_string())
-                .unwrap_or_else(|| String::from("unknown"))
-        )
-    );
-
-    Ok((signer, provider))
 }
 
 fn set_ens_payload(name: &str, storage: &Storage) -> anyhow::Result<()> {
