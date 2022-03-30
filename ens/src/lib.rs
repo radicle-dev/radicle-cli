@@ -25,6 +25,7 @@ Usage
     rad ens               [<option>...]
     rad ens --setup       [<option>...] [--rpc-url <url>] --ledger-hdpath <hd-path>
     rad ens --setup       [<option>...] [--rpc-url <url>] --keystore <file>
+    rad ens --setup       [<option>...] [--rpc-url <url>] --walletconnect
     rad ens [<operation>] [<option>...]
 
     If no operation is specified, `--show` is implied.
@@ -44,6 +45,7 @@ Wallet options
     --rpc-url <url>              JSON-RPC URL of Ethereum node (eg. http://localhost:8545)
     --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware device
     --keystore <file>            Keystore file containing encrypted private key (default: none)
+    --walletconnect              Use WalletConnect
 
 Environment variables
 

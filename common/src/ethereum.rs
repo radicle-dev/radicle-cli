@@ -18,12 +18,17 @@ use ethers::types::Chain;
 use rad_terminal::args;
 use rad_terminal::components as term;
 
+mod walletconnect;
+
+use self::walletconnect::WalletConnect;
+
 /// Radicle's ENS domain.
 pub const RADICLE_DOMAIN: &str = ".radicle.eth";
 
 pub const SIGNER_OPTIONS: &str = r#"
     --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware device
     --keystore <file>            Keystore file containing encrypted private key (default: none)
+    --walletconnect              Use WalletConnect
 "#;
 
 pub const PROVIDER_OPTIONS: &str = r#"
@@ -42,6 +47,8 @@ pub struct SignerOptions {
     pub ledger_hdpath: Option<DerivationPath>,
     /// Keystore file containing encrypted private key (default: none).
     pub keystore: Option<PathBuf>,
+    /// Walletconnect account (default: false).
+    pub walletconnect: bool,
 }
 
 impl SignerOptions {
@@ -54,6 +61,7 @@ impl SignerOptions {
             ledger_hdpath: env::var("ETH_HDPATH")
                 .ok()
                 .and_then(|v| DerivationPath::from_str(v.as_str()).ok()),
+            walletconnect: false,
         };
 
         while let Some(arg) = parser.next()? {
@@ -69,6 +77,9 @@ impl SignerOptions {
                     let value = parser.value()?;
 
                     options.keystore = Some(args::parse_value(&flag, value)?);
+                }
+                Long("walletconnect") => {
+                    options.walletconnect = true;
                 }
                 _ => unparsed.push(args::format(arg)),
             }
@@ -130,6 +141,8 @@ pub enum WalletError {
     Ledger(#[from] LedgerError),
     #[error(transparent)]
     Local(#[from] ethers::signers::WalletError),
+    #[error(transparent)]
+    WalletConnect(#[from] ::walletconnect::client::CallError),
     #[error("no wallet specified")]
     NoWallet,
 }
@@ -139,6 +152,7 @@ pub enum WalletError {
 pub enum Wallet {
     Ledger(Ledger),
     Local(LocalWallet),
+    WalletConnect(WalletConnect),
 }
 
 #[async_trait::async_trait]
@@ -149,6 +163,7 @@ impl Signer for Wallet {
         match self {
             Self::Ledger(s) => s.chain_id(),
             Self::Local(s) => s.chain_id(),
+            Self::WalletConnect(s) => s.chain_id(),
         }
     }
 
@@ -156,6 +171,7 @@ impl Signer for Wallet {
         match self {
             Self::Ledger(s) => s.address(),
             Self::Local(s) => s.address(),
+            Self::WalletConnect(s) => s.address(),
         }
     }
 
@@ -163,6 +179,7 @@ impl Signer for Wallet {
         match self {
             Self::Ledger(s) => Self::Ledger(s.with_chain_id(chain_id)),
             Self::Local(s) => Self::Local(s.with_chain_id(chain_id)),
+            Self::WalletConnect(_s) => unimplemented!(),
         }
     }
 
@@ -173,6 +190,7 @@ impl Signer for Wallet {
         match self {
             Self::Ledger(s) => s.sign_typed_data(payload).await.map_err(WalletError::from),
             Self::Local(s) => s.sign_typed_data(payload).await.map_err(WalletError::from),
+            Self::WalletConnect(_s) => unimplemented!(),
         }
     }
 
@@ -183,6 +201,7 @@ impl Signer for Wallet {
         match self {
             Self::Ledger(s) => s.sign_message(message).await.map_err(WalletError::from),
             Self::Local(s) => s.sign_message(message).await.map_err(WalletError::from),
+            Self::WalletConnect(s) => s.sign_message(message).await.map_err(WalletError::from),
         }
     }
 
@@ -193,6 +212,7 @@ impl Signer for Wallet {
         match self {
             Self::Ledger(s) => s.sign_transaction(message).await.map_err(WalletError::from),
             Self::Local(s) => s.sign_transaction(message).await.map_err(WalletError::from),
+            Self::WalletConnect(s) => s.sign_transaction(message).await.map_err(WalletError::from),
         }
     }
 }
@@ -223,6 +243,13 @@ impl Wallet {
                 .context("Could not connect to Ledger device")?;
 
             Ok(Wallet::Ledger(signer))
+        } else if options.walletconnect {
+            let signer = WalletConnect::new()
+                .map_err(|_| anyhow!("Failed to create WalletConnect client"))?
+                .show_qr()
+                .await
+                .context("Failed to connect to WalletConnect session")?;
+            Ok(Wallet::WalletConnect(signer))
         } else {
             Err(WalletError::NoWallet.into())
         }

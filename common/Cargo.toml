@@ -6,7 +6,7 @@ license = "GPL-3.0-or-later"
 
 [features]
 default = []
-ethereum = ["ethers", "coins-bip32", "async-trait", "hex"]
+ethereum = ["ethers", "coins-bip32", "async-trait", "hex", "walletconnect"]
 
 [dependencies]
 anyhow = "1.0"
@@ -48,4 +48,10 @@ optional = true
 
 [dependencies.hex]
 version = "0.4.3"
+optional = true
+
+[dependencies.walletconnect]
+git = "https://github.com/xphoniex/walletconnect-rs"
+branch = "v0.1.0"
+features = ["qr"]
 optional = true
