@@ -20,7 +20,7 @@ Usage
 Options
 
     --seed <host>       Use the given seed node for syncing
-    --all               Sync all branches (default: false)
+    --all               Push and sync all branches (default: false)
     --sync              Sync after pushing to the "rad" remote (default: true)
     --no-sync           Do not sync after pushing to the "rad" remote
     --help              Print help

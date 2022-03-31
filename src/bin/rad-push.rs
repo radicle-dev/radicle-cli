@@ -29,6 +29,9 @@ fn run(options: rad_push::Options) -> anyhow::Result<()> {
     if options.set_upstream {
         args.push("--set-upstream");
     }
+    if options.all {
+        args.push("--all");
+    }
     if options.verbose {
         args.push("--verbose");
     }
