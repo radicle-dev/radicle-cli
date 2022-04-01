@@ -3324,7 +3324,7 @@ dependencies = [
  "multibase",
  "multihash 0.11.4",
  "nom 5.1.2",
- "nonempty",
+ "nonempty 0.6.0",
  "nonzero_ext",
  "notify",
  "num_cpus",
@@ -3586,7 +3586,7 @@ dependencies = [
  "libgit2-sys",
  "librad",
  "lnk-clib",
- "nonempty",
+ "nonempty 0.6.0",
  "radicle-git-ext",
  "radicle-std-ext",
  "serde",
@@ -3942,6 +3942,12 @@ name = "nonempty"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fa586da3e43cc7df44aae0e21ed2e743218b876de3f38035683d30bd8a3828e"
+
+[[package]]
+name = "nonempty"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9e591e719385e6ebaeb5ce5d3887f7d5676fceca6411d1925ccc95745f3d6f7"
 
 [[package]]
 name = "nonzero_ext"
@@ -4799,6 +4805,7 @@ dependencies = [
  "lnk-clib",
  "lnk-identities",
  "lnk-profile",
+ "nonempty 0.7.0",
  "rad-terminal",
  "radicle-git-ext",
  "serde",
@@ -5067,7 +5074,7 @@ version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-03-01#a5181d98b12cf5f90362a761cc0c6a7a98712fc3"
 dependencies = [
  "minicbor",
- "nonempty",
+ "nonempty 0.6.0",
  "serde",
  "thiserror",
  "typenum",
