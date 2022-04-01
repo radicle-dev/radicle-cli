@@ -1,26 +1,29 @@
-use nonempty::NonEmpty;
-
-pub use git2::{Note, Oid, Repository};
+//! Proposal-related functions and types.
+pub use nonempty::NonEmpty;
+pub use git2::{Note, Repository};
 pub use serde::{Deserialize, Serialize};
 
 /// Commit hash
-type Revision = Oid;
+type Revision = librad::git_ext::Oid;
 
 /// Content types supported by proposals.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum ContentType {
     Plain,
     Markdown,
 }
 
 /// Typed text content used by proposals.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Text {
     pub content: String,
     pub mime: ContentType,
 }
-
+    
 /// Data structure as specified in RFC. A "proposal" is conceptually similar
 /// to a "topic branch": a series of one or more commits made on top of some
 /// commit within the ancestry graph of the project's main branch.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Metadata {
     // The title should contain a very short and concise summary of
     // this proposal.
@@ -47,17 +50,15 @@ mod test {
                 mime: ContentType::Plain,
             }),
             revisions: NonEmpty {
-                head: Oid::zero(),
-                tail: vec![Oid::zero()],
+                head: Revision::from(git2::Oid::zero()),
+                tail: vec![Revision::from(git2::Oid::zero())],
             },
         };
 
         assert_eq!(metadata.title, "Title".to_owned());
-        assert_eq!(metadata.revisions.head, Oid::zero());
-        assert_eq!(
-            metadata.description.unwrap().content,
-            "Description".to_owned()
-        );
-        assert_eq!(metadata.description.unwrap().mime, ContentType::Plain);
+        assert_eq!(metadata.description.as_ref().unwrap().content, "Description".to_owned());
+        assert_eq!(metadata.description.as_ref().unwrap().mime, ContentType::Plain);
+        assert_eq!(metadata.revisions.head, Revision::from(git2::Oid::zero()));
+        
     }
 }
