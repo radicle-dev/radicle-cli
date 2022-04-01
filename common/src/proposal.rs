@@ -20,3 +20,27 @@ pub struct Metadata {
     // Description or "cover letter" of this proposal.
     pub description: Option<String>,
 }
+
+#[cfg(test)]
+mod test {
+    use assay::assay;
+    use super::*;
+
+    #[assay]
+    fn fields_can_be_initialized() {
+        let metadata = Metadata {
+            patch: Patch {
+                title: "Title".to_owned(),
+                revisions: NonEmpty {
+                    head: Oid::zero(),
+                    tail: vec![Oid::zero()],
+                },
+            },
+            description: Some("Description".to_owned()),
+        };
+
+        assert_eq!(metadata.patch.title, "Title".to_owned());
+        assert_eq!(metadata.patch.revisions.head, Oid::zero());
+        assert_eq!(metadata.description, Some("Description".to_owned()));
+    }
+}
