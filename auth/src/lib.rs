@@ -251,6 +251,7 @@ mod tests {
     use super::*;
 
     use rad_common::test;
+    use test::setup::Steps;
 
     fn create_auth_options(username: &str) -> Options {
         Options {
@@ -262,7 +263,7 @@ mod tests {
     }
 
     #[assay(
-        setup = test::setup::lnk_home()?,
+        setup = test::setup::with_steps(vec![Steps::CreateLnkHome])?,
         teardown = test::teardown::profiles()?,
     )]
     fn can_be_initialized() {

@@ -57,11 +57,6 @@ pub mod setup {
         Ok((storage, urn, repo)) 
     }
 
-    pub fn lnk_home() -> Result<(), BoxedError> {
-        env::set_var(LNK_HOME, env::current_dir()?.join("lnk_home"));
-        Ok(())
-    }
-
     pub fn repo_path() -> PathBuf {
         env::current_dir().unwrap().join("repo_dir")
     }
