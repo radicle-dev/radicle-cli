@@ -8,13 +8,14 @@ use rad_common::test;
 
 mod auth {
     use super::*;
+    use test::setup::*;
 
     const USERNAME_MISSING: &str = "missing argument for option '--username'";
     const PASSWORD_MISSING: &str = "missing argument for option '--password'";
     const INIT_MISSING: &str = "invalid option '--password'";
 
     #[assay(
-        setup = test::setup::lnk_home()?,
+        setup = with_steps(vec![Steps::CreateLnkHome])?,
         teardown = test::teardown::profiles()?,
     )]
     fn can_be_initialized() {
