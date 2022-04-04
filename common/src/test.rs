@@ -5,9 +5,9 @@ pub use git2::{Note, Repository};
 pub use nonempty::NonEmpty;
 pub use serde::{Deserialize, Serialize};
 
+use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::git::storage::Storage;
 use librad::git::Urn;
-use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::profile::LNK_HOME;
 
 use super::{git, keys, profile, project, test};
@@ -46,7 +46,7 @@ pub mod setup {
         Ok(())
     }
 
-    pub fn environment() -> Result<(Storage, Urn, Repository), BoxedError>{
+    pub fn environment() -> Result<(Storage, Urn, Repository), BoxedError> {
         let repo = git::Repository::open(test::setup::repo_path())?;
         let urn = project::rad_remote(&repo)?.url.urn;
 
@@ -54,7 +54,7 @@ pub mod setup {
         let sock = keys::ssh_auth_sock();
         let (_, storage) = keys::storage(&profile, sock)?;
 
-        Ok((storage, urn, repo)) 
+        Ok((storage, urn, repo))
     }
 
     pub fn repo_path() -> PathBuf {
