@@ -28,8 +28,10 @@ pub const HELP: Help = Help {
 Usage
 
     rad gov [<options>...] <command> [<args>...]
-    rad gov [<options>...] vote <proposal-id> (true | false)
+    rad gov [<options>...] execute <proposal-id>
     rad gov [<options>...] propose <proposal-file>
+    rad gov [<options>...] queue <proposal-id>
+    rad gov [<options>...] vote <proposal-id> (true | false)
 
 Options
 
@@ -42,13 +44,17 @@ Wallet options
     --keystore <file>            Keystore file containing encrypted private key (default: none)
 
 Commands
-    propose (short: p)
-    vote    (short: v)
+    execute (short: e)  execute a proposal
+    propose (short: p)  make a governance proposal
+    queue   (short: q)  queue a proposal
+    vote    (short: v)  vote on a proposal
 "#,
 };
 
 enum Command {
+    Execute { id: U256 },
     Propose { file: OsString },
+    Queue { id: U256 },
     Vote { id: U256 },
 }
 
@@ -74,16 +80,30 @@ impl Args for Options {
                     return Err(Error::Help.into());
                 }
                 Value(val) if command.is_none() => {
-                    if val == "vote" || val == "v" {
+                    if val == "execute" || val == "e" {
+                        let id = parser
+                            .value()?
+                            .to_str()
+                            .map(U256::from_dec_str)
+                            .ok_or_else(|| anyhow!("Proposal ID is not a valid uint256"))??;
+                        command = Some(Command::Execute { id });
+                    } else if val == "propose" || val == "p" {
+                        let file = parser.value()?;
+                        command = Some(Command::Propose { file });
+                    } else if val == "queue" || val == "q" {
+                        let id = parser
+                            .value()?
+                            .to_str()
+                            .map(U256::from_dec_str)
+                            .ok_or_else(|| anyhow!("Proposal ID is not a valid uint256"))??;
+                        command = Some(Command::Queue { id });
+                    } else if val == "vote" || val == "v" {
                         let id = parser
                             .value()?
                             .to_str()
                             .map(U256::from_dec_str)
                             .ok_or_else(|| anyhow!("Proposal ID is not a valid uint256"))??;
                         command = Some(Command::Vote { id });
-                    } else if val == "propose" || val == "p" {
-                        let file = parser.value()?;
-                        command = Some(Command::Propose { file });
                     }
                 }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
@@ -113,14 +133,30 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let governance = Governance::new(signer);
 
     match options.command {
+        Command::Execute { id } => {
+            rt.block_on(run_execute(id, governance))?;
+        }
         Command::Propose { file } => {
             rt.block_on(run_propose(file, governance))?;
+        }
+        Command::Queue { id } => {
+            rt.block_on(run_queue(id, governance))?;
         }
         Command::Vote { id } => {
             rt.block_on(run_vote(id, governance))?;
         }
     }
 
+    Ok(())
+}
+
+async fn run_execute<M>(id: U256, governance: Governance<M>) -> anyhow::Result<()>
+where
+    M: Middleware + 'static,
+    crate::governance::Error<M>: From<<M as Middleware>::Error>,
+{
+    let call = governance.execute_proposal(id).await?;
+    ethereum::transaction(call).await?;
     Ok(())
 }
 
@@ -204,6 +240,16 @@ where
     let call = governance.propose(targets, values, signatures, calldatas, content)?;
     ethereum::transaction(call).await?;
 
+    Ok(())
+}
+
+async fn run_queue<M>(id: U256, governance: Governance<M>) -> anyhow::Result<()>
+where
+    M: Middleware + 'static,
+    crate::governance::Error<M>: From<<M as Middleware>::Error>,
+{
+    let call = governance.queue_proposal(id).await?;
+    ethereum::transaction(call).await?;
     Ok(())
 }
 

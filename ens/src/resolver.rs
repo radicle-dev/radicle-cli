@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use ethers::contract::ContractError;
 use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
 use ethers::types::{Address, Bytes};
 use ethers::{
     abi::{Abi, Detokenize, ParamType},
-    contract::{AbiError, Contract},
+    contract::{AbiError, Contract, ContractError},
     prelude::builders::ContractCall,
     providers::{ens::ENS_ADDRESS, Provider},
 };

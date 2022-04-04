@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use ethers::contract::ContractError;
 use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
 use ethers::types::{Address, U256};
 use ethers::{
     abi::Abi,
-    contract::{AbiError, Contract},
+    contract::{AbiError, Contract, ContractError},
     prelude::builders::ContractCall,
     providers::Provider,
 };
@@ -24,6 +23,8 @@ pub struct Governance<M> {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error<M: Middleware> {
+    #[error("Expected proposal state to be {1}, but currently is {0}")]
+    ProposalStateMismatch(ProposalState, ProposalState),
     #[error(transparent)]
     Provider(#[from] ProviderError),
     #[error(transparent)]
@@ -31,10 +32,31 @@ pub enum Error<M: Middleware> {
     #[error(transparent)]
     Abi(#[from] ethers::abi::Error),
     #[error(transparent)]
+    ContractAbi(#[from] AbiError),
+    #[error(transparent)]
     SignerMiddleware(#[from] SignerMiddlewareError<Provider<Http>, ethereum::Wallet>),
 }
 
 type Proposal = (Address, U256, U256, U256, U256, U256, bool, bool);
+
+#[derive(PartialEq, Debug)]
+pub enum ProposalState {
+    Pending,
+    Active,
+    Canceled,
+    Defeated,
+    Succeeded,
+    Queued,
+    Expired,
+    Executed,
+    Undefined,
+}
+
+impl std::fmt::Display for ProposalState {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 impl<M> Governance<M>
 where
@@ -60,8 +82,55 @@ where
         Ok(proposal)
     }
 
+    async fn get_proposal_state(&self, id: U256) -> Result<ProposalState, Error<M>> {
+        let state = self
+            .contract
+            .method("state", id)
+            .map_err(ContractError::from)?
+            .call()
+            .await?;
+
+        let state = match state {
+            0 => ProposalState::Pending,
+            1 => ProposalState::Active,
+            2 => ProposalState::Canceled,
+            3 => ProposalState::Defeated,
+            4 => ProposalState::Succeeded,
+            5 => ProposalState::Queued,
+            6 => ProposalState::Expired,
+            7 => ProposalState::Executed,
+            _ => ProposalState::Undefined,
+        };
+
+        Ok(state)
+    }
+
     pub fn cast_vote(&self, id: U256, support: bool) -> Result<ContractCall<M, ()>, AbiError> {
         self.contract.method("castVote", (id, support))
+    }
+
+    pub async fn queue_proposal(&self, id: U256) -> Result<ContractCall<M, ()>, Error<M>> {
+        let state = self.get_proposal_state(id).await?;
+        let wanted = ProposalState::Succeeded;
+        if state != wanted {
+            return Err(Error::ProposalStateMismatch(state, wanted));
+        }
+
+        self.contract
+            .method("queue", id)
+            .map_err(Error::ContractAbi)
+    }
+
+    pub async fn execute_proposal(&self, id: U256) -> Result<ContractCall<M, ()>, Error<M>> {
+        let state = self.get_proposal_state(id).await?;
+        let wanted = ProposalState::Queued;
+        if state != wanted {
+            return Err(Error::ProposalStateMismatch(state, wanted));
+        }
+
+        self.contract
+            .method("execute", id)
+            .map_err(Error::ContractAbi)
     }
 
     pub fn propose(
