@@ -17,14 +17,14 @@ Usage
 
     rad auth [--init | --active] [<options>...]
 
-    If `--init` is used, username and password may be given via the `--username`
+    If `--init` is used, name and password may be given via the `--name`
     and `--password` option. Using these disables the respective input prompt.
 
 Options
 
     --init                  Initialize a new identity
     --active                Authenticate with the currently active profile
-    --username <username>   Use given username (default: none)
+    --name <name>           Use given name (default: none)
     --password <password>   Use given password (default: none)
     --help                  Print help
 "#,
@@ -34,7 +34,7 @@ Options
 pub struct Options {
     pub init: bool,
     pub active: bool,
-    pub username: Option<String>,
+    pub name: Option<String>,
     pub password: Option<String>,
 }
 
@@ -44,7 +44,7 @@ impl Args for Options {
 
         let mut init = false;
         let mut active = false;
-        let mut username = None;
+        let mut name = None;
         let mut password = None;
         let mut parser = lexopt::Parser::from_args(args);
 
@@ -56,16 +56,14 @@ impl Args for Options {
                 Long("active") => {
                     active = true;
                 }
-                Long("username") if init && username.is_none() => {
+                Long("name") if init && name.is_none() => {
                     let val = parser
                         .value()?
                         .to_str()
-                        .ok_or(anyhow::anyhow!(
-                            "invalid username specified with `--username`"
-                        ))?
+                        .ok_or(anyhow::anyhow!("invalid name specified with `--name`"))?
                         .to_owned();
 
-                    username = Some(val);
+                    name = Some(val);
                 }
                 Long("password") if init && password.is_none() => {
                     let val = parser
@@ -94,7 +92,7 @@ impl Args for Options {
             Options {
                 init,
                 active,
-                username,
+                name,
                 password,
             },
             vec![],
@@ -128,9 +126,9 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         term::blank();
     }
 
-    let username = options
-        .username
-        .unwrap_or_else(|| term::text_input("Username", None).unwrap());
+    let name = options
+        .name
+        .unwrap_or_else(|| term::text_input("Name", None).unwrap());
     let pass = term::pwhash(
         options
             .password
@@ -152,7 +150,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     spinner.finish();
 
-    let person = person::create(&profile, &username, signer, &storage)?;
+    let person = person::create(&profile, &name, signer, &storage)?;
     person::set_local(&storage, &person);
 
     term::success!(
@@ -252,11 +250,11 @@ mod tests {
 
     use rad_common::test;
 
-    fn create_auth_options(username: &str) -> Options {
+    fn create_auth_options(name: &str) -> Options {
         Options {
             active: false,
             init: true,
-            username: Some(username.to_owned()),
+            name: Some(name.to_owned()),
             password: Some(test::USER_PASS.to_owned()),
         }
     }

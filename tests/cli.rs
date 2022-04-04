@@ -9,7 +9,7 @@ use rad_common::test;
 mod auth {
     use super::*;
 
-    const USERNAME_MISSING: &str = "missing argument for option '--username'";
+    const NAME_MISSING: &str = "missing argument for option '--name'";
     const PASSWORD_MISSING: &str = "missing argument for option '--password'";
     const INIT_MISSING: &str = "invalid option '--password'";
 
@@ -19,13 +19,7 @@ mod auth {
     )]
     fn can_be_initialized() {
         let status = Command::cargo_bin("rad-auth")?
-            .args([
-                "--init",
-                "--username",
-                "user1",
-                "--password",
-                test::USER_PASS,
-            ])
+            .args(["--init", "--name", "user1", "--password", test::USER_PASS])
             .status();
         assert!(status?.success());
     }
@@ -33,11 +27,11 @@ mod auth {
     #[assay]
     fn username_missing() {
         let output = Command::cargo_bin("rad-auth")?
-            .args(["--init", "--username"])
+            .args(["--init", "--name"])
             .output()?;
         let result = String::from_utf8_lossy(&output.stderr);
 
-        assert!(result.contains(USERNAME_MISSING), "{}", result);
+        assert!(result.contains(NAME_MISSING), "{}", result);
     }
 
     #[assay]
