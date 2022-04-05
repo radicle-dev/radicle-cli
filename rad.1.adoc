@@ -40,7 +40,7 @@ command:
 
   $ rad auth
 
-Follow the instructions by entering a username and password to protect your key
+Follow the instructions by entering a name and password to protect your key
 pair. When you've completed the steps, your *Peer ID* will be displayed. This
 identifies your radicle key pair and device, as well as all the code you
 publish. Share it freely with collaborators.
