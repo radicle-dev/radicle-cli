@@ -107,6 +107,7 @@ members = [
   "init",
   "ls",
   "rm",
+  "patch",
   "push",
   "pull",
   "remote",
