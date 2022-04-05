@@ -1,8 +1,10 @@
+pub mod command;
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
 pub mod format;
 pub mod io;
 pub mod keys;
+pub mod patch;
 pub mod spinner;
 pub mod table;
 pub mod textbox;
@@ -12,6 +14,7 @@ use std::process;
 use dialoguer::console::style;
 use radicle_common::args::{Args, Error, Help};
 
+pub use dialoguer::Editor;
 pub use io::*;
 pub use spinner::spinner;
 pub use table::Table;

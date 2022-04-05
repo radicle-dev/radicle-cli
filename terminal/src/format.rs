@@ -16,6 +16,10 @@ pub fn tertiary<D: std::fmt::Display>(msg: D) -> String {
     style(msg).cyan().to_string()
 }
 
+pub fn tertiary_bold<D: std::fmt::Display>(msg: D) -> String {
+    style(msg).cyan().bold().to_string()
+}
+
 pub fn yellow<D: std::fmt::Display>(msg: D) -> String {
     style(msg).yellow().to_string()
 }

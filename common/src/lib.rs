@@ -5,6 +5,7 @@ pub mod cobs;
 pub mod git;
 pub mod keys;
 pub mod logger;
+pub mod patch;
 pub mod person;
 pub mod profile;
 pub mod project;

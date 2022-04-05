@@ -32,6 +32,7 @@ assets = [
     ["target/release/rad-init", "usr/bin/rad-init", "755"],
     ["target/release/rad-issue", "usr/bin/rad-issue", "755"],
     ["target/release/rad-clone", "usr/bin/rad-clone", "755"],
+    ["target/release/rad-patch", "usr/bin/rad-patch", "755"],
     ["target/release/rad-pull", "usr/bin/rad-pull", "755"],
     ["target/release/rad-checkout", "usr/bin/rad-checkout", "755"],
     ["target/release/rad-untrack", "usr/bin/rad-untrack", "755"],
@@ -59,6 +60,7 @@ rad-init = { path = "./init" }
 rad-self = { path = "./self" }
 rad-inspect = { path = "./inspect" }
 rad-issue = { path = "./issue" }
+rad-patch = { path = "./patch" }
 rad-push = { path = "./push" }
 rad-pull = { path = "./pull" }
 rad-sync = { path = "./sync" }
@@ -115,6 +117,7 @@ members = [
   "ls",
   "rm",
   "issue",
+  "patch",
   "push",
   "pull",
   "remote",

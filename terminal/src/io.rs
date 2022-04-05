@@ -9,6 +9,7 @@ use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Pas
 
 use radicle_common::signer::ToSigner;
 
+use super::command;
 use super::keys;
 use super::spinner::spinner;
 use super::Error;
@@ -146,13 +147,22 @@ pub fn fail(header: &str, error: &anyhow::Error) {
     }
 }
 
-pub fn confirm<D: fmt::Display>(prompt: D) -> bool {
+pub fn ask<D: fmt::Display>(prompt: D, default: bool) -> bool {
     dialoguer::Confirm::new()
         .with_prompt(format!("{} {}", style(" ⤷".to_owned()).cyan(), prompt))
         .wait_for_newline(false)
         .default(true)
+        .default(default)
         .interact()
         .unwrap_or_default()
+}
+
+pub fn confirm<D: fmt::Display>(prompt: D) -> bool {
+    ask(prompt, true)
+}
+
+pub fn abort<D: fmt::Display>(prompt: D) -> bool {
+    ask(prompt, false)
 }
 
 /// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.
@@ -313,6 +323,16 @@ pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&
         .unwrap();
 
     selection.map(|i| &profiles[i])
+}
+
+pub fn markdown(content: &str) {
+    if !content.is_empty() {
+        blank();
+        if command::bat(["-p", "-l", "md"], content).is_err() {
+            blob(content);
+        }
+        blank();
+    }
 }
 
 fn _info(args: std::fmt::Arguments) {

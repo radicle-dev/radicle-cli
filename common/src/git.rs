@@ -318,6 +318,45 @@ pub fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
         .and_then(|(peer, r)| PeerId::from_str(peer).ok().map(|p| (p, r)))
 }
 
+pub fn view_diff(
+    repo: &git2::Repository,
+    left: &git2::Oid,
+    right: &git2::Oid,
+) -> anyhow::Result<()> {
+    // TODO(erikli): Replace with repo.diff()
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| anyhow!("Could not get workdir current repository."))?;
+
+    let left = format!("{:.7}", left.to_string());
+    let right = format!("{:.7}", right.to_string());
+
+    let mut git = Command::new("git")
+        .current_dir(workdir)
+        .args(["diff", &left, &right])
+        .spawn()?;
+    git.wait()?;
+
+    Ok(())
+}
+
+pub fn add_tag(repo: &git2::Repository, message: &str, patch_tag_name: &str) -> anyhow::Result<()> {
+    let head = repo.head()?;
+    let commit = head.peel(git2::ObjectType::Commit).unwrap();
+
+    repo.tag(patch_tag_name, &commit, &repo.signature()?, message, false)?;
+
+    Ok(())
+}
+
+pub fn push_tag(tag_name: &str) -> anyhow::Result<String> {
+    git(Path::new("."), vec!["push", "rad", "tag", tag_name])
+}
+
+pub fn push_branch(name: &str) -> anyhow::Result<String> {
+    git(Path::new("."), vec!["push", "rad", name])
+}
+
 fn write_gitsigner(mut w: impl io::Write, signer: &PeerId) -> io::Result<()> {
     writeln!(w, "{} {}", signer, keys::to_ssh_key(signer)?)
 }
