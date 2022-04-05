@@ -2643,6 +2643,8 @@ dependencies = [
  "libc",
  "libgit2-sys",
  "log",
+ "openssl-probe",
+ "openssl-sys",
  "url",
 ]
 
@@ -3278,7 +3280,9 @@ checksum = "19e1c899248e606fbfe68dcb31d8b0176ebab833b103824af31bddf4b7457494"
 dependencies = [
  "cc",
  "libc",
+ "libssh2-sys",
  "libz-sys",
+ "openssl-sys",
  "pkg-config",
 ]
 
@@ -3361,6 +3365,20 @@ dependencies = [
  "uuid",
  "webpki 0.21.4",
  "xorf",
+]
+
+[[package]]
+name = "libssh2-sys"
+version = "0.2.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b094a36eb4b8b8c8a7b4b8ae43b2944502be3e59cd87687595cf6b0a71b3f4ca"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "openssl-sys",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
@@ -4911,6 +4929,18 @@ dependencies = [
 [[package]]
 name = "rad-patch"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "git2",
+ "lexopt",
+ "librad",
+ "lnk-identities",
+ "lnk-profile",
+ "rad-common",
+ "rad-terminal",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "rad-pull"
@@ -5051,6 +5081,7 @@ dependencies = [
  "rad-init",
  "rad-inspect",
  "rad-ls",
+ "rad-patch",
  "rad-pull",
  "rad-push",
  "rad-remote",
