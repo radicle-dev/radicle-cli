@@ -4,126 +4,11 @@ on:
     tags:
       - test
       - "v[0-9]+.[0-9]+.[0-9]+"
+    branches:
+      - adaszko/*
 
 jobs:
-  create-artifacts:
-    strategy:
-      matrix:
-        build:
-          - linux-latest-stable-rust
-          - macos-latest-stable-rust
-        include:
-          - build: linux-latest-stable-rust
-            os: ubuntu-latest
-            rust: stable
-            target: i686-ubuntu-linux-gnu
-          - build: macos-latest-stable-rust
-            os: macos-latest
-            rust: stable
-            target: x86_64-apple-darwin
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Update dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y pkg-config libudev-dev asciidoctor
-      - name: Install macOS dependencies
-        if: matrix.os == 'macos-latest'
-        run: brew install asciidoctor
-      - uses: actions/checkout@v2
-      - name: Configure build cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-            !target/debian
-          key: cargo-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-      - name: script
-        run: .github/build-man-page.bash $(find . -name '*.adoc')
-        shell: bash
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-      - name: Install cargo-deb (Linux)
-        run: cargo install cargo-deb
-        if: matrix.os == 'ubuntu-latest'
-      - name: Build the release binaries
-        run: cargo build --release
-      - name: Run cargo deb (Linux)
-        run: cargo deb
-        if: matrix.os == 'ubuntu-latest'
-      - name: Build the release archive (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          staging="radicle-cli-${{ matrix.target }}"
-          mkdir -p "$staging"
-          find ./target/release -maxdepth 1 -name 'rad*' -executable | xargs --replace cp '{}' "$staging"/
-          cp ./target/release/git-remote-rad "$staging"/
-          cp *.1.gz "$staging"/
-          tar czf "$staging.tar.gz" "$staging"
-      - name: Build the release archive (macOS)
-        if: matrix.os == 'macos-latest'
-        shell: bash
-        run: |
-          staging="radicle-cli-${{ matrix.target }}"
-          mkdir -p "$staging"
-          find ./target/release -maxdepth 1 -name 'rad*' -perm +111 -type f | xargs -J '{}' -n 1 cp '{}' "$staging"/
-          cp ./target/release/git-remote-rad "$staging"/
-          cp *.1.gz "$staging"/
-          tar czf "$staging.tar.gz" "$staging"
-      - name: Release (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        uses: softprops/action-gh-release@v1
-        with:
-          fail_on_unmatched_files: true
-          files: |
-            radicle-cli-*.tar.gz
-            target/debian/*.deb
-      - uses: actions/upload-artifact@v2
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          name: deb-package
-          path: target/debian/*.deb
-      - name: Release (macOS)
-        if: matrix.os == 'macos-latest'
-        uses: softprops/action-gh-release@v1
-        with:
-          fail_on_unmatched_files: true
-          files: |
-            radicle-cli-*.tar.gz
-
-  upload-deb:
-    needs: create-artifacts
-    runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: deb-package
-      - id: 'auth'
-        uses: 'google-github-actions/auth@v0'
-        with:
-          workload_identity_provider: 'projects/281042598092/locations/global/workloadIdentityPools/github-actions/providers/google-cloud'
-          service_account: 'github-actions@radicle-services.iam.gserviceaccount.com'
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v0'
-        with:
-          install_components: beta
-      - name: Upload .deb package to an APT repo
-        run: gcloud --quiet beta artifacts apt upload radicle-cli --location=europe-west6 --source *.deb
-
   test-drive-deb:
-    needs: upload-deb
     strategy:
       matrix:
         build:
@@ -146,6 +31,8 @@ jobs:
         run: echo deb https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
       - name: Update APT sources
         run: sudo apt update
+      - name: Show APT version
+        run: apt --version
       - name: Install Radicle package
         run: sudo apt install radicle-cli
       - name: Test drive radicle binary
