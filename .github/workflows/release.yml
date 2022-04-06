@@ -30,10 +30,10 @@ jobs:
       - name: Add APT source
         run: echo deb https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
       - name: Update APT sources
-        run: sudo apt update
+        run: sudo apt-get update
       - name: Show APT version
-        run: apt --version
+        run: apt-get --version
       - name: Install Radicle package
-        run: sudo apt install radicle-cli
+        run: sudo apt-get install radicle-cli
       - name: Test drive radicle binary
         run: rad help
