@@ -121,3 +121,32 @@ jobs:
           install_components: beta
       - name: Upload .deb package to an APT repo
         run: gcloud --quiet beta artifacts apt upload radicle-cli --location=europe-west6 --source *.deb
+
+  test-drive-deb:
+    needs: upload-deb
+    strategy:
+      matrix:
+        build:
+          - ubuntu-18.04
+          - ubuntu-20.04
+        include:
+          - build: ubuntu-18.04
+            os: ubuntu-18.04
+            rust: stable
+            target: i686-ubuntu-linux-gnu
+          - build: ubuntu-20.04
+            os: ubuntu-20.04
+            rust: stable
+            target: i686-ubuntu-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add APT repo
+        run: curl https://europe-west6-apt.pkg.dev/doc/repo-signing-key.gpg | sudo apt-key add -
+      - name: Add APT source
+        run: echo deb https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
+      - name: Update APT sources
+        run: sudo apt update
+      - name: Install Radicle package
+        run: sudo apt install radicle-cli
+      - name: Test drive radicle binary
+        run: rad help
