@@ -1,6 +1,7 @@
 //! Common radicle utilities.
 pub mod git;
 pub mod keys;
+pub mod patch;
 pub mod person;
 pub mod profile;
 pub mod project;

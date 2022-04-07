@@ -53,9 +53,9 @@ impl Metadata {
 /// patches if `peer` is `None`.
 pub fn list<S>(
     storage: &S,
-    repo: &git2::Repository,
-    project: &project::Metadata,
     peer: Option<PeerId>,
+    project: &project::Metadata,
+    repo: &git2::Repository,
 ) -> Result<Vec<Metadata>, Error>
 where
     S: AsRef<ReadOnly>,
@@ -67,27 +67,24 @@ where
         .target()
         .unwrap();
 
-    match Refs::load(&storage, &project.urn, peer) {
-        Ok(refs) => {
-            let blobs = match refs {
-                Some(refs) => refs.tags().collect(),
-                None => vec![],
-            };
-            for blob in blobs {
-                let object = storage.find_object(blob.1)?.unwrap();
-                let tag = object.peel_to_tag()?;
-                let merge_base = repo.merge_base(master, tag.target_id())?;
+    if let Ok(refs) = Refs::load(&storage, &project.urn, peer) {
+        let blobs = match refs {
+            Some(refs) => refs.tags().collect(),
+            None => vec![],
+        };
+        for blob in blobs {
+            let object = storage.find_object(blob.1)?.unwrap();
+            let tag = object.peel_to_tag()?;
+            let merge_base = repo.merge_base(master, tag.target_id())?;
 
-                patches.push(Metadata {
-                    id: tag.name().unwrap().to_string(),
-                    peer: peer.unwrap_or(*storage.peer_id()),
-                    message: Some(tag.message().unwrap().to_string()),
-                    commit: tag.target_id(),
-                    merge_base: Some(merge_base),
-                });
-            }
+            patches.push(Metadata {
+                id: tag.name().unwrap().to_string(),
+                peer: peer.unwrap_or(*storage.peer_id()),
+                message: Some(tag.message().unwrap().to_string()),
+                commit: tag.target_id(),
+                merge_base: Some(merge_base),
+            });
         }
-        Err(_) => {}
     }
 
     Ok(patches)
@@ -95,10 +92,10 @@ where
 
 /// Adds patch details as a new row to `table` and render later.
 pub fn print<S>(
-    project: &project::Metadata,
     storage: &S,
-    patch: &Metadata,
     peer: Option<PeerId>,
+    project: &project::Metadata,
+    patch: &Metadata,
     table: &mut term::Table<2>,
 ) -> anyhow::Result<()>
 where

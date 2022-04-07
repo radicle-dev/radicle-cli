@@ -118,15 +118,27 @@ fn list_filtered(
     state: patch::State,
 ) -> anyhow::Result<()> {
     let mut table = term::Table::default();
-    let patches: Vec<patch::Metadata> = patch::list(&storage, peer, project, repo)?;
+    let mut patches: Vec<patch::Metadata> = patch::list(&storage, peer, project, repo)?;
+
+    let tracked = project::tracked(project, storage)?;
+    for (peer_id, _) in tracked {
+        let mut others = patch::list(&storage, Some(peer_id), project, repo)?;
+        patches.append(&mut others);
+    }
+
     let filtered: Vec<&patch::Metadata> = patches
         .iter()
         .filter(|patch| patch.state() == state)
         .collect();
 
-    for patch in filtered {
-        patch::print(storage, peer, project, patch, &mut table)?;
+    if !filtered.is_empty() {
+        for patch in filtered {
+            patch::print(storage, peer, project, patch, &mut table)?;
+        }
+    } else {
+        term::info!("No patches found.");
     }
+
     table.render();
     Ok(())
 }
