@@ -119,7 +119,7 @@ fn list_filtered(
 ) -> anyhow::Result<()> {
     let mut table = term::Table::default();
     let mut patches: Vec<patch::Metadata> = patch::list(&storage, peer, project, repo)?;
-
+    
     let tracked = project::tracked(project, storage)?;
     for (peer_id, _) in tracked {
         let mut others = patch::list(&storage, Some(peer_id), project, repo)?;
