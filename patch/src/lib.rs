@@ -2,10 +2,13 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
+use librad::git::Storage;
+use librad::PeerId;
+
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
-use rad_common::{keys, profile, project};
+use rad_common::{keys, patch, profile, project};
 
 pub const HELP: Help = Help {
     name: "patch",
@@ -56,17 +59,17 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let (urn, _repo) = project::cwd()
+    let (urn, repo) = project::cwd()
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
 
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (_signer, storage) = keys::storage(&profile, sock)?;
-    let _project = project::get(&storage, &urn)?
+    let project = project::get(&storage, &urn)?
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
     if options.list {
-        list()?;
+        list(project, &storage, &repo)?;
     } else {
         create()?;
     }
@@ -74,8 +77,29 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn list() -> anyhow::Result<()> {
-    term::warning("Not implemented yet!");
+fn list(
+    project: project::Metadata,
+    storage: &Storage,
+    repo: &git2::Repository,
+) -> anyhow::Result<()> {
+    let peer = None;
+    term::headline(&format!(
+        "🌱 Listing patches for {}.",
+        term::format::highlight(project.name.clone())
+    ));
+
+    term::info!("[{}]", term::format::secondary("Open"));
+    term::blank();
+
+    list_filtered(storage, peer, &project, repo, patch::State::Open)?;
+    term::blank();
+    term::blank();
+
+    term::info!("[{}]", term::format::positive("Merged"));
+    term::blank();
+
+    list_filtered(storage, peer, &project, repo, patch::State::Merged)?;
+    term::blank();
 
     Ok(())
 }
@@ -83,5 +107,26 @@ fn list() -> anyhow::Result<()> {
 fn create() -> anyhow::Result<()> {
     term::warning("Not implemented yet!");
 
+    Ok(())
+}
+
+fn list_filtered(
+    storage: &Storage,
+    peer: Option<PeerId>,
+    project: &project::Metadata,
+    repo: &git2::Repository,
+    state: patch::State,
+) -> anyhow::Result<()> {
+    let mut table = term::Table::default();
+    let patches: Vec<patch::Metadata> = patch::list(&storage, peer, project, repo)?;
+    let filtered: Vec<&patch::Metadata> = patches
+        .iter()
+        .filter(|patch| patch.state() == state)
+        .collect();
+
+    for patch in filtered {
+        patch::print(storage, peer, project, patch, &mut table)?;
+    }
+    table.render();
     Ok(())
 }
