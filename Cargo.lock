@@ -784,6 +784,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17cc5e6b5ab06331c33589842070416baa137e8b0eb912b008cfd4a78ada7919"
 
 [[package]]
+name = "chrono"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+dependencies = [
+ "libc",
+ "num-integer",
+ "num-traits",
+ "time 0.1.43",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "chunked_transfer"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2270,7 +2283,7 @@ dependencies = [
  "prodash 18.0.2",
  "quick-error 2.0.1",
  "sha1_smol",
- "time",
+ "time 0.3.7",
  "walkdir",
 ]
 
@@ -3170,7 +3183,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "time",
+ "time 0.3.7",
  "url",
  "uuid",
 ]
@@ -3351,7 +3364,7 @@ dependencies = [
  "socket2 0.4.4",
  "tempfile",
  "thiserror",
- "time",
+ "time 0.3.7",
  "tokio",
  "toml",
  "tracing",
@@ -4887,6 +4900,7 @@ name = "rad-inspect"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "colored_json",
  "lexopt",
  "librad",
@@ -6178,6 +6192,16 @@ dependencies = [
  "byteorder",
  "cryptovec",
  "thiserror",
+]
+
+[[package]]
+name = "time"
+version = "0.1.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
 ]
 
 [[package]]

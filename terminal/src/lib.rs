@@ -73,6 +73,37 @@ pub mod components {
     pub use success;
     pub use tip;
 
+    pub struct Box(pub String);
+
+    impl fmt::Display for Box {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let mut width = self
+                .0
+                .lines()
+                .map(console::measure_text_width)
+                .max()
+                .unwrap_or(0)
+                + 2;
+            if self::width() < width + 2 {
+                width = self::width() - 2
+            }
+
+            let header = format!("╔{}╗\n", "═".repeat(width));
+            write!(f, "{}", header)?;
+
+            for l in self.0.lines() {
+                writeln!(
+                    f,
+                    "║ {}║",
+                    console::pad_str(l, width - 1, console::Alignment::Left, Some("…"))
+                )?;
+            }
+
+            let footer = format!("╚{}╝\n", "═".repeat(width));
+            write!(f, "{}", footer)
+        }
+    }
+
     #[derive(Debug, Default)]
     pub struct TableOptions {
         pub overflow: bool,

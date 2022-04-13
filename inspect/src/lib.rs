@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -8,10 +9,13 @@ use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 use librad::git::identities::any;
+use librad::git::storage::ReadOnlyStorage;
+use librad::git::types::Reference;
 use librad::git::Urn;
 
 use anyhow::anyhow;
 
+use chrono::prelude::*;
 use colored_json::prelude::*;
 
 pub const HELP: Help = Help {
@@ -32,6 +36,7 @@ Options
 
     --payload   Inspect the object's payload
     --refs      Inspect the object's refs on the local device (requires `tree`)
+    --history   Show object's history
     --help      Print help
 "#,
 };
@@ -42,6 +47,7 @@ pub struct Options {
     pub urn: Option<Urn>,
     pub refs: bool,
     pub payload: bool,
+    pub history: bool,
 }
 
 impl Args for Options {
@@ -53,6 +59,7 @@ impl Args for Options {
         let mut urn: Option<Urn> = None;
         let mut refs = false;
         let mut payload = false;
+        let mut history = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -64,6 +71,9 @@ impl Args for Options {
                 }
                 Long("payload") => {
                     payload = true;
+                }
+                Long("history") => {
+                    history = true;
                 }
                 Value(val) if path.is_none() && urn.is_none() => {
                     let val = val.to_string_lossy();
@@ -86,6 +96,7 @@ impl Args for Options {
             Options {
                 path,
                 payload,
+                history,
                 refs,
                 urn,
             },
@@ -127,6 +138,64 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             "{}",
             serde_json::to_string_pretty(&payload)?.to_colored_json_auto()?
         );
+    } else if options.history {
+        let branch = Reference::try_from(&urn)?;
+        match storage.reference(&branch) {
+            Ok(Some(reference)) => {
+                let mut tip = reference.peel_to_commit()?;
+
+                loop {
+                    let tree = tip.tree()?;
+                    let entry = tree
+                        .get(0)
+                        .ok_or(anyhow!("Couldn't get the first tree entry"))?
+                        .id();
+                    let blob = storage
+                        .find_object(Box::new(entry))?
+                        .ok_or(anyhow!(
+                            "Couldn't find the object being pointed to by first tree entry"
+                        ))?
+                        .into_blob()
+                        .map_err(|_| anyhow!("First tree entry is not a blob"))?;
+                    let content: serde_json::Value = serde_json::from_slice(blob.content())?;
+                    let timezone = if tip.time().sign() == '+' {
+                        FixedOffset::east(tip.time().offset_minutes() * 60)
+                    } else {
+                        FixedOffset::west(tip.time().offset_minutes() * 60)
+                    };
+                    let time = DateTime::<Utc>::from(
+                        std::time::UNIX_EPOCH
+                            + std::time::Duration::from_secs(tip.time().seconds() as u64),
+                    )
+                    .with_timezone(&timezone)
+                    .to_rfc2822();
+
+                    println!(
+                        "{}  ▲\n  ┃\n  ┃\n",
+                        term::Box(format!(
+                            "tree {}\ncommit {}\nblob {}\ndate {}\n\n{}",
+                            term::format::highlight(term::format::bold(tree.id())),
+                            term::format::highlight(term::format::bold(tip.id())),
+                            term::format::highlight(term::format::bold(blob.id())),
+                            term::format::highlight(term::format::bold(time)),
+                            serde_json::to_string_pretty(&content)?.to_colored_json_auto()?,
+                        ))
+                    );
+
+                    match tip.parent(0) {
+                        Ok(p) => tip = p,
+                        Err(_) => break,
+                    }
+                }
+
+                println!(
+                    "{}",
+                    term::Box(term::format::highlight(term::format::bold(urn.to_string())))
+                );
+            }
+
+            _ => return Err(anyhow!("Couldn't find reference to {} in storage", urn)),
+        }
     } else {
         term::info!("{}", term::format::highlight(urn));
     }
