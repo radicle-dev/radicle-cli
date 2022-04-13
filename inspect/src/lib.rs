@@ -144,7 +144,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             Ok(Some(reference)) => {
                 let mut tip = reference.peel_to_commit()?;
 
-                loop {
+                for i in 0.. {
                     let tree = tip.tree()?;
                     let entry = tree
                         .get(0)
@@ -170,16 +170,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                     .with_timezone(&timezone)
                     .to_rfc2822();
 
-                    println!(
-                        "{}  ▲\n  ┃\n  ┃\n",
-                        term::Box(format!(
-                            "tree {}\ncommit {}\nblob {}\ndate {}\n\n{}",
-                            term::format::highlight(term::format::bold(tree.id())),
-                            term::format::highlight(term::format::bold(tip.id())),
-                            term::format::highlight(term::format::bold(blob.id())),
-                            term::format::highlight(term::format::bold(time)),
+                    print!(
+                        "{}",
+                        term::TextBox::new(format!(
+                            "{}\ncommit {}\nblob   {}\ndate   {}\n\n{}",
+                            term::format::yellow(format!("tree   {}", tree.id())),
+                            term::format::dim(tip.id()),
+                            term::format::dim(blob.id()),
+                            term::format::dim(time),
                             serde_json::to_string_pretty(&content)?.to_colored_json_auto()?,
                         ))
+                        .first(i == 0)
+                        .last(false)
                     );
 
                     match tip.parent(0) {
@@ -188,10 +190,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                     }
                 }
 
-                println!(
-                    "{}",
-                    term::Box(term::format::highlight(term::format::bold(urn.to_string())))
-                );
+                println!(" └─ {}", term::format::highlight(urn.to_string()));
+                println!();
             }
 
             _ => return Err(anyhow!("Couldn't find reference to {} in storage", urn)),
