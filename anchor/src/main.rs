@@ -137,20 +137,17 @@ async fn main() {
     logger::init(NAME).unwrap();
     logger::set_level(log::Level::Error);
 
-    match execute().await {
-        Err(err) => {
-            if let Some(&anchor::Error::NoWallet) =
-                err.downcast_ref::<anchor::Error<std::convert::Infallible>>()
-            {
-                log::error!("Error: no wallet specified: either '--ledger-hdpath' or '--keystore' must be specified");
-            } else if let Some(cause) = err.source() {
-                log::error!("Error: {} ({})", err, cause);
-            } else {
-                log::error!("Error: {}", err);
-            }
-            process::exit(1);
+    if let Err(err) = execute().await {
+        if let Some(&anchor::Error::NoWallet) =
+            err.downcast_ref::<anchor::Error<std::convert::Infallible>>()
+        {
+            log::error!("Error: no wallet specified: either '--ledger-hdpath' or '--keystore' must be specified");
+        } else if let Some(cause) = err.source() {
+            log::error!("Error: {} ({})", err, cause);
+        } else {
+            log::error!("Error: {}", err);
         }
-        Ok(()) => {}
+        process::exit(1);
     }
 }
 
