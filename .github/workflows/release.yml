@@ -119,3 +119,28 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             radicle-cli-*.tar.gz
+
+
+  smoke-test-deb:
+    needs: upload-deb
+    strategy:
+      matrix:
+        build:
+          - ubuntu-18.04
+          - ubuntu-20.04
+        include:
+          - build: ubuntu-18.04
+            os: ubuntu-18.04
+            rust: stable
+            target: i686-ubuntu-linux-gnu
+          - build: ubuntu-20.04
+            os: ubuntu-20.04
+            rust: stable
+            target: i686-ubuntu-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: curl https://europe-west6-apt.pkg.dev/doc/repo-signing-key.gpg | sudo apt-key add -
+      - run: echo deb https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
+      - run: sudo apt-get update
+      - run: sudo apt-get install radicle-cli
+      - run: rad help
