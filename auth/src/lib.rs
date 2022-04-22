@@ -108,7 +108,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if options.init || profiles.is_empty() || ignore_empty {
         init(options)
     } else {
-        authenticate(&profiles, options)
+        let profile = profile::default()?;
+        authenticate(&profiles, &profile, options)
     }
 }
 
@@ -178,9 +179,12 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::Result<()> {
+pub fn authenticate(
+    profiles: &[profile::Profile],
+    profile: &profile::Profile,
+    options: Options,
+) -> anyhow::Result<()> {
     let sock = keys::ssh_auth_sock();
-    let profile = profile::default()?;
 
     if !options.active {
         term::info!(
@@ -190,13 +194,13 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     }
 
     let selection = if profiles.len() > 1 && !options.active {
-        if let Some(p) = term::format::profile::select(profiles, &profile) {
+        if let Some(p) = term::format::profile::select(profiles, profile) {
             p
         } else {
             return Ok(());
         }
     } else {
-        &profile
+        profile
     };
 
     let read_only = profile::read_only(selection)?;
