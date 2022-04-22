@@ -240,13 +240,14 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
                 term::success!("Created {} file", term::format::tertiary(file.display()));
             }
             Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                let ssh_key = keys::to_ssh_key(peer_id)?;
                 let gitsigners = term::format::tertiary(".gitsigners");
                 term::success!("Found existing {} file", gitsigners);
 
-                let peer_ids =
+                let ssh_keys =
                     git::read_gitsigners(repo).context("error reading .gitsigners file")?;
 
-                if peer_ids.contains(peer_id) {
+                if ssh_keys.contains(&ssh_key) {
                     term::success!("Signing key is already in {} file", gitsigners);
                 } else if term::confirm(&format!("Add signing key to {}?", gitsigners)) {
                     git::add_gitsigners(repo, [peer_id])?;

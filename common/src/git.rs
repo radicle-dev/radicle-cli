@@ -188,30 +188,29 @@ pub fn add_gitsigners<'a>(
     Ok(())
 }
 
-/// Read a `.gitsigners` file.
-pub fn read_gitsigners(path: &Path) -> Result<HashSet<PeerId>, io::Error> {
+/// Read a `.gitsigners` file. Returns SSH keys.
+pub fn read_gitsigners(path: &Path) -> Result<HashSet<String>, io::Error> {
     use std::io::BufRead;
 
-    let mut peers = HashSet::new();
+    let mut keys = HashSet::new();
     let file = File::open(path.join(".gitsigners"))?;
 
     for line in io::BufReader::new(file).lines() {
         let line = line?;
-        if let Some((peer_id, key)) = line.split_once(' ') {
-            let peer = PeerId::from_str(peer_id)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-            let expected = keys::to_ssh_key(&peer)?;
-            if key != expected {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "key does not match peer id",
-                ));
+        if let Some((label, key)) = line.split_once(' ') {
+            if let Ok(peer) = PeerId::from_str(label) {
+                let expected = keys::to_ssh_key(&peer)?;
+                if key != expected {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "key does not match peer id",
+                    ));
+                }
             }
-            peers.insert(peer);
+            keys.insert(key.to_owned());
         }
     }
-    Ok(peers)
+    Ok(keys)
 }
 
 /// Add a path to the repository's git ignore file. Creates the
