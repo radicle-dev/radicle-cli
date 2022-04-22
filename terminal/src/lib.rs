@@ -581,18 +581,19 @@ pub mod components {
             }
         }
 
-        pub fn profile_select<'a>(
-            profiles: &'a [Profile],
-            active: &Profile,
-        ) -> Option<&'a Profile> {
-            let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
-            let selection = dialoguer::Select::with_theme(&theme())
-                .items(&profiles.iter().map(|p| p.id()).collect::<Vec<_>>())
-                .default(active)
-                .interact_opt()
-                .unwrap();
+        pub mod profile {
 
-            selection.map(|i| &profiles[i])
+            use super::{theme, Profile};
+
+            pub fn select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&'a Profile> {
+                let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
+                let selection = dialoguer::Select::with_theme(&theme())
+                    .items(&profiles.iter().map(|p| p.id()).collect::<Vec<_>>())
+                    .default(active)
+                    .interact_opt()
+                    .unwrap();
+                selection.map(|i| &profiles[i])
+            }
         }
     }
 }

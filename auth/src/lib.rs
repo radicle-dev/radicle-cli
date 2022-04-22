@@ -189,7 +189,7 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     }
 
     let selection = if profiles.len() > 1 && !options.active {
-        if let Some(p) = term::format::profile_select(profiles, &profile) {
+        if let Some(p) = term::format::profile::select(profiles, &profile) {
             p
         } else {
             return Ok(());
