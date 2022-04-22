@@ -107,6 +107,14 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if options.init || profiles.is_empty() || ignore_empty {
         init(options)
+    } else if !profiles.is_empty() && profile::default().is_err() {
+        term::error("Found profile(s), but could not load active one.");
+
+        if term::confirm("Activate fallback profile?") {
+            activate_fallback(&profiles)
+        } else {
+            return Err(anyhow::anyhow!("Profile fallback activation cancelled."));
+        }
     } else {
         let profile = profile::default()?;
         authenticate(&profiles, &profile, options)
@@ -244,6 +252,18 @@ pub fn authenticate(
     term::success!("Signing key configured in git");
 
     Ok(())
+}
+
+pub fn activate_fallback(profiles: &[profile::Profile]) -> anyhow::Result<()> {
+    if !profiles.is_empty() {
+        let id = profiles.first().unwrap().id();
+        profile::set(id)?;
+        term::success!("Fallback profile {} activated", id);
+
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("No profiles found. Cannot set fallback."))
+    }
 }
 
 pub fn check_ignored() -> anyhow::Result<()> {
