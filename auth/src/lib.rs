@@ -101,12 +101,11 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let profiles = match profile::list() {
-        Ok(profiles) => profiles,
-        _ => vec![],
-    };
+    let profiles = selectable_profiles();
+    let ignored = ignored_profiles();
+    let ignore_empty = profiles.is_empty() && !ignored.is_empty();
 
-    if options.init || profiles.is_empty() {
+    if options.init || profiles.is_empty() || ignore_empty {
         init(options)
     } else {
         authenticate(&profiles, options)
@@ -256,6 +255,10 @@ pub fn check_ignored() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn selectable_profiles() -> Vec<profile::Profile> {
+    filtered_profiles(|p| profile::read_only(p).is_ok())
 }
 
 pub fn ignored_profiles() -> Vec<profile::Profile> {
