@@ -4,6 +4,7 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::crypto::BoxedSigner;
+use librad::git::local::transport;
 use librad::git::storage::{ReadOnly, Storage};
 use librad::git::tracking;
 use librad::profile::Profile;
@@ -75,7 +76,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         track(peer, proj, repo, storage, profile, signer, options)?;
     } else {
         // Show tracking graph.
-        show(proj, repo, storage.read_only(), options)?;
+        show(proj, repo, storage.read_only(), profile, signer, options)?;
     }
 
     Ok(())
@@ -168,6 +169,8 @@ pub fn show(
     project: project::Metadata,
     repo: git::Repository,
     storage: &ReadOnly,
+    profile: Profile,
+    signer: BoxedSigner,
     options: Options,
 ) -> anyhow::Result<()> {
     let peers = if options.local {
@@ -193,7 +196,7 @@ pub fn show(
             &project.urn,
             term::format::dim(format!("({})", seed.host_str().unwrap_or("seed"))),
         ));
-        let peers = show_remote(&project, &repo, seed)?;
+        let peers = show_remote(&project, &repo, seed, profile, signer)?;
 
         spinner.done();
 
@@ -291,9 +294,17 @@ pub fn show_remote(
     project: &project::Metadata,
     repo: &git::Repository,
     seed: &Url,
+    profile: Profile,
+    signer: BoxedSigner,
 ) -> anyhow::Result<Vec<Peer>> {
     let urn = &project.urn;
-    let remotes = project::list_remote_heads(repo, urn, seed)?;
+    let remotes = project::list_remote_heads(
+        repo,
+        transport::Settings {
+            paths: profile.paths().clone(),
+            signer,
+        },
+    )?;
     let mut commits: HashMap<_, String> = HashMap::new();
 
     let remote_metadata = if let Ok(meta) = seed::get_remotes(seed.clone(), urn) {

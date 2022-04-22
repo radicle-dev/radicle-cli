@@ -266,21 +266,16 @@ where
 /// List the heads of a remote repository.
 pub fn list_remote_heads(
     repo: &git2::Repository,
-    urn: &Urn,
-    url: &url::Url,
+    settings: transport::Settings,
 ) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
-    // TODO: Use `Remote::remote_heads`.
-    let url = url.join(&urn.encode_id())?;
-    let mut remote = repo.remote_anonymous(url.as_str())?;
+    let mut remote = self::rad_remote(repo)?;
     let mut remotes = HashMap::new();
+    let heads = remote.remote_heads(settings, repo)?;
 
-    remote.connect(git2::Direction::Fetch)?;
-
-    let heads = remote.list()?;
-    for head in heads {
-        if let Some((peer, r)) = git::parse_remote(head.name()) {
+    for (head, oid) in heads {
+        if let Some((peer, r)) = git::parse_remote(&head.to_string()) {
             if let Some(branch) = r.strip_prefix("heads/") {
-                let value = (branch.to_owned(), head.oid());
+                let value = (branch.to_owned(), oid);
                 remotes.entry(peer).or_insert_with(Vec::new).push(value);
             }
         }
