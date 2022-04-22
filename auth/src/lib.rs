@@ -158,6 +158,8 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         term::format::highlight(&profile_id.to_string())
     );
 
+    check_ignored()?;
+
     term::blank();
     term::info!(
         "Your radicle Peer ID is {}. This identifies your device.",
@@ -239,6 +241,35 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     term::success!("Signing key configured in git");
 
     Ok(())
+}
+
+pub fn check_ignored() -> anyhow::Result<()> {
+    let profiles = ignored_profiles();
+    if !profiles.is_empty() {
+        term::warning(&format!(
+            "Ignored empty profile(s): {:?}",
+            &profiles
+                .into_iter()
+                .map(|p| p.id().to_string())
+                .collect::<Vec<String>>()
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn ignored_profiles() -> Vec<profile::Profile> {
+    filtered_profiles(|p| profile::read_only(p).is_err())
+}
+
+pub fn filtered_profiles<F>(func: F) -> Vec<profile::Profile>
+where
+    F: Fn(&profile::Profile) -> bool,
+{
+    match profile::list() {
+        Ok(profiles) => profiles.into_iter().filter(|p| func(p)).collect(),
+        _ => vec![],
+    }
 }
 
 #[cfg(test)]
