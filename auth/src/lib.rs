@@ -301,8 +301,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+    use std::{env, fs};
+
     use anyhow::Result;
     use assay::assay;
+
+    use librad::profile::LNK_HOME;
 
     use super::*;
 
@@ -328,5 +333,58 @@ mod tests {
 
         assert_eq!(profile::count().unwrap(), 1);
         assert_eq!(profile::name(None).unwrap(), "user");
+
+        assert_eq!(selectable_profiles().len(), 1);
+        assert_eq!(ignored_profiles().len(), 0);
+    }
+
+    #[assay(
+        setup = test::setup::lnk_home()?,
+        teardown = test::teardown::profiles()?,
+    )]
+    fn fallback_can_be_activated() {
+        let home = env::var(LNK_HOME)?;
+        let options = create_auth_options("user");
+
+        init(options).unwrap();
+        assert!(profile::default().is_ok());
+
+        fs::remove_file(Path::new(&home).join("active_profile"))?;
+        assert!(profile::default().is_err());
+
+        let profiles = selectable_profiles();
+        activate_fallback(&profiles)?;
+
+        assert!(profile::default().is_ok());
+    }
+
+    #[assay(setup = test::setup::lnk_home()?)]
+    fn fallback_does_not_exist() {
+        let profiles = selectable_profiles();
+
+        assert!(activate_fallback(&profiles).is_err());
+    }
+
+    #[assay(setup = test::setup::lnk_home()?)]
+    fn selectable_profiles_are_empty() {
+        let profiles = selectable_profiles();
+
+        assert_eq!(profiles.len(), 0);
+    }
+
+    #[assay(setup = test::setup::lnk_home()?)]
+    fn ignored_profiles_are_empty() {
+        let ignored = ignored_profiles();
+
+        assert_eq!(ignored.len(), 0);
+    }
+
+    #[assay(setup = test::setup::lnk_home()?)]
+    fn empty_profile_is_ignored() {
+        let home = env::var(LNK_HOME)?;
+        fs::create_dir_all(Path::new(&home).join("electron"))?;
+        let ignored = ignored_profiles();
+
+        assert_eq!(ignored.len(), 1);
     }
 }
