@@ -11,13 +11,19 @@ pub fn default() -> Result<Profile, Error> {
     use rad_terminal::args;
 
     let error = args::Error::WithHint {
-        err: anyhow!("failed to load radicle profile"),
+        err: anyhow!("Could not load radicle profile"),
         hint: "To setup your radicle profile, run `rad auth`.",
+    };
+
+    let not_active_error = args::Error::WithHint {
+        err: anyhow!("Could not load active radicle profile"),
+        hint: "To setup your radicle profile, run `rad auth --init`.",
     };
 
     match lnk_profile::get(None, None) {
         Ok(Some(profile)) => Ok(profile),
-        Ok(None) | Err(_) => Err(error.into()),
+        Ok(None) => Err(not_active_error.into()),
+        Err(_) => Err(error.into()),
     }
 }
 
