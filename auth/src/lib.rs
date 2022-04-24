@@ -105,8 +105,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         Ok(profiles) => profiles,
         _ => vec![],
     };
+    let initialized = !profiles.is_empty() && profile::default().is_ok();
 
-    if options.init || profiles.is_empty() {
+    if options.init || profiles.is_empty() || !initialized {
+        if !initialized {
+            term::warning("Found profile(s) but could not load active one. Initializing...");
+        }
         init(options)
     } else {
         authenticate(&profiles, options)
