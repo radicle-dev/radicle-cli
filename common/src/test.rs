@@ -1,10 +1,10 @@
 use std::{env, error};
 
+use librad::crypto::keystore::crypto::{Pwhash, KDF_PARAMS_TEST};
 use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::profile::LNK_HOME;
 
 use super::{keys, profile, test};
-use rad_terminal::components as term;
 
 pub type BoxedError = Box<dyn error::Error>;
 
@@ -21,9 +21,11 @@ pub mod setup {
 pub mod teardown {
     use super::*;
     pub fn profiles() -> Result<(), BoxedError> {
-        for profile in profile::list()? {
-            let pass = term::pwhash(SecUtf8::from(test::USER_PASS));
-            keys::remove(&profile, pass, keys::ssh_auth_sock())?;
+        if let Ok(profiles) = profile::list() {
+            for profile in profiles {
+                let pass = Pwhash::new(SecUtf8::from(test::USER_PASS), *KDF_PARAMS_TEST);
+                keys::remove(&profile, pass, keys::ssh_auth_sock())?;
+            }
         }
         Ok(())
     }

@@ -3,8 +3,6 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context as _};
 
-use librad::canonical::Cstring;
-use librad::identities::payload::{self};
 use librad::PeerId;
 
 use rad_common::{git, keys, profile, project};
@@ -158,12 +156,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         .unwrap_or_else(|| term::text_input("Default branch", Some(head)).unwrap());
 
     let spinner = term::spinner("Initializing...");
-
-    let payload = payload::Project {
-        name: Cstring::from(name),
-        description: Some(Cstring::from(description)),
-        default_branch: Some(Cstring::from(branch.clone())),
-    };
+    let payload = project::payload(name, description, branch.clone());
 
     match project::create(payload, &storage).and_then(|proj| {
         project::init(&proj, &repo, &storage, profile.paths(), signer).map(|_| proj)
