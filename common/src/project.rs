@@ -31,7 +31,7 @@ use librad::PeerId;
 use lnk_identities;
 use rad_terminal::components as term;
 
-use crate::{git, seed};
+use crate::{git, person, seed};
 
 /// URL scheme for radicle resources.
 pub const URL_SCHEME: &str = "rad";
@@ -182,36 +182,38 @@ impl TryFrom<librad::identities::Project> for Metadata {
 }
 
 /// Create a new project identity.
-pub fn create(
-    repo: &git2::Repository,
-    identity: identities::local::LocalIdentity,
-    storage: &Storage,
-    signer: BoxedSigner,
-    profile: &Profile,
-    payload: payload::Project,
-) -> Result<Project, Error> {
-    let paths = profile.paths().clone();
+pub fn create(payload: payload::Project, storage: &Storage) -> Result<Project, Error> {
+    let whoami = person::local(storage)?;
     let payload = ProjectPayload::new(payload);
-
     let delegations = identities::IndirectDelegation::try_from_iter(iter::once(Either::Right(
-        identity.clone().into_inner().into_inner(),
+        whoami.clone().into_inner().into_inner(),
     )))?;
+    let project = project::create(storage, whoami, payload, delegations)?;
 
-    let urn = project::urn(storage, payload.clone(), delegations.clone())?;
-    let url = LocalUrl::from(urn);
-    let project = project::create(storage, identity, payload, delegations)?;
+    Ok(project)
+}
 
+/// Initialize a repo as a project.
+pub fn init(
+    project: &Project,
+    repo: &git2::Repository,
+    storage: &Storage,
+    paths: &Paths,
+    signer: BoxedSigner,
+) -> Result<(), Error> {
     if let Some(branch) = project.subject().default_branch.clone() {
         let branch = RefLike::try_from(branch.to_string())?.into();
         let settings = transport::Settings {
             paths: paths.clone(),
             signer,
         };
+        let url = LocalUrl::from(project.urn());
+
         lnk_identities::git::setup_remote(repo, settings, url, &branch)?;
     }
-    lnk_identities::git::include::update(storage, &paths, &project)?;
+    lnk_identities::git::include::update(storage, paths, project)?;
 
-    Ok(project)
+    Ok(())
 }
 
 /// Create a checkout of a radicle project.

@@ -7,7 +7,7 @@ use librad::canonical::Cstring;
 use librad::identities::payload::{self};
 use librad::PeerId;
 
-use rad_common::{git, keys, person, profile, project};
+use rad_common::{git, keys, profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -140,7 +140,6 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
     let sock = keys::ssh_auth_sock();
     let (signer, storage) = keys::storage(&profile, sock)?;
-    let identity = person::local(&storage)?;
 
     let head: String = repo
         .head()
@@ -166,7 +165,9 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         default_branch: Some(Cstring::from(branch.clone())),
     };
 
-    match project::create(&repo, identity, &storage, signer, &profile, payload) {
+    match project::create(payload, &storage).and_then(|proj| {
+        project::init(&proj, &repo, &storage, profile.paths(), signer).map(|_| proj)
+    }) {
         Ok(proj) => {
             let urn = proj.urn();
 
