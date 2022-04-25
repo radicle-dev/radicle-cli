@@ -10,6 +10,7 @@ use either::Either;
 use git2::Repository;
 use url::Url;
 
+use librad::canonical::Cstring;
 use librad::crypto::BoxedSigner;
 use librad::git::identities::{self, project, Project};
 use librad::git::local::transport;
@@ -178,6 +179,15 @@ impl TryFrom<librad::identities::Project> for Metadata {
             delegates,
             remotes,
         })
+    }
+}
+
+/// Create a project payload.
+pub fn payload(name: String, description: String, default_branch: String) -> payload::Project {
+    payload::Project {
+        name: Cstring::from(name),
+        description: Some(Cstring::from(description)),
+        default_branch: Some(Cstring::from(default_branch)),
     }
 }
 

@@ -26,7 +26,7 @@ pub mod components {
     use std::fmt::Write;
     use std::str::FromStr;
 
-    use librad::crypto::keystore::crypto::{KdfParams, Pwhash};
+    use librad::crypto::keystore::crypto;
     use librad::crypto::keystore::pinentry::SecUtf8;
 
     use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
@@ -355,9 +355,16 @@ pub mod components {
             .unwrap_or_default()
     }
 
-    pub fn pwhash(secret: SecUtf8) -> Pwhash<keys::CachedPrompt> {
+    #[cfg(not(test))]
+    pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<keys::CachedPrompt> {
         let prompt = keys::CachedPrompt::new(secret);
-        Pwhash::new(prompt, KdfParams::recommended())
+        crypto::Pwhash::new(prompt, crypto::KdfParams::recommended())
+    }
+
+    #[cfg(test)]
+    pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<keys::CachedPrompt> {
+        let prompt = keys::CachedPrompt::new(secret);
+        crypto::Pwhash::new(prompt, *crypto::KDF_PARAMS_TEST)
     }
 
     pub fn theme() -> ColorfulTheme {

@@ -5,6 +5,7 @@ use librad::crypto::keystore::crypto::Pwhash;
 use librad::crypto::BoxedSigner;
 use librad::git::storage::Storage;
 
+use librad::keystore::pinentry::Pinentry;
 use librad::profile::{Profile, ProfileId};
 use librad::PeerId;
 
@@ -12,8 +13,6 @@ use lnk_clib::keys;
 use lnk_clib::keys::ssh::SshAuthSock;
 use lnk_clib::storage;
 use lnk_clib::storage::ssh;
-
-use rad_terminal::keys::CachedPrompt;
 
 /// Get the radicle signer and storage.
 pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<(BoxedSigner, Storage), Error> {
@@ -27,21 +26,27 @@ pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<(BoxedSigner, Sto
 }
 
 /// Add a profile's radicle signing key to ssh-agent.
-pub fn add(
+pub fn add<P: Pinentry>(
     profile: &Profile,
-    pass: Pwhash<CachedPrompt>,
+    pass: Pwhash<P>,
     sock: SshAuthSock,
-) -> Result<ProfileId, Error> {
+) -> Result<ProfileId, Error>
+where
+    <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
+{
     lnk_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new())
         .context("could not add ssh key")
 }
 
 /// Remove a profile's radicle signing key from the ssh-agent
-pub fn remove(
+pub fn remove<P: Pinentry>(
     profile: &Profile,
-    pass: Pwhash<CachedPrompt>,
+    pass: Pwhash<P>,
     sock: SshAuthSock,
-) -> Result<ProfileId, Error> {
+) -> Result<ProfileId, Error>
+where
+    <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
+{
     lnk_profile::ssh_remove(None, profile.id().clone(), sock, pass)
         .context("could not remove ssh key")
 }
