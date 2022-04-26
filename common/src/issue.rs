@@ -1,5 +1,6 @@
 //! Manage issues.
-use std::collections::{HashMap, HashSet};
+#![allow(dead_code)]
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -13,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// Unix timestamp (seconds since Epoch).
 pub type Timestamp = u64;
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Serialize, Deserialize)]
 pub struct Id {
     #[serde(with = "string")]
     oid: git2::Oid,
@@ -49,25 +50,6 @@ pub struct Issue {
 }
 
 impl Issue {
-    pub fn new(
-        project: Urn,
-        title: String,
-        description: String,
-        author: Urn,
-        timestamp: Timestamp,
-    ) -> Self {
-        Self {
-            project,
-            title,
-            description,
-            author,
-            timestamp,
-            labels: HashSet::new(),
-            assignees: HashSet::new(),
-            related: HashSet::new(),
-        }
-    }
-
     pub fn namespace(project: &Urn, id: Id) -> Reference<Many> {
         let namespace = Namespace::from(project);
         let refname = RefLike::try_from(format!("issues/{id}")).unwrap();
@@ -75,40 +57,97 @@ impl Issue {
         Reference::rads(namespace, None).with_name(&refname)
     }
 
-    pub fn head(project: &Urn, id: Id) -> Reference<Many> {
+    pub fn id_ref(project: &Urn, id: Id) -> Reference<Many> {
         let namespace = Self::namespace(project, id);
-        let head = RefLike::try_from(format!("{}/head", namespace.name)).unwrap();
+        let head = RefLike::try_from(format!("{}/id", namespace.name)).unwrap();
 
         namespace.with_name(head)
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Reaction {
     emoji: char,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Comment {
     pub body: String,
     pub author: Urn,
     pub timestamp: Timestamp,
-    pub parents: HashSet<Id>,
+    pub parents: BTreeSet<Id>,
     pub reply_to: Option<Id>,
-    pub reactions: HashMap<Reaction, usize>,
+    pub reactions: BTreeMap<Reaction, usize>,
 }
 
 impl Comment {
-    pub fn head(project: &Urn, issue: Id, id: Id) -> Reference<Many> {
-        let namespace = Issue::namespace(project, issue);
-        let head = RefLike::try_from(format!("{}/comments/{}", namespace.name, id)).unwrap();
+    pub fn new(
+        body: impl Into<String>,
+        author: Urn,
+        timestamp: Timestamp,
+        parents: impl IntoIterator<Item = Id>,
+    ) -> Self {
+        Self {
+            body: body.into(),
+            author,
+            timestamp,
+            parents: parents.into_iter().collect(),
+            reply_to: None,
+            reactions: BTreeMap::new(),
+        }
+    }
 
-        namespace.with_name(head)
+    pub fn id(&self) -> Id {
+        let json = serde_json::to_vec(self).unwrap();
+        let oid = git2::Oid::hash_object(git2::ObjectType::Blob, &json).unwrap();
+
+        Id::from(oid)
+    }
+
+    pub fn head_ref(project: &Urn, issue: Id) -> Reference<Many> {
+        let namespace = Issue::namespace(project, issue);
+        let name = RefLike::try_from(format!("{}/comments/head", namespace.name)).unwrap();
+
+        namespace.with_name(name)
+    }
+
+    pub fn id_ref(project: &Urn, issue: Id, id: Id) -> Reference<Many> {
+        let namespace = Issue::namespace(project, issue);
+        let name = RefLike::try_from(format!("{}/comments/{}", namespace.name, id)).unwrap();
+
+        namespace.with_name(name)
+    }
+}
+
+/// Unsorted comments graph.
+pub type Comments = HashMap<Id, Comment>;
+
+/// Sorted comments list.
+pub type SortedComments = Vec<(Id, Comment)>;
+
+/// Projects map.
+pub struct Project {
+    pub issues: HashMap<Id, (Issue, Comments)>,
+}
+
+impl Project {
+    pub fn get_issue(&self, id: Id) -> (&Issue, SortedComments) {
+        let (issue, comments) = self.issues.get(&id).unwrap();
+        let sorter = TopologicalSort::new(&comments);
+        let list = sorter
+            .sort()
+            .into_iter()
+            .map(|id| (id, comments.get(&id).unwrap().clone()))
+            .collect();
+
+        (issue, list)
     }
 }
 
 /// Issues backend in Git.
 pub struct Backend {
+    pub projects: HashMap<Urn, Project>,
+
     whoami: LocalIdentity,
     repo: git2::Repository,
 }
@@ -116,7 +155,13 @@ pub struct Backend {
 impl Backend {
     pub fn new(whoami: LocalIdentity, storage: &Storage) -> Result<Self, git2::Error> {
         let repo = git2::Repository::open_bare(storage.path())?;
-        Ok(Self { whoami, repo })
+        let projects = HashMap::new();
+
+        Ok(Self {
+            whoami,
+            repo,
+            projects,
+        })
     }
 
     /// Create an issue.
@@ -130,16 +175,17 @@ impl Backend {
     /// last commit.
     ///
     pub fn issue(
-        &self,
-        project: &Urn,
+        &mut self,
+        project_urn: &Urn,
         title: impl Into<String>,
         description: impl Into<String>,
         labels: impl IntoIterator<Item = Label>,
         assignees: impl IntoIterator<Item = Urn>,
         related: impl IntoIterator<Item = Urn>,
-    ) -> Result<(Id, Issue, git2::Reference), git2::Error> {
+    ) -> Result<(Id, &Issue, git2::Reference), git2::Error> {
+        let project = self.projects.get_mut(project_urn).unwrap();
         let issue = Issue {
-            project: project.clone(),
+            project: project_urn.clone(),
             title: title.into(),
             description: description.into(),
             author: self.whoami.urn(),
@@ -149,56 +195,88 @@ impl Backend {
             related: related.into_iter().collect(),
         };
 
-        let (id, commit) = self.blob(&issue, "issue")?;
-        let head = Issue::head(project, id);
+        let (id, commit) = blob(&issue, &self.repo, &self.whoami, "issue")?;
+        let head = Issue::id_ref(project_urn, id);
         let reference =
             self.repo
                 .reference(head.to_string().as_str(), commit, false, "Create new issue")?;
+        let (issue, _) = project
+            .issues
+            .entry(id)
+            .or_insert((issue, Comments::default()));
 
         Ok((id, issue, reference))
     }
 
-    pub fn get_issue(&self, project: &Urn, id: Id) -> Result<Issue, git2::Error> {
-        let head = Issue::head(project, id).to_string();
-        let value = self.get_blob(&head)?;
-
-        Ok(value)
-    }
-
+    /// Create a comment under an issue.
+    ///
+    ///     /git/refs/namespaces/<proj>/refs/rad/issues/<id>/comments/<id> -> <commit>
+    ///
+    /// When a new comment is added, the `comments/head` ref is updated to point to it.
+    ///
     pub fn comment(
-        &self,
-        project: &Urn,
-        issue: Id,
+        &mut self,
+        project_urn: &Urn,
+        issue_id: Id,
         body: impl Into<String>,
-    ) -> Result<(Id, Comment, git2::Reference), git2::Error> {
+    ) -> Result<(Id, &Comment, git2::Reference), git2::Error> {
+        let project = self.projects.get_mut(project_urn).unwrap();
+        let (_, comments) = project.issues.get_mut(&issue_id).unwrap();
         let comment = Comment {
             author: self.whoami.urn(),
             body: body.into(),
             timestamp: self::timestamp(),
             reply_to: None,
-            parents: HashSet::new(),
-            reactions: HashMap::new(),
+            parents: BTreeSet::new(),
+            reactions: BTreeMap::new(),
         };
-        let (id, commit) = self.blob(&comment, "comment")?;
-        let head = Comment::head(project, issue, id);
-        let reference = self.repo.reference(
-            head.to_string().as_str(),
-            commit,
-            false,
-            "Create new comment",
+        let (id, commit) = blob(&comment, &self.repo, &self.whoami, "comment")?;
+        let id_ref = Comment::id_ref(project_urn, issue_id, id).to_string();
+        let reference =
+            self.repo
+                .reference(id_ref.as_str(), commit, false, "Create new comment")?;
+
+        let head_ref = Comment::head_ref(project_urn, issue_id);
+        self.repo.reference_symbolic(
+            head_ref.to_string().as_str(),
+            id_ref.as_str(),
+            true,
+            "Set comment head",
         )?;
+        let comment = comments.entry(id).or_insert(comment);
 
         Ok((id, comment, reference))
     }
 
-    pub fn get_comment(&self, project: &Urn, issue: Id, id: Id) -> Result<Comment, git2::Error> {
-        let refname = Comment::head(project, issue, id).to_string();
+    ////////////////////////////////////////////////////////////////////////////
+
+    fn get_comment(&self, project: &Urn, issue: Id, id: Id) -> Result<Comment, git2::Error> {
+        let refname = Comment::id_ref(project, issue, id).to_string();
         let value = self.get_blob(&refname)?;
 
         Ok(value)
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    fn get_issue(&self, project: &Urn, id: Id) -> Result<Issue, git2::Error> {
+        let head = Issue::id_ref(project, id).to_string();
+        let value = self.get_blob(&head)?;
+
+        Ok(value)
+    }
+
+    /// Get the head comment of all remotes as well as the local one.
+    fn get_comment_heads(&self, project: &Urn, issue: Id) -> Result<HashSet<Id>, git2::Error> {
+        let head_ref = Comment::head_ref(project, issue).to_string();
+        let reference = self.repo.find_reference(&head_ref)?;
+        let target = reference.symbolic_target().unwrap();
+        let id = target.split('/').next_back().unwrap();
+        let oid = git2::Oid::from_str(id).unwrap();
+
+        let mut ids = HashSet::new();
+        ids.insert(Id::from(oid));
+
+        Ok(ids)
+    }
 
     fn get_blob<T: DeserializeOwned>(&self, refname: &str) -> Result<T, git2::Error> {
         let head = self.repo.find_reference(refname)?;
@@ -213,29 +291,97 @@ impl Backend {
 
         Ok(value)
     }
+}
 
-    fn blob<T: Serialize>(&self, value: &T, log: &str) -> Result<(Id, git2::Oid), git2::Error> {
-        let json = serde_json::to_vec(value).unwrap();
-        let blob = self.repo.blob(&json)?;
-        let tree = {
-            let mut builder = self.repo.treebuilder(None)?;
-            builder.insert(blob.to_string(), blob, 0o100644)?;
-            self.repo.find_tree(builder.write()?)?
-        };
-        let id = Id::from(blob);
-        let name = self.whoami.subject().name.to_string();
-        let committer = git2::Signature::now(name.as_str(), &format!("{name}@radicle.local"))?;
-        let commit = self.repo.commit(
-            None,
-            &committer,
-            &committer,
-            &format!("{log} (create)"),
-            &tree,
-            &[],
-        )?;
+struct TopologicalSort<'a> {
+    comments: &'a HashMap<Id, Comment>,
+    output: Vec<Id>,
+    context: Vec<(BTreeSet<Id>, Timestamp)>,
+    sorted: HashSet<Id>,
+    stack: HashSet<Id>,
+    unsorted: Vec<Id>,
+}
 
-        Ok((id, commit))
+impl<'a> TopologicalSort<'a> {
+    pub fn new(comments: &'a HashMap<Id, Comment>) -> Self {
+        Self {
+            comments,
+            output: Vec::new(),
+            context: Vec::new(),
+            stack: HashSet::new(),
+            sorted: HashSet::new(),
+            unsorted: comments.keys().copied().collect(),
+        }
     }
+
+    pub fn sort(mut self) -> Vec<Id> {
+        while self.sorted.len() < self.comments.len() {
+            let id = self.unsorted.pop().unwrap();
+            let comment = self.comments.get(&id).unwrap();
+
+            self.visit(id, comment);
+        }
+        self.output
+    }
+
+    fn visit(&mut self, id: Id, comment: &Comment) {
+        if self.sorted.contains(&id) {
+            return;
+        }
+        if self.stack.contains(&id) {
+            panic!("Graph cycle detected");
+        }
+        self.stack.insert(id);
+
+        for id in &comment.parents {
+            let parent = self.comments.get(id).unwrap();
+            self.visit(*id, parent);
+        }
+        self.stack.remove(&id);
+        self.sorted.insert(id);
+
+        let mut iter = self.context.iter().enumerate().rev();
+        let ix = loop {
+            if let Some((i, (parents, timestamp))) = iter.next() {
+                if &comment.parents != parents || &comment.timestamp >= timestamp {
+                    break i + 1;
+                }
+            } else {
+                break 0;
+            }
+        };
+        self.output.insert(ix, id);
+        self.context
+            .insert(ix, (comment.parents.clone(), comment.timestamp));
+    }
+}
+
+fn blob<T: Serialize>(
+    value: &T,
+    repo: &git2::Repository,
+    whoami: &LocalIdentity,
+    log: &str,
+) -> Result<(Id, git2::Oid), git2::Error> {
+    let json = serde_json::to_vec(value).unwrap();
+    let blob = repo.blob(&json)?;
+    let tree = {
+        let mut builder = repo.treebuilder(None)?;
+        builder.insert(blob.to_string(), blob, 0o100644)?;
+        repo.find_tree(builder.write()?)?
+    };
+    let id = Id::from(blob);
+    let name = whoami.subject().name.to_string();
+    let committer = git2::Signature::now(name.as_str(), &format!("{name}@radicle.local"))?;
+    let commit = repo.commit(
+        None,
+        &committer,
+        &committer,
+        &format!("{log} (create)"),
+        &tree,
+        &[],
+    )?;
+
+    Ok((id, commit))
 }
 
 pub fn timestamp() -> Timestamp {
@@ -320,7 +466,7 @@ mod test {
         let urn = Urn::try_from_id("hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap();
         let oid = git2::Oid::from_str("53d4c844582a67fe355845fb65fe89800c887c37").unwrap();
         let issue = Id::from(oid);
-        let head = Issue::head(&urn, issue);
+        let head = Issue::id_ref(&urn, issue);
 
         assert_eq!(
             head.to_string(),
@@ -335,7 +481,7 @@ mod test {
         let oid2 = git2::Oid::from_str("998192f1c7ea0036abbc39da48af71843258ec2c").unwrap();
         let issue = Id::from(oid1);
         let comment = Id::from(oid2);
-        let head = Comment::head(&urn, issue, comment);
+        let head = Comment::id_ref(&urn, issue, comment);
 
         assert_eq!(
             head.to_string(),
@@ -347,7 +493,7 @@ mod test {
         teardown = test::teardown::profiles()?,
     )]
     fn smoke_test() {
-        let (backend, project) = self::setup();
+        let (mut backend, project) = self::setup();
         let (i, _, _) = backend
             .issue(
                 &project.urn(),
@@ -370,10 +516,45 @@ mod test {
         assert_eq!(&issue.title, "Nothing works");
         assert_eq!(&issue.project, &project.urn());
 
+        let heads = backend.get_comment_heads(&project.urn(), i).unwrap();
+        assert_eq!(heads.len(), 1);
+        assert!(heads.contains(&c2));
+
         let c1 = backend.get_comment(&project.urn(), i, c1).unwrap();
         assert_eq!(&c1.body, "That's too bad.");
 
         let c2 = backend.get_comment(&project.urn(), i, c2).unwrap();
         assert_eq!(&c2.body, "I really think that's too bad.");
+    }
+
+    #[test]
+    fn test_topological_sort() {
+        let timestamp = 0;
+
+        let a = Urn::try_from_id("hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap();
+        let b = Urn::try_from_id("hnrkq5sti58yw41szighu565oprgt5eduhmhy").unwrap();
+
+        // A1 06f8ba9604e13385ea4ab7de0aefd9807de3707b
+        // B2 0e7debaa08a26f5eeb099c32fbb9f776ec1899f0
+        // A3 3e8d17ded2f18691f8c710c122a2d693c4c490f9
+        // B3 00f930e3dea4d24cf0aa9bb5d0a9b19ad3ffcf67
+        // B4 01de06ff27ad3462ed69bd0d730f5875c4b09ff4
+        // A5 7a8f9c324bf98fb0405cf8b923141f2a0a306f9b
+
+        let a1 = Comment::new("A1", a.clone(), timestamp, []);
+        let b2 = Comment::new("B2", b.clone(), timestamp, [a1.id()]);
+        let a3 = Comment::new("A3", a.clone(), timestamp + 1, [b2.id()]);
+        let b3 = Comment::new("B3", b.clone(), timestamp + 2, [b2.id()]);
+        let b4 = Comment::new("B4", b, timestamp, [a3.id(), b3.id()]);
+        let a5 = Comment::new("A5", a, timestamp, [b4.id()]);
+
+        let expected = vec![a1, b2, a3, b3, b4, a5];
+        let comments: HashMap<Id, Comment> =
+            expected.clone().into_iter().map(|c| (c.id(), c)).collect();
+
+        let sorter = TopologicalSort::new(&comments);
+        let sorted = sorter.sort();
+
+        assert_eq!(sorted, expected.iter().map(|c| c.id()).collect::<Vec<_>>());
     }
 }
