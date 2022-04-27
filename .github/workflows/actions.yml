@@ -1,4 +1,4 @@
-name: Cargo
+name: Build, test, and lint
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 jobs:
-  build:
+  test:
     name: Build & Test
     strategy:
       matrix:
@@ -31,7 +31,7 @@ jobs:
         with:
           profile: minimal
       - name: Build
-        run: cargo build --verbose
+        run: cargo test --workspace --no-run
         env:
           RUSTFLAGS: -D warnings
       - name: Start ssh-agent
@@ -41,25 +41,11 @@ jobs:
       - name: Run tests
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: cargo test --all --verbose
-
-  docs:
-    name: Docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update dependencies
-        run: sudo apt-get update
-      - name: Install dependencies
-        run: sudo apt-get install -y pkg-config libudev-dev
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-      - name: Docs
-        run: cargo doc --all
-        env:
-          RUSTDOCFLAGS: -D warnings
+        run: cargo test --workspace
 
   lint:
     name: Lint
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Update dependencies
@@ -89,3 +75,19 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+
+  docs:
+    name: Docs
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update dependencies
+        run: sudo apt-get update
+      - name: Install dependencies
+        run: sudo apt-get install -y pkg-config libudev-dev
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+      - name: Docs
+        run: cargo doc --workspace
+        env:
+          RUSTDOCFLAGS: -D warnings
