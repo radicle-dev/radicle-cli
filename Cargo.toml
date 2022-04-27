@@ -6,6 +6,11 @@ authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 rust-version = "1.59"
 
+[profile.ci]
+inherits = "dev"
+debug = 0
+incremental = false
+
 [features]
 default = ["ethereum"]
 ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "ethers", "tokio", "futures"]
