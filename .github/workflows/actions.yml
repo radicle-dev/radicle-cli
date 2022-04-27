@@ -26,7 +26,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: cargo-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ matrix.os }}-fast-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-fast-${{ hashFiles('**/Cargo.lock') }}
       - name: Run clippy
         uses: actions-rs/cargo@v1
         with:
