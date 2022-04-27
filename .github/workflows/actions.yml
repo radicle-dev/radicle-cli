@@ -30,18 +30,15 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-      - name: Build
-        run: cargo test --profile ci --workspace --no-run
-        env:
-          RUSTFLAGS: -D warnings
       - name: Start ssh-agent
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-      - name: Run tests
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      - name: Build
         run: cargo test --profile ci --workspace
+        env:
+          RUSTFLAGS: -D warnings
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
   lint:
     name: Lint
