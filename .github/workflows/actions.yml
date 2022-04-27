@@ -42,7 +42,6 @@ jobs:
 
   lint:
     name: Lint
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Update dependencies
@@ -75,7 +74,6 @@ jobs:
 
   docs:
     name: Docs
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Update dependencies
