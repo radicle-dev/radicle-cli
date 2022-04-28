@@ -34,7 +34,7 @@ jobs:
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-      - name: Build
+      - name: Build & Test
         run: cargo test --profile ci --workspace
         env:
           RUSTFLAGS: -D warnings
