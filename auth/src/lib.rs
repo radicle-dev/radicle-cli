@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 
 use anyhow::Context as _;
+use zeroize::Zeroizing;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
 
@@ -227,7 +228,14 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
 
         // TODO: We should show the spinner on the passphrase prompt,
         // otherwise it seems like the passphrase is valid even if it isn't.
-        let pass = term::pwhash(term::secret_input());
+        let secret_input: SecUtf8 = if atty::is(atty::Stream::Stdin) {
+            term::secret_input()
+        } else {
+            let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
+            std::io::stdin().read_line(&mut input)?;
+            SecUtf8::from(input.trim_end())
+        };
+        let pass = term::pwhash(secret_input);
         let spinner = term::spinner("Unlocking...");
 
         keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;

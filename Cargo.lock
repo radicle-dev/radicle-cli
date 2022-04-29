@@ -4756,11 +4756,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assay",
+ "atty",
  "lexopt",
  "librad",
  "lnk-profile",
  "rad-common",
  "rad-terminal",
+ "zeroize",
 ]
 
 [[package]]

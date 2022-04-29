@@ -13,6 +13,8 @@ librad = "0"
 lnk-profile = "0"
 rad-terminal = { path = "../terminal" }
 rad-common = { path = "../common" }
+atty = "0.2"
+zeroize = "1.1"
 
 [dev-dependencies]
 assay = "0.1.0"
