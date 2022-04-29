@@ -1,4 +1,4 @@
-name: Cargo
+name: Build, test, and lint
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 jobs:
-  build:
+  test:
     name: Build & Test
     strategy:
       matrix:
@@ -26,37 +26,19 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: cargo-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ matrix.os }}-fast-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-      - name: Build
-        run: cargo build --verbose
-        env:
-          RUSTFLAGS: -D warnings
       - name: Start ssh-agent
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-      - name: Run tests
+      - name: Build & Test
+        run: cargo test --profile ci --workspace
         env:
+          RUSTFLAGS: -D warnings
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: cargo test --all --verbose
-
-  docs:
-    name: Docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update dependencies
-        run: sudo apt-get update
-      - name: Install dependencies
-        run: sudo apt-get install -y pkg-config libudev-dev
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-      - name: Docs
-        run: cargo doc --all
-        env:
-          RUSTDOCFLAGS: -D warnings
 
   lint:
     name: Lint
@@ -76,7 +58,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-fast-${{ hashFiles('**/Cargo.lock') }}
       - name: Run clippy
         uses: actions-rs/cargo@v1
         with:
@@ -89,3 +71,18 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update dependencies
+        run: sudo apt-get update
+      - name: Install dependencies
+        run: sudo apt-get install -y pkg-config libudev-dev
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+      - name: Docs
+        run: cargo doc --profile ci --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
