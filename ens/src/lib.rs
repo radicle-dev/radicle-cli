@@ -287,7 +287,7 @@ async fn setup(
         }
     }
 
-    let call = resolver.multicall(calls)?.gas(21000);
+    let call = resolver.multicall(calls)?;
     ethereum::transaction(call).await?;
 
     let spinner = term::spinner("Updating local identity...");
