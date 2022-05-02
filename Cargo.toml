@@ -125,36 +125,32 @@ members = [
 
 [patch.crates-io.link-crypto]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.radicle-git-helpers]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.lnk-clib]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.lnk-profile]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.radicle-git-ext]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 
 [patch.crates-io.lnk-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-03-01"
-
-[patch.crates-io.thrussh-encoding]
-git = "https://github.com/FintanH/thrussh.git"
-branch = "generic-agent"
+rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"

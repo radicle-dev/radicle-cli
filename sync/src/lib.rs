@@ -1,3 +1,4 @@
+#![allow(clippy::or_fun_call)]
 use librad::git::Storage;
 use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;

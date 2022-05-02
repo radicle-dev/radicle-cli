@@ -34,7 +34,7 @@ pub fn add<P: Pinentry>(
 where
     <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
 {
-    lnk_profile::ssh_add(None, profile.id().clone(), sock, pass, &Vec::new())
+    lnk_profile::ssh_add(None, profile.id().clone(), sock, pass, Vec::new())
         .context("could not add ssh key")
 }
 

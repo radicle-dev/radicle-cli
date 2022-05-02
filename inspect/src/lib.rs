@@ -1,3 +1,4 @@
+#![allow(clippy::or_fun_call)]
 use std::convert::TryFrom;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
