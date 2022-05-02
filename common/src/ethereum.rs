@@ -143,7 +143,7 @@ pub enum WalletError {
     #[error(transparent)]
     Local(#[from] ethers::signers::WalletError),
     #[error(transparent)]
-    WalletConnect(#[from] ::walletconnect::client::CallError),
+    WalletConnect(#[from] walletconnect::WalletError),
     #[error("no wallet specified")]
     NoWallet,
 }
