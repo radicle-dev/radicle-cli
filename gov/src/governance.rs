@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
+use ethers::prelude::{Http, Middleware, ProviderError};
 use ethers::types::{Address, U256};
 use ethers::{
     abi::Abi,
@@ -11,7 +11,7 @@ use ethers::{
 
 use std::str::FromStr;
 
-use rad_common::ethereum;
+use rad_common::ethereum::{self, signer::SignerMiddlewareError};
 
 const RADICLE_GOVERNANCE_ADDRESS: &str = "0x690e775361AD66D1c4A25d89da9fCd639F5198eD";
 const PUBLIC_RESOLVER_ABI: &str =

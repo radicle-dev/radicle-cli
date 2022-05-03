@@ -18,8 +18,11 @@ use ethers::types::Chain;
 use rad_terminal::args;
 use rad_terminal::components as term;
 
+pub mod signer;
+
 mod walletconnect;
 
+use self::signer::Signer as ExtendedSigner;
 use self::walletconnect::WalletConnect;
 
 /// Radicle's ENS domain.
@@ -80,6 +83,8 @@ impl SignerOptions {
                 }
                 Long("walletconnect") => {
                     options.walletconnect = true;
+                }
+                Long("legacy") => {
                     std::env::set_var("RAD_SIGNER_LEGACY", "true");
                 }
                 _ => unparsed.push(args::format(arg)),
@@ -157,7 +162,7 @@ pub enum Wallet {
 }
 
 #[async_trait::async_trait]
-impl Signer for Wallet {
+impl ExtendedSigner for Wallet {
     type Error = WalletError;
 
     fn chain_id(&self) -> u64 {
@@ -214,6 +219,25 @@ impl Signer for Wallet {
             Self::Ledger(s) => s.sign_transaction(message).await.map_err(WalletError::from),
             Self::Local(s) => s.sign_transaction(message).await.map_err(WalletError::from),
             Self::WalletConnect(s) => s.sign_transaction(message).await.map_err(WalletError::from),
+        }
+    }
+
+    async fn send_transaction(
+        &self,
+        message: &ethers::types::transaction::eip2718::TypedTransaction,
+    ) -> Result<H256, Self::Error> {
+        match self {
+            Self::Ledger(_) => unimplemented!(),
+            Self::Local(_) => unimplemented!(),
+            Self::WalletConnect(s) => s.send_transaction(message).await.map_err(WalletError::from),
+        }
+    }
+
+    fn is_walletconnect(&self) -> bool {
+        match self {
+            Self::Ledger(_) => false,
+            Self::Local(_) => false,
+            Self::WalletConnect(_) => true,
         }
     }
 }

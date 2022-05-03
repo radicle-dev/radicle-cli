@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use ethers::abi::token::{LenientTokenizer, Token, Tokenizer};
 use ethers::abi::AbiParser;
-use ethers::prelude::{Middleware, SignerMiddleware};
+use ethers::prelude::Middleware;
 use ethers::types::{Address, U256};
 
 use anyhow::anyhow;
@@ -12,7 +12,7 @@ use anyhow::Context;
 use regex::Regex;
 
 use rad_common::ethereum;
-use rad_common::ethereum::{ProviderOptions, SignerOptions};
+use rad_common::ethereum::{signer::SignerMiddleware, ProviderOptions, SignerOptions};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 

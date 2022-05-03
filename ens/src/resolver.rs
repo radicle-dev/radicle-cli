@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
+use ethers::prelude::{Http, Middleware, ProviderError};
 use ethers::types::{Address, Bytes};
 use ethers::{
     abi::{Abi, Detokenize, ParamType},
@@ -9,7 +9,7 @@ use ethers::{
     providers::{ens::ENS_ADDRESS, Provider},
 };
 
-use rad_common::ethereum;
+use rad_common::ethereum::{self, signer::SignerMiddlewareError};
 
 pub const RADICLE_ID_KEY: &str = "eth.radicle.id";
 pub const RADICLE_SEED_ID_KEY: &str = "eth.radicle.seed.id";

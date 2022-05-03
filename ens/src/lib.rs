@@ -2,11 +2,14 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use ethers::prelude::{Address, Chain, Http, Provider, Signer, SignerMiddleware};
+use ethers::prelude::{Address, Chain, Http, Provider};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
-use rad_common::ethereum::{ProviderOptions, SignerOptions};
+use rad_common::ethereum::{
+    signer::{Signer, SignerMiddleware},
+    ProviderOptions, SignerOptions,
+};
 use rad_common::{ethereum, keys, person, profile, seed};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;

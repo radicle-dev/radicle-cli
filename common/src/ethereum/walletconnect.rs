@@ -3,7 +3,7 @@ use walletconnect::client::{CallError, SessionError};
 use walletconnect::{qr, Client, Metadata, Transaction};
 
 use ethers::types::transaction::eip2718::TypedTransaction;
-use ethers::types::{Address, NameOrAddress, Signature, U256};
+use ethers::types::{Address, NameOrAddress, Signature, H256, U256};
 
 #[derive(Debug)]
 pub struct WalletConnect {
@@ -118,6 +118,28 @@ impl WalletConnect {
             r: U256::from(r),
             s: U256::from(s),
         })
+    }
+
+    pub async fn send_transaction(&self, msg: &TypedTransaction) -> Result<H256, WalletError> {
+        let to = if let Some(NameOrAddress::Address(address)) = msg.to() {
+            Some(*address)
+        } else {
+            None
+        };
+        let tx = Transaction {
+            from: *msg.from().unwrap(),
+            to,
+            gas_limit: None,
+            gas_price: msg.gas_price(),
+            value: *msg.value().unwrap_or(&U256::from(0)),
+            data: msg.data().unwrap().to_vec(),
+            nonce: None,
+        };
+
+        self.client
+            .send_transaction(tx)
+            .await
+            .map_err(WalletError::from)
     }
 }
 
