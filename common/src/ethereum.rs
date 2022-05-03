@@ -80,6 +80,7 @@ impl SignerOptions {
                 }
                 Long("walletconnect") => {
                     options.walletconnect = true;
+                    std::env::set_var("RAD_SIGNER_LEGACY", "true");
                 }
                 _ => unparsed.push(args::format(arg)),
             }
@@ -262,6 +263,11 @@ where
     D: Detokenize,
     M: Middleware + 'static,
 {
+    let call = if std::env::var_os("RAD_SIGNER_LEGACY").is_some() {
+        call.legacy()
+    } else {
+        call
+    };
     let receipt = loop {
         let spinner = term::spinner("Waiting for transaction to be signed...");
         let tx = match call.send().await {
