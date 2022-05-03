@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use ethers::prelude::{Address, Http, Provider, SignerMiddleware};
+use ethers::prelude::{Address, Chain, Http, Provider, Signer, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
@@ -190,6 +190,7 @@ async fn setup(
     storage: &Storage,
 ) -> anyhow::Result<()> {
     let urn = id.urn();
+    let chain_id = signer.chain_id();
     let signer = SignerMiddleware::new(provider, signer);
     let radicle_name = name.ends_with(ethereum::RADICLE_DOMAIN);
     let resolver = match PublicResolver::get(name, signer).await {
@@ -290,27 +291,31 @@ async fn setup(
     let call = resolver.multicall(calls)?;
     ethereum::transaction(call).await?;
 
-    let spinner = term::spinner("Updating local identity...");
-    match person::set_ens_payload(
-        person::Ens {
-            name: name.to_owned(),
-        },
-        storage,
-    ) {
-        Ok(doc) => {
-            spinner.finish();
-            term::blob(serde_json::to_string(&doc.payload())?);
+    if chain_id == u64::from(Chain::Mainnet) {
+        let spinner = term::spinner("Updating local identity...");
+        match person::set_ens_payload(
+            person::Ens {
+                name: name.to_owned(),
+            },
+            storage,
+        ) {
+            Ok(doc) => {
+                spinner.finish();
+                term::blob(serde_json::to_string(&doc.payload())?);
+            }
+            Err(err) => {
+                spinner.failed();
+                return Err(err);
+            }
         }
-        Err(err) => {
-            spinner.failed();
-            return Err(err);
-        }
-    }
 
-    term::info!(
-        "Successfully associated local 🌱 identity with {}",
-        term::format::highlight(name)
-    );
+        term::info!(
+            "Successfully associated local 🌱 identity with {}",
+            term::format::highlight(name)
+        );
+    } else {
+        term::warning("Warning: Skipping local ENS setup");
+    }
 
     term::blank();
     term::tip!("To view your profile, visit:");
