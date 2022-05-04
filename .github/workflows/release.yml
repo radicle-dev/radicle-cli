@@ -119,6 +119,9 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             radicle-cli-*.tar.gz
+      - run: brew install age
+      - shell: bash
+        run: .github/generate-homebrew-formula.bash
 
 
   smoke-test-deb:
