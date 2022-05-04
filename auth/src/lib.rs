@@ -263,6 +263,9 @@ mod tests {
 
     use rad_common::test;
 
+    use test::{setup, teardown};
+    use test::setup::Env;
+
     fn create_auth_options(name: &str) -> Options {
         Options {
             active: false,
@@ -273,8 +276,8 @@ mod tests {
     }
 
     #[assay(
-        setup = test::setup::lnk_home()?,
-        teardown = test::teardown::profiles()?,
+        setup = setup::with(&[Env::Home])?,
+        teardown = teardown::profiles()?,
     )]
     fn can_be_initialized() {
         let options = create_auth_options("user");

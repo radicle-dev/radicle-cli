@@ -12,8 +12,16 @@ pub const USER_PASS: &str = "password";
 
 pub mod setup {
     use super::*;
-    pub fn lnk_home() -> Result<(), BoxedError> {
-        env::set_var(LNK_HOME, env::current_dir()?.join("lnk_home"));
+
+    #[derive(PartialEq)]
+    pub enum Env {
+        Home,
+    }
+
+    pub fn with(environment: &[Env]) -> Result<(), BoxedError> {
+        if environment.contains(&Env::Home) {
+            env::set_var(LNK_HOME, env::current_dir()?.join("lnk_home"));
+        }
         Ok(())
     }
 }
