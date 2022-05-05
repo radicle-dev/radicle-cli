@@ -151,22 +151,22 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     spinner.finish();
 
-    let (profile_id, signer, storage) = if let Ok(sock) = sock {
+    let (profile_id, signer) = if let Ok(sock) = sock {
         spinner = term::spinner("Adding to ssh-agent...");
 
         let profile_id = keys::add(&profile, pass, sock.clone())?;
-        let (signer, storage) = keys::storage(&profile, sock)?;
+        let signer = sock.to_signer(&profile)?;
 
         spinner.finish();
 
-        (profile_id, signer, storage)
+        (profile_id, signer)
     } else {
-        let signer = term::secret_key(&profile)?;
-        let (signer, storage) = keys::storage(&profile, signer)?;
+        let signer = term::secret_key(&profile)?.to_signer(&profile)?;
 
-        (profile.id().clone(), signer, storage)
+        (profile.id().clone(), signer)
     };
 
+    let storage = keys::storage(&profile, signer.clone())?;
     let person = person::create(&profile, &name, signer, &storage)?;
     person::set_local(&storage, &person);
 

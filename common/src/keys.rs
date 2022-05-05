@@ -17,7 +17,7 @@ use rad_terminal::components as term;
 use crate::signer::ToSigner;
 
 /// Get the radicle signer and storage.
-pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<(BoxedSigner, Storage), Error> {
+pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<Storage, Error> {
     let signer = match signer.to_signer(profile) {
         Ok(signer) => signer,
         Err(keys::ssh::Error::NoSuchKey(_)) => {
@@ -25,9 +25,9 @@ pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<(BoxedSigner,
         }
         Err(err) => anyhow::bail!(err),
     };
-    let storage = Storage::open(profile.paths(), signer.clone())?;
+    let storage = Storage::open(profile.paths(), signer)?;
 
-    Ok((signer, storage))
+    Ok(storage)
 }
 
 /// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.

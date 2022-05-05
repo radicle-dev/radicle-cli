@@ -138,7 +138,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     let profile = profile::default()?;
     let signer = keys::signer(&profile)?;
-    let (_, storage) = keys::storage(&profile, signer.clone())?;
+    let storage = keys::storage(&profile, signer.clone())?;
 
     let head: String = repo
         .head()

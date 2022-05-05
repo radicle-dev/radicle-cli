@@ -73,7 +73,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     let profile = profile::default()?;
     let signer = keys::signer(&profile)?;
-    let (_, storage) = keys::storage(&profile, signer.clone())?;
+    let storage = keys::storage(&profile, signer.clone())?;
     let project = project::get(&storage, &options.urn)?
         .context("project could not be found in local storage")?;
     let path = PathBuf::from(project.name.clone());

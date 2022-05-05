@@ -92,7 +92,7 @@ pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
 
     let profile = profile::default()?;
     let signer = keys::signer(&profile)?;
-    let (_, storage) = keys::storage(&profile, signer)?;
+    let storage = keys::storage(&profile, signer)?;
 
     if let Some(peer) = options.peer {
         tracking::untrack(

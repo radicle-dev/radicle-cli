@@ -109,7 +109,7 @@ impl Args for Options {
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
     let signer = keys::signer(&profile)?;
-    let (_, storage) = keys::storage(&profile, signer.clone())?;
+    let storage = keys::storage(&profile, signer.clone())?;
     let (urn, repo) = project::cwd()?;
 
     match options.op {

@@ -131,7 +131,7 @@ pub fn clone_project(urn: Urn, seed: Option<seed::Address>) -> anyhow::Result<()
 
     let profile = profile::default()?;
     let signer = keys::signer(&profile)?;
-    let (_, storage) = keys::storage(&profile, signer)?;
+    let storage = keys::storage(&profile, signer)?;
     let cfg = tracking::config::Config::default();
     let project = project::get(&storage, &urn)?
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
