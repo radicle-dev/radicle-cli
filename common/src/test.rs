@@ -1,8 +1,16 @@
+use std::fmt;
 use std::{env, error};
+
+use serde::{de::DeserializeOwned, Serialize};
 
 use librad::crypto::keystore::crypto;
 use librad::crypto::keystore::pinentry::SecUtf8;
-use librad::profile::LNK_HOME;
+use librad::crypto::keystore::FileStorage;
+use librad::crypto::BoxedSigner;
+use librad::keystore::crypto::Crypto;
+use librad::keystore::Keystore;
+use librad::profile::{Profile, LNK_HOME};
+use librad::PublicKey;
 
 use super::{keys, profile, test};
 
@@ -34,4 +42,24 @@ pub mod teardown {
         }
         Ok(())
     }
+}
+
+/// Signer useful for testing.
+pub fn signer<C: Crypto>(profile: &Profile, crypto: C) -> Result<BoxedSigner, anyhow::Error>
+where
+    C::Error: fmt::Debug + fmt::Display + Send + Sync + 'static,
+    C::SecretBox: Serialize + DeserializeOwned,
+{
+    let file_storage: FileStorage<_, PublicKey, _, _> = FileStorage::new(
+        &profile
+            .paths()
+            .keys_dir()
+            .join(rad_terminal::keys::KEY_FILE),
+        crypto,
+    );
+    let keystore = file_storage.get_key()?;
+
+    Ok(BoxedSigner::new(
+        rad_terminal::keys::ZeroizingSecretKey::new(keystore.secret_key),
+    ))
 }

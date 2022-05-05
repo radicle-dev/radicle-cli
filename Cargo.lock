@@ -4907,7 +4907,6 @@ name = "rad-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "assay",
  "async-trait",
  "automerge 0.1.0",
  "base64 0.13.0",

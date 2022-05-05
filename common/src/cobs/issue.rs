@@ -333,8 +333,6 @@ mod test {
     use std::env;
     use std::path::Path;
 
-    use assay::assay;
-
     use librad::crypto::keystore::crypto::{Pwhash, KDF_PARAMS_TEST};
     use librad::crypto::keystore::pinentry::SecUtf8;
     use librad::git::identities::Project;
@@ -352,14 +350,11 @@ mod test {
 
         env::set_var(LNK_HOME, home);
 
-        let sock = keys::ssh_auth_sock();
         let name = "cloudhead";
         let pass = Pwhash::new(SecUtf8::from(test::USER_PASS), *KDF_PARAMS_TEST);
         let (profile, _peer_id) = lnk_profile::create(None, pass.clone()).unwrap();
-
-        keys::add(&profile, pass, sock.clone()).unwrap();
-
-        let (signer, storage) = keys::storage(&profile, sock).unwrap();
+        let signer = test::signer(&profile, pass).unwrap();
+        let storage = keys::storage(&profile, signer.clone()).unwrap();
         let person = person::create(&profile, name, signer, &storage).unwrap();
 
         person::set_local(&storage, &person);
@@ -375,9 +370,7 @@ mod test {
         (storage, profile, whoami, project)
     }
 
-    #[assay(
-        teardown = test::teardown::profiles()?,
-    )]
+    #[test]
     fn test_issue_create_and_get() {
         let (storage, profile, whoami, project) = setup();
         let author = whoami.urn();
@@ -395,18 +388,29 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_issue_comment() {
         let (storage, profile, whoami, project) = setup();
-        let _author = whoami.urn();
+        let author = whoami.urn();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.")
             .unwrap();
 
-        let _comment = issues.comment(&project.urn(), &issue_id, "Ho ho ho.");
-        let _issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
+        issues
+            .comment(&project.urn(), &issue_id, "Ho ho ho.")
+            .unwrap();
 
-        todo!();
+        issues
+            .comment(&project.urn(), &issue_id, "Ha ha ha.")
+            .unwrap();
+
+        let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
+        let c1 = &issue.comments()[0];
+        let c2 = &issue.comments()[1];
+
+        assert_eq!(&c1.body, "Ho ho ho.");
+        assert_eq!(&c1.author, &author);
+        assert_eq!(&c2.body, "Ha ha ha.");
+        assert_eq!(&c2.author, &author);
     }
 }
