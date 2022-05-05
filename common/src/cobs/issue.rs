@@ -322,7 +322,9 @@ mod events {
             .map_err(|failure| failure.error)?
             .result;
 
-        Ok(EntryContents::Automerge(issue.save_incremental()))
+        let change = issue.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok(EntryContents::Automerge(change))
     }
 }
 
