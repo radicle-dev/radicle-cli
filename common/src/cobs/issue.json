@@ -10,6 +10,9 @@
         "author": {
             "type": "string"
         },
+        "state": {
+            "type": "string"
+        },
         "comments": {
             "type": "array",
             "items": {

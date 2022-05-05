@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::ops::ControlFlow;
 use std::str::FromStr;
 
-use automerge::{Automerge, AutomergeError, ObjType, Value};
+use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use lazy_static::lazy_static;
 use nonempty::NonEmpty;
 
@@ -45,10 +45,40 @@ pub fn author(val: Value) -> Result<Urn, AutomergeError> {
     Ok(author)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+    Open,
+    Closed,
+}
+
+impl From<State> for ScalarValue {
+    fn from(state: State) -> Self {
+        match state {
+            State::Open => ScalarValue::from("open"),
+            State::Closed => ScalarValue::from("closed"),
+        }
+    }
+}
+
+impl<'a> TryFrom<Value<'a>> for State {
+    type Error = &'static str;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let state = value.to_str().ok_or("value isn't a string")?;
+
+        match state {
+            "open" => Ok(Self::Open),
+            "closed" => Ok(Self::Closed),
+            _ => Err("invalid state name"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Issue {
     pub author: Urn,
     pub title: String,
+    pub state: State,
     pub comments: NonEmpty<Comment>,
     pub automerge: Automerge,
 }
@@ -60,6 +90,10 @@ impl Issue {
 
     pub fn title(&self) -> &str {
         &self.title
+    }
+
+    pub fn state(&self) -> State {
+        self.state
     }
 
     pub fn description(&self) -> &str {
@@ -79,6 +113,7 @@ impl TryFrom<Automerge> for Issue {
         let (title, _) = doc.get(&obj_id, "title")?.unwrap();
         let (comments, comments_id) = doc.get(&obj_id, "comments")?.unwrap();
         let (author, _) = doc.get(&obj_id, "author")?.unwrap();
+        let (state, _) = doc.get(&obj_id, "state")?.unwrap();
 
         assert_eq!(comments.to_objtype(), Some(ObjType::List));
 
@@ -95,9 +130,11 @@ impl TryFrom<Automerge> for Issue {
         }
         let author = self::author(author)?;
         let comments = NonEmpty::from_vec(comments).unwrap();
+        let state = State::try_from(state).unwrap();
 
         Ok(Self {
             title: title.into_string().unwrap(),
+            state,
             author,
             comments,
             automerge: doc,
@@ -244,6 +281,7 @@ mod events {
 
                     tx.put(&issue, "title", title)?;
                     tx.put(&issue, "author", author.to_string())?;
+                    tx.put(&issue, "state", State::Open)?;
 
                     let comments = tx.put_object(&issue, "comments", ObjType::List)?;
                     let comment = tx.insert_object(&comments, 0, ObjType::Map)?;
@@ -351,6 +389,7 @@ mod test {
         assert_eq!(issue.author(), &author);
         assert_eq!(issue.description(), "Blah blah blah.");
         assert_eq!(issue.comments().len(), 0);
+        assert_eq!(issue.state(), State::Open);
     }
 
     #[test]
