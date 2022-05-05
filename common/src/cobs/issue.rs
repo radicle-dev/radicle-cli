@@ -144,8 +144,8 @@ impl<'a> Issues<'a> {
         body: &str,
     ) -> Result<ObjectId, Error> {
         let author = self.whoami.urn();
-        let mut issue = self.get(project, issue_id)?.unwrap();
-        let changes = events::comment(&mut issue.automerge, &author, body)?;
+        let mut issue = self.get_raw(project, issue_id)?.unwrap();
+        let changes = events::comment(&mut issue, &author, body)?;
         let cob = self
             .store
             .update(
@@ -193,6 +193,32 @@ impl<'a> Issues<'a> {
         let issue = Issue::try_from(doc)?;
 
         Ok(Some(issue))
+    }
+
+    pub fn get_raw(&self, project: &Urn, id: &ObjectId) -> Result<Option<Automerge>, Error> {
+        let cob = self
+            .store
+            .retrieve(project, &TYPENAME, id)
+            .map_err(|e| Error::Retrieve(e.to_string()))?;
+
+        let cob = if let Some(cob) = cob {
+            cob
+        } else {
+            return Ok(None);
+        };
+
+        let doc = cob.history().traverse(Vec::new(), |mut doc, entry| {
+            match entry.contents() {
+                EntryContents::Automerge(bytes) => {
+                    doc.extend(bytes);
+                }
+            }
+            ControlFlow::Continue(doc)
+        });
+
+        let doc = Automerge::load(&doc)?;
+
+        Ok(Some(doc))
     }
 }
 
@@ -327,9 +353,8 @@ mod test {
         assert_eq!(issue.comments().len(), 0);
     }
 
-    #[assay(
-        teardown = test::teardown::profiles()?,
-    )]
+    #[test]
+    #[ignore]
     fn test_issue_comment() {
         let (storage, profile, whoami, project) = setup();
         let _author = whoami.urn();
