@@ -135,9 +135,8 @@ fn run(remote: Remote) -> anyhow::Result<()> {
             process::exit(status.code().unwrap_or(EXIT_FAILURE))
         }
         Remote::Project { urn: _urn } => {
-            let sock = keys::ssh_auth_sock();
             let profile = profile::default()?;
-            let (signer, _) = keys::storage(&profile, sock)?;
+            let signer = keys::signer(&profile)?;
             let config = remote_helper::Config {
                 signer: Some(signer),
             };

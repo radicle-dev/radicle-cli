@@ -91,8 +91,8 @@ pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
     // TODO: Remove tracking branch
 
     let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
+    let signer = keys::signer(&profile)?;
+    let (_, storage) = keys::storage(&profile, signer)?;
 
     if let Some(peer) = options.peer {
         tracking::untrack(

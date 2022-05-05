@@ -64,8 +64,8 @@ impl Args for Options {
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
+    let signer = keys::signer(&profile)?;
+    let (_, storage) = keys::storage(&profile, signer)?;
 
     if project::get(&storage, &options.urn)?.is_none() {
         anyhow::bail!("project {} does not exist", options.urn);

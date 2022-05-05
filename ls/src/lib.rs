@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use rad_common::{keys, profile, project};
+use rad_common::{profile, project};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -42,8 +42,7 @@ impl Args for Options {
 
 pub fn run(_options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
+    let storage = profile::read_only(&profile)?;
     let projs = project::list(&storage)?;
     let mut table = term::Table::default();
 

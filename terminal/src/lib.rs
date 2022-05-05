@@ -2,6 +2,13 @@ pub mod args;
 
 pub mod keys {
     use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
+    use librad::crypto::keystore::sign::ed25519;
+    use librad::crypto::BoxedSignError;
+    use librad::SecretKey;
+    use zeroize::Zeroizing;
+
+    /// The filename for storing the secret key.
+    pub const KEY_FILE: &str = "librad.key";
 
     #[derive(Clone)]
     pub struct CachedPrompt(pub SecUtf8);
@@ -19,6 +26,46 @@ pub mod keys {
             Ok(self.0.clone())
         }
     }
+
+    /// Secret key that is zeroed when dropped.
+    #[derive(Clone)]
+    pub struct ZeroizingSecretKey {
+        key: Zeroizing<SecretKey>,
+    }
+
+    impl ZeroizingSecretKey {
+        pub fn new(key: SecretKey) -> Self {
+            Self {
+                key: Zeroizing::new(key),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ed25519::Signer for ZeroizingSecretKey {
+        type Error = BoxedSignError;
+
+        fn public_key(&self) -> ed25519::PublicKey {
+            self.key.public_key()
+        }
+
+        async fn sign(&self, data: &[u8]) -> Result<ed25519::Signature, Self::Error> {
+            <SecretKey as ed25519::Signer>::sign(&self.key, data)
+                .await
+                .map_err(BoxedSignError::from_std_error)
+        }
+    }
+
+    impl librad::Signer for ZeroizingSecretKey {
+        fn sign_blocking(
+            &self,
+            data: &[u8],
+        ) -> Result<librad::keystore::sign::Signature, <Self as ed25519::Signer>::Error> {
+            self.key
+                .sign_blocking(data)
+                .map_err(BoxedSignError::from_std_error)
+        }
+    }
 }
 
 pub mod components {
@@ -26,8 +73,11 @@ pub mod components {
     use std::fmt::Write;
     use std::str::FromStr;
 
-    use librad::crypto::keystore::crypto;
     use librad::crypto::keystore::pinentry::SecUtf8;
+    use librad::crypto::keystore::FileStorage;
+    use librad::keystore::Keystore;
+    use librad::profile::Profile;
+    use librad::{crypto::keystore::crypto, PublicKey};
 
     use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
     use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
@@ -455,6 +505,16 @@ pub mod components {
 
     pub fn secret_input() -> SecUtf8 {
         secret_input_with_prompt("Passphrase")
+    }
+
+    pub fn secret_key(profile: &Profile) -> Result<keys::ZeroizingSecretKey, anyhow::Error> {
+        let passphrase = secret_input();
+        let secret_box = pwhash(passphrase);
+        let file_storage: FileStorage<_, PublicKey, _, _> =
+            FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), secret_box);
+        let keystore = file_storage.get_key()?;
+
+        Ok(keys::ZeroizingSecretKey::new(keystore.secret_key))
     }
 
     // TODO: This prompt shows success just for entering a password,

@@ -29,7 +29,7 @@ pub mod teardown {
         if let Ok(profiles) = profile::list() {
             for profile in profiles {
                 let pass = crypto::Pwhash::new(SecUtf8::from(test::USER_PASS), params);
-                keys::remove(&profile, pass, keys::ssh_auth_sock())?;
+                keys::remove(&profile, pass, keys::ssh_auth_sock()?)?;
             }
         }
         Ok(())

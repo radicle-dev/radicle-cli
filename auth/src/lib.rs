@@ -2,6 +2,7 @@
 use std::ffi::OsString;
 
 use anyhow::Context as _;
+use rad_common::signer::ToSigner;
 use zeroize::Zeroizing;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
@@ -120,9 +121,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 }
 
 pub fn init(options: Options) -> anyhow::Result<()> {
-    let sock = keys::ssh_auth_sock();
-
     term::headline("Initializing your 🌱 profile and identity");
+
+    let sock = keys::ssh_auth_sock();
 
     if git::check_version().is_err() {
         term::warning(&format!(
@@ -149,12 +150,22 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 
     spinner.finish();
-    spinner = term::spinner("Adding to ssh-agent...");
 
-    let profile_id = keys::add(&profile, pass, sock.clone())?;
-    let (signer, storage) = keys::storage(&profile, sock)?;
+    let (profile_id, signer, storage) = if let Ok(sock) = sock {
+        spinner = term::spinner("Adding to ssh-agent...");
 
-    spinner.finish();
+        let profile_id = keys::add(&profile, pass, sock.clone())?;
+        let (signer, storage) = keys::storage(&profile, sock)?;
+
+        spinner.finish();
+
+        (profile_id, signer, storage)
+    } else {
+        let signer = term::secret_key(&profile)?;
+        let (signer, storage) = keys::storage(&profile, signer)?;
+
+        (profile.id().clone(), signer, storage)
+    };
 
     let person = person::create(&profile, &name, signer, &storage)?;
     person::set_local(&storage, &person);
@@ -184,7 +195,6 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 }
 
 pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::Result<()> {
-    let sock = keys::ssh_auth_sock();
     let profile = profile::default()?;
 
     if !options.active {
@@ -224,29 +234,34 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
         term::success!("Profile {} activated", id);
     }
 
-    if !keys::is_ready(selection, sock.clone())? {
-        term::warning("Adding your radicle key to ssh-agent...");
+    let signer = if let Ok(sock) = keys::ssh_auth_sock() {
+        if !keys::is_ready(selection, sock.clone())? {
+            term::warning("Adding your radicle key to ssh-agent...");
 
-        // TODO: We should show the spinner on the passphrase prompt,
-        // otherwise it seems like the passphrase is valid even if it isn't.
-        let secret_input: SecUtf8 = if atty::is(atty::Stream::Stdin) {
-            term::secret_input()
+            // TODO: We should show the spinner on the passphrase prompt,
+            // otherwise it seems like the passphrase is valid even if it isn't.
+            let secret_input: SecUtf8 = if atty::is(atty::Stream::Stdin) {
+                term::secret_input()
+            } else {
+                let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
+                std::io::stdin().read_line(&mut input)?;
+                SecUtf8::from(input.trim_end())
+            };
+            let pass = term::pwhash(secret_input);
+            let spinner = term::spinner("Unlocking...");
+
+            keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
+            spinner.finish();
+
+            term::success!("Radicle key added to ssh-agent");
         } else {
-            let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
-            std::io::stdin().read_line(&mut input)?;
-            SecUtf8::from(input.trim_end())
-        };
-        let pass = term::pwhash(secret_input);
-        let spinner = term::spinner("Unlocking...");
-
-        keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
-        spinner.finish();
-
-        term::success!("Radicle key added to ssh-agent");
+            term::success!("Signing key already in ssh-agent");
+        }
+        sock.to_signer(&profile)?
     } else {
-        term::success!("Signing key already in ssh-agent");
-    }
-    let (signer, _) = keys::storage(selection, sock)?;
+        let signer = term::secret_key(&profile)?;
+        signer.to_signer(&profile)?
+    };
 
     git::configure_signing(selection.paths().git_dir(), &signer.peer_id())?;
     term::success!("Signing key configured in git");

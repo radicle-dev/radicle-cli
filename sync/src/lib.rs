@@ -203,8 +203,8 @@ impl Args for Options {
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let sock = keys::ssh_auth_sock();
-    let (_, storage) = keys::storage(&profile, sock)?;
+    let signer = keys::signer(&profile)?;
+    let (_, storage) = keys::storage(&profile, signer)?;
 
     let project_urn = if let Some(origin) = &options.origin {
         origin.urn.clone()

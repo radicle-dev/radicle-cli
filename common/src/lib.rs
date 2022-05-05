@@ -6,6 +6,7 @@ pub mod person;
 pub mod profile;
 pub mod project;
 pub mod seed;
+pub mod signer;
 pub mod test;
 
 #[cfg(feature = "ethereum")]

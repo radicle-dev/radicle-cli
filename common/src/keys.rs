@@ -1,5 +1,5 @@
 //! SSH and key-related functions.
-use anyhow::{anyhow, Context as _, Error, Result};
+use anyhow::{Context as _, Error, Result};
 
 use librad::crypto::keystore::crypto::Pwhash;
 use librad::crypto::BoxedSigner;
@@ -11,18 +11,33 @@ use librad::PeerId;
 
 use lnk_clib::keys;
 use lnk_clib::keys::ssh::SshAuthSock;
-use lnk_clib::storage;
-use lnk_clib::storage::ssh;
+
+use rad_terminal::components as term;
+
+use crate::signer::ToSigner;
 
 /// Get the radicle signer and storage.
-pub fn storage(profile: &Profile, sock: SshAuthSock) -> Result<(BoxedSigner, Storage), Error> {
-    match ssh::storage(profile, sock) {
-        Ok(result) => Ok(result),
-        Err(storage::Error::SshKeys(keys::ssh::Error::NoSuchKey(_))) => Err(anyhow!(
-            "the radicle ssh key for this profile is not in ssh-agent"
-        )),
-        Err(err) => Err(anyhow!(err)),
-    }
+pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<(BoxedSigner, Storage), Error> {
+    let signer = match signer.to_signer(profile) {
+        Ok(signer) => signer,
+        Err(keys::ssh::Error::NoSuchKey(_)) => {
+            anyhow::bail!("the radicle ssh key for this profile is not in ssh-agent")
+        }
+        Err(err) => anyhow::bail!(err),
+    };
+    let storage = Storage::open(profile.paths(), signer.clone())?;
+
+    Ok((signer, storage))
+}
+
+/// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.
+pub fn signer(profile: &Profile) -> Result<BoxedSigner, Error> {
+    let signer = if let Ok(sock) = ssh_auth_sock() {
+        sock.to_signer(profile)?
+    } else {
+        term::secret_key(profile)?.to_signer(profile)?
+    };
+    Ok(signer)
 }
 
 /// Add a profile's radicle signing key to ssh-agent.
@@ -51,12 +66,12 @@ where
         .context("could not remove ssh key")
 }
 
-/// Get the SSH auth socket and warn if ssh-agent is not running.
-pub fn ssh_auth_sock() -> SshAuthSock {
+/// Get the SSH auth socket and error if ssh-agent is not running.
+pub fn ssh_auth_sock() -> Result<SshAuthSock, anyhow::Error> {
     if std::env::var("SSH_AGENT_PID").is_err() && std::env::var("SSH_AUTH_SOCK").is_err() {
-        rad_terminal::components::warning("Warning: ssh-agent does not appear to be running!");
+        anyhow::bail!("ssh-agent does not appear to be running");
     }
-    SshAuthSock::default()
+    Ok(SshAuthSock::Env)
 }
 
 /// Check whether the radicle signing key has been added to ssh-agent.
