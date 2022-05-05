@@ -4924,6 +4924,7 @@ dependencies = [
  "lnk-clib",
  "lnk-identities",
  "lnk-profile",
+ "log",
  "nonempty",
  "rad-terminal",
  "radicle-git-ext",
