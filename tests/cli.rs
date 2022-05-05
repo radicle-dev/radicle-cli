@@ -16,8 +16,8 @@ mod auth {
     const INIT_MISSING: &str = "invalid option '--password'";
 
     #[assay(
-        setup = setup::with(&[Env::Home])?,
-        teardown = teardown::profiles()?,
+        setup = setup::with(&[Env::Home, Env::SshAgent])?,
+        teardown = teardown::all()?,
     )]
     fn can_be_initialized() {
         let status = Command::cargo_bin("rad-auth")?
