@@ -200,6 +200,27 @@ impl<'a> Issues<'a> {
         Ok(*cob.id()) // TODO: Return something other than doc id.
     }
 
+    pub fn close(&self, project: &Urn, issue_id: &ObjectId) -> Result<(), Error> {
+        let author = self.whoami.urn();
+        let mut issue = self.get_raw(project, issue_id)?.unwrap();
+        let changes = events::lifecycle(&mut issue, &author, State::Closed)?;
+        let _cob = self
+            .store
+            .update(
+                &self.whoami,
+                project,
+                UpdateObjectSpec {
+                    object_id: *issue_id,
+                    typename: TYPENAME.clone(),
+                    message: Some("Add comment".to_owned()),
+                    changes,
+                },
+            )
+            .unwrap();
+
+        Ok(())
+    }
+
     pub fn get(&self, project: &Urn, id: &ObjectId) -> Result<Option<Issue>, Error> {
         let cob = self
             .store
@@ -326,6 +347,30 @@ mod events {
 
         Ok(EntryContents::Automerge(change))
     }
+
+    pub fn lifecycle(
+        issue: &mut Automerge,
+        _author: &Urn,
+        state: State,
+    ) -> Result<EntryContents, AutomergeError> {
+        issue
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Close issue".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "issue")?.unwrap();
+                    tx.put(&obj_id, "state", state)?;
+
+                    // TODO: Record who changed the state of the issue.
+
+                    Ok(())
+                },
+            )
+            .map_err(|failure| failure.error)?;
+
+        let change = issue.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok(EntryContents::Automerge(change))
+    }
 }
 
 #[cfg(test)]
@@ -385,6 +430,20 @@ mod test {
         assert_eq!(issue.description(), "Blah blah blah.");
         assert_eq!(issue.comments().len(), 0);
         assert_eq!(issue.state(), State::Open);
+    }
+
+    #[test]
+    fn test_issue_create_and_change_state() {
+        let (storage, profile, whoami, project) = setup();
+        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let issue_id = issues
+            .create(&project.urn(), "My first issue", "Blah blah blah.")
+            .unwrap();
+
+        issues.close(&project.urn(), &issue_id).unwrap();
+
+        let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
+        assert_eq!(issue.state(), State::Closed);
     }
 
     #[test]
