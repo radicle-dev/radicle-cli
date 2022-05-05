@@ -297,6 +297,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "automerge"
+version = "0.1.0"
+source = "git+https://github.com/automerge/automerge-rs?rev=291557a019acac283e54ea31a9fad81ed65736ab#291557a019acac283e54ea31a9fad81ed65736ab"
+dependencies = [
+ "flate2",
+ "fxhash",
+ "hex",
+ "itertools 0.10.3",
+ "leb128",
+ "nonzero_ext 0.2.0",
+ "rand 0.8.5",
+ "serde",
+ "sha2 0.10.2",
+ "smol_str",
+ "thiserror",
+ "tinyvec",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "automerge-backend"
 version = "0.0.1"
 source = "git+https://github.com/automerge/automerge-rs.git?rev=e72571962b51c2f0726fb534890ef3b4f7c74dfc#e72571962b51c2f0726fb534890ef3b4f7c74dfc"
@@ -870,7 +891,7 @@ name = "cob"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?rev=a9485b78b5c78d252c92f61d990cf34622d1c8f1#a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 dependencies = [
- "automerge",
+ "automerge 0.0.2",
  "either",
  "git-trailers",
  "git2",
@@ -4886,7 +4907,9 @@ name = "rad-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assay",
  "async-trait",
+ "automerge 0.1.0",
  "base64 0.13.0",
  "byteorder",
  "coins-bip32 0.6.0",
@@ -4901,6 +4924,7 @@ dependencies = [
  "lnk-clib",
  "lnk-identities",
  "lnk-profile",
+ "nonempty",
  "rad-terminal",
  "radicle-git-ext",
  "serde",

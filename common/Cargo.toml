@@ -9,6 +9,7 @@ default = []
 ethereum = ["ethers", "coins-bip32", "async-trait", "hex", "walletconnect"]
 
 [dependencies]
+automerge = "0.1"
 anyhow = "1.0"
 base64 = "0.13"
 byteorder = "1.4"
@@ -25,10 +26,14 @@ lnk-profile = { version = "0" }
 lnk-identities = { version = "0" }
 rad-terminal = { path = "../terminal" }
 radicle-git-ext = { version = "0" }
+nonempty = "0.7"
 url = { version = "2" }
 sha2 = { version = "0.10.2" }
 ureq = { version = "2.2", default-features = false, features = ["json", "tls"] }
 thiserror = "1"
+
+[dev-dependencies]
+assay = "0.1.1"
 
 # Ethereum feature dependencies
 

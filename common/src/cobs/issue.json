@@ -1,0 +1,28 @@
+{
+    "$vocabulary": {
+        "https://alexjg.github.io/automerge-jsonschema/spec": true
+    },
+    "type": "object",
+    "properties": {
+        "title": {
+            "type": "string"
+        },
+        "author": {
+            "type": "string"
+        },
+        "comments": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "body": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}
