@@ -1,14 +1,17 @@
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
-use std::convert::{Infallible, TryFrom};
+use std::convert::{Infallible, TryFrom, TryInto};
 use std::ops::ControlFlow;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use lazy_static::lazy_static;
 use nonempty::NonEmpty;
 
 use librad::collaborative_objects::{
-    CollaborativeObjects, EntryContents, NewObjectSpec, ObjectId, TypeName, UpdateObjectSpec,
+    CollaborativeObjects, EntryContents, History, NewObjectSpec, ObjectId, TypeName,
+    UpdateObjectSpec,
 };
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
@@ -25,6 +28,9 @@ lazy_static! {
 pub enum Error {
     #[error("Create error: {0}")]
     Create(String),
+
+    #[error("List error: {0}")]
+    List(String),
 
     #[error("Retrieve error: {0}")]
     Retrieve(String),
@@ -128,6 +134,7 @@ pub struct Issue {
     pub state: State,
     pub comments: NonEmpty<Comment>,
     pub labels: HashSet<Label>,
+    pub timestamp: Timestamp,
 }
 
 impl Issue {
@@ -158,6 +165,35 @@ impl Issue {
     pub fn labels(&self) -> &HashSet<Label> {
         &self.labels
     }
+
+    pub fn timestamp(&self) -> Timestamp {
+        self.timestamp
+    }
+}
+
+impl TryFrom<&History> for Issue {
+    type Error = anyhow::Error;
+
+    fn try_from(history: &History) -> Result<Self, Self::Error> {
+        let doc = history.traverse(Automerge::new(), |mut doc, entry| {
+            match entry.contents() {
+                EntryContents::Automerge(bytes) => {
+                    match automerge::Change::from_bytes(bytes.clone()) {
+                        Ok(change) => {
+                            doc.apply_changes([change]).ok();
+                        }
+                        Err(_err) => {
+                            // Ignore
+                        }
+                    }
+                }
+            }
+            ControlFlow::Continue(doc)
+        });
+        let issue = Issue::try_from(doc)?;
+
+        Ok(issue)
+    }
 }
 
 impl TryFrom<Automerge> for Issue {
@@ -169,6 +205,7 @@ impl TryFrom<Automerge> for Issue {
         let (comments, comments_id) = doc.get(&obj_id, "comments")?.unwrap();
         let (author, _) = doc.get(&obj_id, "author")?.unwrap();
         let (state, _) = doc.get(&obj_id, "state")?.unwrap();
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
         let (labels, labels_id) = doc.get(&obj_id, "labels")?.unwrap();
 
         assert_eq!(comments.to_objtype(), Some(ObjType::List));
@@ -210,6 +247,7 @@ impl TryFrom<Automerge> for Issue {
         let author = self::author(author)?;
         let comments = NonEmpty::from_vec(comments).unwrap();
         let state = State::try_from(state).unwrap();
+        let timestamp = Timestamp::try_from(timestamp).unwrap();
 
         Ok(Self {
             title: title.into_string().unwrap(),
@@ -217,7 +255,52 @@ impl TryFrom<Automerge> for Issue {
             author,
             comments,
             labels,
+            timestamp,
         })
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq)]
+pub struct Timestamp {
+    seconds: u64,
+}
+
+impl Timestamp {
+    pub fn new(seconds: u64) -> Self {
+        Self { seconds }
+    }
+
+    pub fn now() -> Self {
+        let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+
+        Self {
+            seconds: duration.as_secs(),
+        }
+    }
+
+    pub fn as_secs(&self) -> u64 {
+        self.seconds
+    }
+}
+
+impl From<Timestamp> for ScalarValue {
+    fn from(ts: Timestamp) -> Self {
+        ScalarValue::Timestamp(ts.seconds as i64)
+    }
+}
+
+impl<'a> TryFrom<Value<'a>> for Timestamp {
+    type Error = String;
+
+    fn try_from(val: Value) -> Result<Self, Self::Error> {
+        if let Value::Scalar(scalar) = val {
+            if let ScalarValue::Timestamp(ts) = scalar.borrow() {
+                return Ok(Self {
+                    seconds: *ts as u64,
+                });
+            }
+        }
+        Err(String::from("value is not a timestamp"))
     }
 }
 
@@ -235,22 +318,10 @@ impl<'a> Issues<'a> {
 
     pub fn create(&self, project: &Urn, title: &str, description: &str) -> Result<ObjectId, Error> {
         let author = self.whoami.urn();
-        let history = events::create(&author, title, description)?;
-        let cob = self
-            .store
-            .create(
-                &self.whoami,
-                project,
-                NewObjectSpec {
-                    schema_json: SCHEMA.clone(),
-                    typename: TYPENAME.clone(),
-                    message: Some("Create issue".to_owned()),
-                    history,
-                },
-            )
-            .map_err(|e| Error::Create(e.to_string()))?;
+        let timestamp = Timestamp::now();
+        let history = events::create(&author, title, description, timestamp)?;
 
-        Ok(*cob.id())
+        cobs::create(history, project, &self.whoami, &self.store)
     }
 
     pub fn comment(
@@ -348,36 +419,34 @@ impl<'a> Issues<'a> {
         Ok(())
     }
 
+    pub fn all(&self, project: &Urn) -> Result<Vec<Issue>, Error> {
+        let cobs = self
+            .store
+            .list(project, &TYPENAME)
+            .map_err(|e| Error::List(e.to_string()))?;
+
+        let mut issues = Vec::new();
+        for cob in cobs {
+            let issue: Result<Issue, _> = cob.history().try_into();
+            issues.push(issue.unwrap());
+        }
+        issues.sort_by_key(|i| i.timestamp);
+
+        Ok(issues)
+    }
+
     pub fn get(&self, project: &Urn, id: &ObjectId) -> Result<Option<Issue>, Error> {
         let cob = self
             .store
             .retrieve(project, &TYPENAME, id)
             .map_err(|e| Error::Retrieve(e.to_string()))?;
 
-        let cob = if let Some(cob) = cob {
-            cob
+        if let Some(cob) = cob {
+            let issue = Issue::try_from(cob.history()).unwrap();
+            Ok(Some(issue))
         } else {
-            return Ok(None);
-        };
-
-        let doc = cob.history().traverse(Automerge::new(), |mut doc, entry| {
-            match entry.contents() {
-                EntryContents::Automerge(bytes) => {
-                    match automerge::Change::from_bytes(bytes.clone()) {
-                        Ok(change) => {
-                            doc.apply_changes([change]).ok();
-                        }
-                        Err(_err) => {
-                            // Ignore
-                        }
-                    }
-                }
-            }
-            ControlFlow::Continue(doc)
-        });
-        let issue = Issue::try_from(doc)?;
-
-        Ok(Some(issue))
+            Ok(None)
+        }
     }
 
     pub fn get_raw(&self, project: &Urn, id: &ObjectId) -> Result<Option<Automerge>, Error> {
@@ -407,6 +476,32 @@ impl<'a> Issues<'a> {
     }
 }
 
+mod cobs {
+    use super::*;
+
+    pub(super) fn create(
+        history: EntryContents,
+        project: &Urn,
+        whoami: &LocalIdentity,
+        store: &CollaborativeObjects,
+    ) -> Result<ObjectId, Error> {
+        let cob = store
+            .create(
+                whoami,
+                project,
+                NewObjectSpec {
+                    schema_json: SCHEMA.clone(),
+                    typename: TYPENAME.clone(),
+                    message: Some("Create issue".to_owned()),
+                    history,
+                },
+            )
+            .map_err(|e| Error::Create(e.to_string()))?;
+
+        Ok(*cob.id())
+    }
+}
+
 mod events {
     use super::*;
     use automerge::{
@@ -418,6 +513,7 @@ mod events {
         author: &Urn,
         title: &str,
         description: &str,
+        timestamp: Timestamp,
     ) -> Result<EntryContents, AutomergeError> {
         // TODO: Set actor id of document?
         let mut doc = Automerge::new();
@@ -430,6 +526,7 @@ mod events {
                     tx.put(&issue, "title", title)?;
                     tx.put(&issue, "author", author.to_string())?;
                     tx.put(&issue, "state", State::Open)?;
+                    tx.put(&issue, "timestamp", timestamp)?;
                     tx.put_object(&issue, "labels", ObjType::Map)?;
 
                     let comments = tx.put_object(&issue, "comments", ObjType::List)?;
@@ -617,12 +714,14 @@ mod test {
             .create(&project.urn(), "My first issue", "Blah blah blah.")
             .unwrap();
         let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
+        let timestamp = Timestamp::now();
 
         assert_eq!(issue.title(), "My first issue");
         assert_eq!(issue.author(), &author);
         assert_eq!(issue.description(), "Blah blah blah.");
         assert_eq!(issue.comments().len(), 0);
         assert_eq!(issue.state(), State::Open);
+        assert!(issue.timestamp() >= timestamp);
     }
 
     #[test]
@@ -710,5 +809,61 @@ mod test {
         assert_eq!(&c1.author, &author);
         assert_eq!(&c2.body, "Ha ha ha.");
         assert_eq!(&c2.author, &author);
+    }
+
+    #[test]
+    fn test_issue_all() {
+        let (storage, profile, whoami, project) = setup();
+        let author = whoami.urn();
+        let issues = Issues::new(whoami.clone(), profile.paths(), &storage).unwrap();
+
+        cobs::create(
+            events::create(
+                &author,
+                "My first issue",
+                "Blah blah blah.",
+                Timestamp::new(1),
+            )
+            .unwrap(),
+            &project.urn(),
+            &whoami,
+            &issues.store,
+        )
+        .unwrap();
+
+        cobs::create(
+            events::create(
+                &author,
+                "My second issue",
+                "Blah blah blah.",
+                Timestamp::new(2),
+            )
+            .unwrap(),
+            &project.urn(),
+            &whoami,
+            &issues.store,
+        )
+        .unwrap();
+
+        cobs::create(
+            events::create(
+                &author,
+                "My third issue",
+                "Blah blah blah.",
+                Timestamp::new(3),
+            )
+            .unwrap(),
+            &project.urn(),
+            &whoami,
+            &issues.store,
+        )
+        .unwrap();
+
+        let issues = issues.all(&project.urn()).unwrap();
+
+        // Issues are sorted by timestamp.
+        assert_eq!(issues[0].title(), "My first issue");
+        assert_eq!(issues[1].title(), "My second issue");
+        assert_eq!(issues[2].title(), "My third issue");
     }
 }
