@@ -109,11 +109,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         _ => vec![],
     };
 
-    if !profiles.is_empty() && profile::default().is_err() {
-        term::warning("Warning: Found profile(s) but could not load active one. Initializing...");
+    if options.init || profiles.is_empty() {
         init(options)
-    } else if options.init || profiles.is_empty() {
-        init(options)
+    } else if profile::default().is_err() {
+        if profiles.len() > 1 {
+            // Show profile selector.
+            term::warning("Warning: Active profile could not be loaded.");
+            authenticate(&profiles, options)
+        } else {
+            anyhow::bail!(
+                "Profile could not be loaded. Create a new profile with `rad auth --init`."
+            )
+        }
     } else {
         authenticate(&profiles, options)
     }
