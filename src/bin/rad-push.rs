@@ -2,7 +2,7 @@ use std::path::Path;
 
 use rad_common::{git, profile};
 use rad_push::HELP;
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 // TODO: Pass all options after `--` to git.
 fn main() {

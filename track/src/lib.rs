@@ -14,7 +14,7 @@ use rad_common::args::Help;
 use rad_common::project::PeerInfo;
 use rad_common::Url;
 use rad_common::{git, keys, profile, project, seed};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 mod options;
 pub use options::Options;

@@ -8,7 +8,7 @@ use rad_common::args;
 use rad_common::args::{Args, Error, Help};
 use rad_common::seed::SeedOptions;
 use rad_common::{git, keys, person, profile, project, seed, seed::Scope};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 use anyhow::anyhow;
 use anyhow::Context as _;

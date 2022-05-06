@@ -11,7 +11,7 @@ use url::Url;
 use rad_common::args::{Args, Error, Help};
 use rad_common::seed::{self, SeedOptions};
 use rad_common::{git, keys, profile, project};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 pub const HELP: Help = Help {
     name: "clone",

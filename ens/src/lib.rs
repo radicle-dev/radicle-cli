@@ -9,7 +9,7 @@ use librad::git::Storage;
 use rad_common::args::{Args, Error, Help};
 use rad_common::ethereum::{ProviderOptions, SignerOptions};
 use rad_common::{ethereum, keys, person, profile, seed};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 use crate::resolver::PublicResolver;
 

@@ -9,7 +9,7 @@ use librad::crypto::keystore::pinentry::SecUtf8;
 
 use rad_common::args::{Args, Error, Help};
 use rad_common::{git, keys, person, profile};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 pub const HELP: Help = Help {
     name: "auth",
@@ -211,7 +211,7 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     }
 
     let selection = if profiles.len() > 1 && !options.active {
-        if let Some(p) = term::format::profile_select(profiles, &profile) {
+        if let Some(p) = term::profile_select(profiles, &profile) {
             p
         } else {
             return Ok(());

@@ -14,7 +14,7 @@ use regex::Regex;
 use rad_common::args::{Args, Error, Help};
 use rad_common::ethereum;
 use rad_common::ethereum::{ProviderOptions, SignerOptions};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 use crate::governance::Governance;
 

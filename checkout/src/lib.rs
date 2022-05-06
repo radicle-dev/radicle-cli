@@ -8,7 +8,7 @@ use librad::git::Urn;
 
 use rad_common::args::{Args, Error, Help};
 use rad_common::{fmt, keys, profile, project};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 pub const HELP: Help = Help {
     name: "checkout",
@@ -130,7 +130,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
 
             // Setup signing.
             if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo) {
-                term::error(&format!("Could not setup signing: {:#}", err));
+                term::warning(&format!("Warning: Could not setup signing: {:#}", err));
             }
 
             // Setup a remote and tracking branch for all project delegates except yourself.

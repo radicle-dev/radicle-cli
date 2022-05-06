@@ -6,7 +6,7 @@ use ethers::prelude::Chain;
 use ethers::signers::{HDPath, Ledger};
 
 use rad_common::args::{Args, Error, Help};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 pub const HELP: Help = Help {
     name: "account",

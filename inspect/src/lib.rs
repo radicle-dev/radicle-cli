@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use rad_common::args::{Args, Error, Help};
 use rad_common::{git, profile, project};
-use rad_terminal::components as term;
+use rad_terminal as term;
 
 use librad::git::identities::any;
 use librad::git::storage::ReadOnlyStorage;
