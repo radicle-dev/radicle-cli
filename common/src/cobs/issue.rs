@@ -8,6 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use lazy_static::lazy_static;
 use nonempty::NonEmpty;
+use serde::{Deserialize, Serialize};
 
 use librad::collaborative_objects::{
     CollaborativeObjects, EntryContents, History, NewObjectSpec, ObjectId, TypeName,
@@ -39,7 +40,7 @@ pub enum Error {
     Automerge(#[from] AutomergeError),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub struct Reaction {
     pub emoji: char,
 }
@@ -65,7 +66,8 @@ impl FromStr for Reaction {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Label(String);
 
 impl Label {
@@ -84,7 +86,7 @@ impl From<Label> for String {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Comment {
     pub author: Urn,
     pub body: String,
@@ -99,7 +101,8 @@ pub fn author(val: Value) -> Result<Urn, AutomergeError> {
     Ok(author)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum State {
     Open,
     Closed,
@@ -128,7 +131,7 @@ impl<'a> TryFrom<Value<'a>> for State {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Issue {
     pub author: Urn,
     pub title: String,
@@ -264,7 +267,8 @@ impl TryFrom<Automerge> for Issue {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Timestamp {
     seconds: u64,
 }
