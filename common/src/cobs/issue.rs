@@ -89,6 +89,7 @@ pub struct Comment {
     pub author: Urn,
     pub body: String,
     pub reactions: HashMap<Reaction, usize>,
+    pub timestamp: Timestamp,
 }
 
 pub fn author(val: Value) -> Result<Urn, AutomergeError> {
@@ -217,10 +218,12 @@ impl TryFrom<Automerge> for Issue {
             let (_val, comment_id) = doc.get(&comments_id, i as usize)?.unwrap();
             let (author, _) = doc.get(&comment_id, "author")?.unwrap();
             let (body, _) = doc.get(&comment_id, "body")?.unwrap();
+            let (timestamp, _) = doc.get(&comment_id, "timestamp")?.unwrap();
             let (_, reactions_id) = doc.get(&comment_id, "reactions")?.unwrap();
 
             let author = self::author(author)?;
             let body = body.into_string().unwrap();
+            let timestamp = Timestamp::try_from(timestamp).unwrap();
 
             let mut reactions: HashMap<_, usize> = HashMap::new();
             for reaction in doc.keys(&reactions_id) {
@@ -234,6 +237,7 @@ impl TryFrom<Automerge> for Issue {
                 author,
                 body,
                 reactions,
+                timestamp,
             });
         }
 
@@ -332,7 +336,8 @@ impl<'a> Issues<'a> {
     ) -> Result<ObjectId, Error> {
         let author = self.whoami.urn();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
-        let changes = events::comment(&mut issue, &author, body)?;
+        let timestamp = Timestamp::now();
+        let changes = events::comment(&mut issue, &author, body, timestamp)?;
         let cob = self
             .store
             .update(
@@ -534,6 +539,7 @@ mod events {
 
                     tx.put(&comment, "body", description)?;
                     tx.put(&comment, "author", author.to_string())?;
+                    tx.put(&comment, "timestamp", timestamp)?;
                     tx.put_object(&comment, "reactions", ObjType::Map)?;
 
                     Ok(issue)
@@ -549,6 +555,7 @@ mod events {
         issue: &mut Automerge,
         author: &Urn,
         body: &str,
+        timestamp: Timestamp,
     ) -> Result<EntryContents, AutomergeError> {
         let _comment = issue
             .transact_with::<_, _, AutomergeError, _, ()>(
@@ -562,6 +569,7 @@ mod events {
 
                     tx.put(&comment, "author", author.to_string())?;
                     tx.put(&comment, "body", body)?;
+                    tx.put(&comment, "timestamp", timestamp)?;
                     tx.put_object(&comment, "labels", ObjType::Map)?;
                     tx.put_object(&comment, "reactions", ObjType::Map)?;
 
@@ -787,6 +795,7 @@ mod test {
     #[test]
     fn test_issue_comment() {
         let (storage, profile, whoami, project) = setup();
+        let now = Timestamp::now();
         let author = whoami.urn();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
@@ -809,6 +818,7 @@ mod test {
         assert_eq!(&c1.author, &author);
         assert_eq!(&c2.body, "Ha ha ha.");
         assert_eq!(&c2.author, &author);
+        assert!(c1.timestamp >= now);
     }
 
     #[test]
