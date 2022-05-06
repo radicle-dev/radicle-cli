@@ -4928,7 +4928,6 @@ dependencies = [
  "lnk-profile",
  "log",
  "nonempty",
- "rad-terminal",
  "radicle-git-ext",
  "serde",
  "serde_json",
@@ -4937,6 +4936,7 @@ dependencies = [
  "ureq",
  "url",
  "walletconnect",
+ "zeroize",
 ]
 
 [[package]]
@@ -5123,6 +5123,7 @@ dependencies = [
  "lexopt",
  "librad",
  "lnk-profile",
+ "rad-common",
  "thiserror",
  "zeroize",
 ]

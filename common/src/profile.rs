@@ -6,10 +6,10 @@ pub use librad::profile::{Profile, ProfileId};
 
 use lnk_profile;
 
+use crate::args;
+
 /// Get the default profile. Fails if there is no profile.
 pub fn default() -> Result<Profile, Error> {
-    use rad_terminal::args;
-
     let error = args::Error::WithHint {
         err: anyhow!("Could not load radicle profile"),
         hint: "To setup your radicle profile, run `rad auth`.",

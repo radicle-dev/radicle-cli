@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::{profile, project};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {

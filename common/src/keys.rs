@@ -2,7 +2,6 @@
 use anyhow::{Context as _, Error, Result};
 
 use librad::crypto::keystore::crypto::Pwhash;
-use librad::crypto::BoxedSigner;
 use librad::git::storage::Storage;
 
 use librad::keystore::pinentry::Pinentry;
@@ -12,7 +11,7 @@ use librad::PeerId;
 use lnk_clib::keys;
 use lnk_clib::keys::ssh::SshAuthSock;
 
-use rad_terminal::components as term;
+pub use lnk_clib::keys::LIBRAD_KEY_FILE as KEY_FILE;
 
 use crate::signer::ToSigner;
 
@@ -28,16 +27,6 @@ pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<Storage, Erro
     let storage = Storage::open(profile.paths(), signer)?;
 
     Ok(storage)
-}
-
-/// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.
-pub fn signer(profile: &Profile) -> Result<BoxedSigner, Error> {
-    let signer = if let Ok(sock) = ssh_auth_sock() {
-        sock.to_signer(profile)?
-    } else {
-        term::secret_key(profile)?.to_signer(profile)?
-    };
-    Ok(signer)
 }
 
 /// Add a profile's radicle signing key to ssh-agent.

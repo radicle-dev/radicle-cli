@@ -7,8 +7,8 @@ use anyhow::Context as _;
 use librad::git::tracking;
 use librad::PeerId;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::{git, keys, profile, project, seed};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
@@ -108,7 +108,7 @@ impl Args for Options {
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer.clone())?;
     let (urn, repo) = project::cwd()?;
 

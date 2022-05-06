@@ -12,7 +12,7 @@ use librad::keystore::Keystore;
 use librad::profile::{Profile, LNK_HOME};
 use librad::PublicKey;
 
-use super::{keys, profile, test};
+use super::{keys, profile, signer, test};
 
 pub type BoxedError = Box<dyn error::Error>;
 
@@ -50,16 +50,11 @@ where
     C::Error: fmt::Debug + fmt::Display + Send + Sync + 'static,
     C::SecretBox: Serialize + DeserializeOwned,
 {
-    let file_storage: FileStorage<_, PublicKey, _, _> = FileStorage::new(
-        &profile
-            .paths()
-            .keys_dir()
-            .join(rad_terminal::keys::KEY_FILE),
-        crypto,
-    );
+    let file_storage: FileStorage<_, PublicKey, _, _> =
+        FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), crypto);
     let keystore = file_storage.get_key()?;
 
-    Ok(BoxedSigner::new(
-        rad_terminal::keys::ZeroizingSecretKey::new(keystore.secret_key),
-    ))
+    Ok(BoxedSigner::new(signer::ZeroizingSecretKey::new(
+        keystore.secret_key,
+    )))
 }

@@ -1,8 +1,8 @@
 use rad_account::{run, Options, HELP};
-use rad_terminal::args;
+use rad_terminal as term;
 
 fn main() {
-    args::run_command::<Options, _>(HELP, "Command", move |opts| {
+    term::run_command::<Options, _>(HELP, "Command", move |opts| {
         let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(run(opts))
     });

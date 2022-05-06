@@ -1,14 +1,179 @@
-pub mod args;
+use std::process;
+
+use rad_common::args::{Args, Error, Help};
+
+pub fn run_command<A, F>(help: Help, action: &str, run: F) -> !
+where
+    A: Args,
+    F: FnOnce(A) -> anyhow::Result<()>,
+{
+    use crate::components as term;
+
+    let options = match A::from_env() {
+        Ok(opts) => opts,
+        Err(err) => {
+            match err.downcast_ref::<Error>() {
+                Some(Error::Help) => {
+                    term::help(help.name, help.version, help.description, help.usage);
+                    process::exit(0);
+                }
+                Some(Error::Usage) => {
+                    term::usage(help.name, help.usage);
+                    process::exit(1);
+                }
+                _ => {}
+            }
+            term::failure(help.name, &err);
+            process::exit(1);
+        }
+    };
+
+    match run(options) {
+        Ok(()) => process::exit(0),
+        Err(err) => {
+            term::format::error(&format!("{} failed", action), &err);
+            process::exit(1);
+        }
+    }
+}
+
+#[cfg(feature = "ethereum")]
+pub mod ethereum {
+    use anyhow::{anyhow, Context};
+
+    use rad_common::args;
+    use rad_common::ethereum;
+    use rad_common::ethereum::ethers::abi::Detokenize;
+    use rad_common::ethereum::ethers::prelude::builders::ContractCall;
+    use rad_common::ethereum::ethers::prelude::*;
+    use rad_common::ethereum::SignerOptions;
+    use rad_common::ethereum::WalletConnect;
+    use rad_common::ethereum::{Wallet, WalletError};
+
+    use super::components as term;
+
+    /// Open a wallet from the given options and provider.
+    pub async fn open_wallet<P>(
+        options: SignerOptions,
+        provider: Provider<P>,
+    ) -> anyhow::Result<Wallet>
+    where
+        P: JsonRpcClient + Clone + 'static,
+    {
+        let chain_id = provider.get_chainid().await?.as_u64();
+
+        if let Some(keypath) = &options.keystore {
+            let password = term::secret_input_with_prompt("Keystore password");
+            let spinner = term::spinner("Decrypting keystore...");
+            let signer = LocalWallet::decrypt_keystore(keypath, password.unsecure())
+                // Nb. Can fail if the file isn't found.
+                .map_err(|e| anyhow!("keystore decryption failed: {}", e))?
+                .with_chain_id(chain_id);
+
+            spinner.finish();
+
+            Ok(Wallet::Local(signer))
+        } else if let Some(path) = &options.ledger_hdpath {
+            let hdpath = path.derivation_string();
+            let signer = Ledger::new(HDPath::Other(hdpath), chain_id)
+                .await
+                .context("Could not connect to Ledger device")?;
+
+            Ok(Wallet::Ledger(signer))
+        } else if options.walletconnect {
+            let signer = WalletConnect::new()
+                .map_err(|_| anyhow!("Failed to create WalletConnect client"))?
+                .show_qr()
+                .await
+                .context("Failed to connect to WalletConnect session")?;
+            Ok(Wallet::WalletConnect(signer))
+        } else {
+            Err(WalletError::NoWallet.into())
+        }
+    }
+
+    /// Access the wallet specified in SignerOptions
+    pub async fn get_wallet(
+        signer_opts: SignerOptions,
+        provider: Provider<Http>,
+    ) -> anyhow::Result<(Wallet, Provider<Http>)> {
+        term::tip!("Accessing your wallet...");
+        let signer = match open_wallet(signer_opts, provider.clone()).await {
+            Ok(signer) => signer,
+            Err(err) => {
+                if let Some(WalletError::NoWallet) = err.downcast_ref::<WalletError>() {
+                    return Err(args::Error::WithHint {
+                        err,
+                        hint: "Use `--ledger-hdpath` or `--keystore` to specify a wallet.",
+                    }
+                    .into());
+                } else {
+                    return Err(err);
+                }
+            }
+        };
+
+        let chain = ethereum::chain_from_id(signer.chain_id());
+        term::success!(
+            "Using {} network",
+            term::format::highlight(
+                chain
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| String::from("unknown"))
+            )
+        );
+
+        Ok((signer, provider))
+    }
+
+    /// Submit a transaction for signing and execution.
+    pub async fn transaction<M, D>(call: ContractCall<M, D>) -> anyhow::Result<TransactionReceipt>
+    where
+        D: Detokenize,
+        M: Middleware + 'static,
+    {
+        let receipt = loop {
+            let spinner = term::spinner("Waiting for transaction to be signed...");
+            let tx = match call.send().await {
+                Ok(tx) => {
+                    spinner.finish();
+                    tx
+                }
+                Err(err) => {
+                    spinner.failed();
+                    return Err(err.into());
+                }
+            };
+            term::success!(
+                "Transaction {} submitted to the network.",
+                term::format::highlight(ethereum::hex(*tx))
+            );
+
+            let spinner = term::spinner("Waiting for transaction to be processed...");
+            if let Some(receipt) = tx.await? {
+                spinner.finish();
+                break receipt;
+            } else {
+                spinner.failed();
+            }
+        };
+
+        term::blank();
+        term::info!(
+            "Transaction included in block #{} ({}).",
+            term::format::highlight(receipt.block_number.unwrap()),
+            receipt.block_hash.unwrap(),
+        );
+
+        Ok(receipt)
+    }
+}
 
 pub mod keys {
     use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
-    use librad::crypto::keystore::sign::ed25519;
-    use librad::crypto::BoxedSignError;
-    use librad::SecretKey;
-    use zeroize::Zeroizing;
 
-    /// The filename for storing the secret key.
-    pub const KEY_FILE: &str = "librad.key";
+    pub use rad_common::keys::*;
+    pub use rad_common::signer;
 
     #[derive(Clone)]
     pub struct CachedPrompt(pub SecUtf8);
@@ -26,46 +191,6 @@ pub mod keys {
             Ok(self.0.clone())
         }
     }
-
-    /// Secret key that is zeroed when dropped.
-    #[derive(Clone)]
-    pub struct ZeroizingSecretKey {
-        key: Zeroizing<SecretKey>,
-    }
-
-    impl ZeroizingSecretKey {
-        pub fn new(key: SecretKey) -> Self {
-            Self {
-                key: Zeroizing::new(key),
-            }
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl ed25519::Signer for ZeroizingSecretKey {
-        type Error = BoxedSignError;
-
-        fn public_key(&self) -> ed25519::PublicKey {
-            self.key.public_key()
-        }
-
-        async fn sign(&self, data: &[u8]) -> Result<ed25519::Signature, Self::Error> {
-            <SecretKey as ed25519::Signer>::sign(&self.key, data)
-                .await
-                .map_err(BoxedSignError::from_std_error)
-        }
-    }
-
-    impl librad::Signer for ZeroizingSecretKey {
-        fn sign_blocking(
-            &self,
-            data: &[u8],
-        ) -> Result<librad::keystore::sign::Signature, <Self as ed25519::Signer>::Error> {
-            self.key
-                .sign_blocking(data)
-                .map_err(BoxedSignError::from_std_error)
-        }
-    }
 }
 
 pub mod components {
@@ -75,6 +200,7 @@ pub mod components {
 
     use librad::crypto::keystore::pinentry::SecUtf8;
     use librad::crypto::keystore::FileStorage;
+    use librad::crypto::BoxedSigner;
     use librad::keystore::Keystore;
     use librad::profile::Profile;
     use librad::{crypto::keystore::crypto, PublicKey};
@@ -82,7 +208,13 @@ pub mod components {
     use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
     use indicatif::{ProgressBar, ProgressFinish, ProgressStyle};
 
+    use rad_common::signer::ToSigner;
+
     use super::keys;
+    use super::Error;
+
+    #[cfg(feature = "ethereum")]
+    pub use super::ethereum;
 
     pub const TAB: &str = "   ";
 
@@ -413,6 +545,16 @@ pub mod components {
             .unwrap_or_default()
     }
 
+    /// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.
+    pub fn signer(profile: &Profile) -> anyhow::Result<BoxedSigner> {
+        let signer = if let Ok(sock) = keys::ssh_auth_sock() {
+            sock.to_signer(profile)?
+        } else {
+            secret_key(profile)?.to_signer(profile)?
+        };
+        Ok(signer)
+    }
+
     #[cfg(not(test))]
     pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<keys::CachedPrompt> {
         let prompt = keys::CachedPrompt::new(secret);
@@ -515,7 +657,9 @@ pub mod components {
         secret_input_with_prompt("Passphrase")
     }
 
-    pub fn secret_key(profile: &Profile) -> Result<keys::ZeroizingSecretKey, anyhow::Error> {
+    pub fn secret_key(
+        profile: &Profile,
+    ) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
         let passphrase = secret_input();
         let _spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
         let secret_box = pwhash(passphrase);
@@ -526,12 +670,12 @@ pub mod components {
     pub fn secret_key_from_pwhash(
         profile: &Profile,
         pwhash: crypto::Pwhash<keys::CachedPrompt>,
-    ) -> Result<keys::ZeroizingSecretKey, anyhow::Error> {
+    ) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
         let file_storage: FileStorage<_, PublicKey, _, _> =
             FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), pwhash);
         let keystore = file_storage.get_key()?;
 
-        Ok(keys::ZeroizingSecretKey::new(keystore.secret_key))
+        Ok(keys::signer::ZeroizingSecretKey::new(keystore.secret_key))
     }
 
     // TODO: This prompt shows success just for entering a password,
@@ -585,6 +729,7 @@ pub mod components {
         use librad::profile::Profile;
 
         use super::theme;
+        use super::Error;
 
         pub fn negative<D: std::fmt::Display>(msg: D) -> String {
             style(msg).red().bright().to_string()
@@ -631,8 +776,6 @@ pub mod components {
         }
 
         pub fn error(header: &str, error: &anyhow::Error) {
-            use crate::args::Error;
-
             let err = error.to_string();
             let err = err.trim_end();
             let separator = if err.len() > 160 || err.contains('\n') {

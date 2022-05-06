@@ -2,12 +2,11 @@ use std::path::Path;
 
 use rad_common::{git, profile};
 use rad_push::HELP;
-use rad_terminal::args;
 use rad_terminal::components as term;
 
 // TODO: Pass all options after `--` to git.
 fn main() {
-    args::run_command::<rad_push::Options, _>(HELP, "Push", run);
+    rad_terminal::run_command::<rad_push::Options, _>(HELP, "Push", run);
 }
 
 fn run(options: rad_push::Options) -> anyhow::Result<()> {

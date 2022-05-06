@@ -11,9 +11,9 @@ use anyhow::anyhow;
 use anyhow::Context;
 use regex::Regex;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::ethereum;
 use rad_common::ethereum::{ProviderOptions, SignerOptions};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 use crate::governance::Governance;
@@ -128,7 +128,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     let provider = ethereum::provider(options.provider)?;
     let signer_opts = options.signer;
-    let (wallet, provider) = rt.block_on(ethereum::get_wallet(signer_opts, provider))?;
+    let (wallet, provider) = rt.block_on(term::ethereum::get_wallet(signer_opts, provider))?;
     let signer = SignerMiddleware::new(provider, wallet);
     let governance = Governance::new(signer);
 
@@ -156,7 +156,7 @@ where
     crate::governance::Error<M>: From<<M as Middleware>::Error>,
 {
     let call = governance.execute_proposal(id).await?;
-    ethereum::transaction(call).await?;
+    term::ethereum::transaction(call).await?;
     Ok(())
 }
 
@@ -238,7 +238,7 @@ where
     spinner.finish();
 
     let call = governance.propose(targets, values, signatures, calldatas, content)?;
-    ethereum::transaction(call).await?;
+    term::ethereum::transaction(call).await?;
 
     Ok(())
 }
@@ -249,7 +249,7 @@ where
     crate::governance::Error<M>: From<<M as Middleware>::Error>,
 {
     let call = governance.queue_proposal(id).await?;
-    ethereum::transaction(call).await?;
+    term::ethereum::transaction(call).await?;
     Ok(())
 }
 
@@ -279,7 +279,7 @@ where
     if let Some(vote) = term::select(&["approve", "reject"], &"approve") {
         let vote = *vote == "approve";
         let call = governance.cast_vote(id, vote)?;
-        ethereum::transaction(call).await?;
+        term::ethereum::transaction(call).await?;
     }
 
     Ok(())

@@ -4,10 +4,10 @@ use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 use librad::PeerId;
 
+use rad_common::args;
+use rad_common::args::{Args, Error, Help};
 use rad_common::seed::SeedOptions;
 use rad_common::{git, keys, person, profile, project, seed, seed::Scope};
-use rad_terminal::args;
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 use anyhow::anyhow;
@@ -203,7 +203,7 @@ impl Args for Options {
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
 
     let project_urn = if let Some(origin) = &options.origin {

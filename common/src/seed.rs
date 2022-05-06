@@ -8,8 +8,7 @@ use librad::crypto::peer::PeerId;
 use librad::git::Urn;
 use url::{Host, Url};
 
-use rad_terminal::args::{self, Args};
-
+use crate::args::{self, Args};
 use crate::{git, project};
 
 pub const CONFIG_SEED_KEY: &str = "rad.seed";

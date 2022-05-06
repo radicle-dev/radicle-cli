@@ -8,9 +8,9 @@ use librad::git::tracking;
 use librad::git::Urn;
 use url::Url;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::seed::{self, SeedOptions};
 use rad_common::{git, keys, profile, project};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
@@ -130,7 +130,7 @@ pub fn clone_project(urn: Urn, seed: Option<seed::Address>) -> anyhow::Result<()
     }
 
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let cfg = tracking::config::Config::default();
     let project = project::get(&storage, &urn)?

@@ -5,7 +5,7 @@ use anyhow::Context as _;
 use ethers::prelude::Chain;
 use ethers::signers::{HDPath, Ledger};
 
-use rad_terminal::args::{Args, Error, Help};
+use rad_common::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {

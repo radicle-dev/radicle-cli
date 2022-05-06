@@ -6,8 +6,8 @@ use anyhow::{anyhow, bail, Context as _};
 
 use librad::PeerId;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::{git, keys, profile, project};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
@@ -137,7 +137,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     }
 
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer.clone())?;
 
     let head: String = repo

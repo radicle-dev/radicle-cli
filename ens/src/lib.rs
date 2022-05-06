@@ -6,9 +6,9 @@ use ethers::prelude::{Address, Http, Provider, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::ethereum::{ProviderOptions, SignerOptions};
 use rad_common::{ethereum, keys, person, profile, seed};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 use crate::resolver::PublicResolver;
@@ -125,7 +125,7 @@ impl Args for Options {
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let rt = tokio::runtime::Runtime::new()?;
     let id = person::local(&storage)?;
@@ -153,7 +153,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let name = term::text_input("ENS name", name)?;
             let provider = ethereum::provider(options.provider)?;
             let signer_opts = options.signer;
-            let (wallet, provider) = rt.block_on(ethereum::get_wallet(signer_opts, provider))?;
+            let (wallet, provider) =
+                rt.block_on(term::ethereum::get_wallet(signer_opts, provider))?;
             rt.block_on(setup(&name, id, provider, wallet, &storage))?;
         }
         Operation::SetLocal(name) => set_ens_payload(&name, &storage)?,
@@ -288,7 +289,7 @@ async fn setup(
     }
 
     let call = resolver.multicall(calls)?;
-    ethereum::transaction(call).await?;
+    term::ethereum::transaction(call).await?;
 
     let spinner = term::spinner("Updating local identity...");
     match person::set_ens_payload(

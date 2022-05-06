@@ -10,10 +10,10 @@ use librad::git::tracking;
 use librad::profile::Profile;
 use librad::PeerId;
 
+use rad_common::args::Help;
 use rad_common::project::PeerInfo;
 use rad_common::Url;
 use rad_common::{git, keys, profile, project, seed};
-use rad_terminal::args::Help;
 use rad_terminal::components as term;
 
 mod options;
@@ -63,7 +63,7 @@ Options
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer.clone())?;
 
     let (urn, repo) =

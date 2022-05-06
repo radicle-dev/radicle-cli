@@ -8,8 +8,8 @@ use librad::git::tracking::git::tracking;
 use librad::git::Urn;
 use librad::PeerId;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::{keys, profile, project};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
@@ -91,7 +91,7 @@ pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
     // TODO: Remove tracking branch
 
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
 
     if let Some(peer) = options.peer {

@@ -1,5 +1,5 @@
 //! Person-related functionality.
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 
 use librad::{canonical::Cstring, git::identities::local::LocalIdentity};
 
@@ -12,7 +12,6 @@ use librad::identities::payload::HasNamespace;
 use librad::profile::Profile;
 
 use lnk_identities::{self, local, person};
-use rad_terminal::components as term;
 
 pub use librad::git::identities::person::verify;
 pub use person::get;
@@ -46,7 +45,7 @@ pub fn create(
     let payload = payload::Person {
         name: Cstring::from(name),
     };
-    match person::create::<payload::Person>(
+    person::create::<payload::Person>(
         storage,
         paths,
         signer,
@@ -54,33 +53,21 @@ pub fn create(
         vec![],
         vec![],
         person::Creation::New { path: None },
-    ) {
-        Ok(person) => Ok(person),
-        Err(err) => {
-            term::error(&format!("Could not create person. {:?}", err));
-            Err(err)
-        }
-    }
+    )
 }
 
 /// Set the local identity to the given person.
-pub fn set_local(storage: &Storage, person: &Person) -> Option<Person> {
+pub fn set_local(storage: &Storage, person: &Person) -> anyhow::Result<Option<Person>> {
     let urn = person.urn();
     match local::get(storage, urn) {
         Ok(identity) => match identity {
             Some(ident) => match local::set(storage, ident) {
-                Ok(_) => Some(person.clone()),
-                Err(err) => {
-                    term::error(&format!("Could not set local identity. {:?}", err));
-                    None
-                }
+                Ok(_) => Ok(Some(person.clone())),
+                Err(err) => Err(err).context("could not set local identity"),
             },
-            None => None,
+            None => Ok(None),
         },
-        Err(err) => {
-            term::error(&format!("Could not read identity. {:?}", err));
-            None
-        }
+        Err(err) => Err(err).context("could not read identity"),
     }
 }
 

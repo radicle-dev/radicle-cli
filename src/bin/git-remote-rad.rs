@@ -1,7 +1,8 @@
 use link_identities::git::Urn;
 use radicle_git_helpers::remote_helper;
 
-use rad_common::{keys, profile};
+use rad_common::profile;
+use rad_terminal::components as term;
 
 use anyhow::anyhow;
 use futures_lite::future;
@@ -136,7 +137,7 @@ fn run(remote: Remote) -> anyhow::Result<()> {
         }
         Remote::Project { urn: _urn } => {
             let profile = profile::default()?;
-            let signer = keys::signer(&profile)?;
+            let signer = term::signer(&profile)?;
             let config = remote_helper::Config {
                 signer: Some(signer),
             };

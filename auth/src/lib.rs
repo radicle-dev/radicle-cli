@@ -7,8 +7,8 @@ use zeroize::Zeroizing;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::{git, keys, person, profile};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
@@ -164,8 +164,9 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     };
 
     let storage = keys::storage(&profile, signer.clone())?;
-    let person = person::create(&profile, &name, signer, &storage)?;
-    person::set_local(&storage, &person);
+    let person = person::create(&profile, &name, signer, &storage)
+        .context("could not create identity document")?;
+    person::set_local(&storage, &person)?;
 
     term::success!(
         "Profile {} created.",

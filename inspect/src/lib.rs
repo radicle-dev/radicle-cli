@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::{git, profile, project};
-use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
 use librad::git::identities::any;

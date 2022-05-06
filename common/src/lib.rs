@@ -1,5 +1,6 @@
 //! Common radicle utilities.
 #![allow(clippy::or_fun_call)]
+pub mod args;
 pub mod cobs;
 pub mod git;
 pub mod keys;

@@ -30,7 +30,6 @@ use librad::reflike;
 use librad::PeerId;
 
 use lnk_identities;
-use rad_terminal::components as term;
 
 use crate::{git, person, seed};
 
@@ -441,7 +440,12 @@ pub struct SetupRemote<'a> {
 
 impl<'a> SetupRemote<'a> {
     /// Run the setup for the given peer.
-    pub fn run(&self, peer: &PeerId, profile: &Profile, storage: &Storage) -> anyhow::Result<()> {
+    pub fn run(
+        &self,
+        peer: &PeerId,
+        profile: &Profile,
+        storage: &Storage,
+    ) -> anyhow::Result<Option<String>> {
         let repo = self.repo;
         let urn = &self.project.urn;
 
@@ -462,14 +466,10 @@ impl<'a> SetupRemote<'a> {
                 // different branch name or prefix.
                 let branch = git::set_upstream(repo.path(), &name, &self.project.default_branch)?;
 
-                term::success!(
-                    "Remote-tracking branch {} created for {}",
-                    term::format::highlight(&branch),
-                    term::format::tertiary(crate::fmt::peer(peer))
-                );
+                return Ok(Some(branch));
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 

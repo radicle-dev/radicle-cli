@@ -704,7 +704,7 @@ mod test {
         let storage = keys::storage(&profile, signer.clone()).unwrap();
         let person = person::create(&profile, name, signer, &storage).unwrap();
 
-        person::set_local(&storage, &person);
+        person::set_local(&storage, &person).unwrap();
 
         let whoami = person::local(&storage).unwrap();
         let payload = project::payload(

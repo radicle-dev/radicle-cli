@@ -1,5 +1,6 @@
 use rad_self::{run, Options, HELP};
+use rad_terminal as term;
 
 fn main() {
-    rad_terminal::args::run_command::<Options, _>(HELP, "Command", run);
+    term::run_command::<Options, _>(HELP, "Command", run);
 }

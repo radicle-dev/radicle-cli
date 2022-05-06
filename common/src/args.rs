@@ -1,10 +1,7 @@
 use std::ffi::OsString;
-use std::process;
 use std::str::FromStr;
 
 use anyhow::anyhow;
-
-use crate::components as term;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -44,39 +41,6 @@ pub trait Args: Sized {
     }
 
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)>;
-}
-
-pub fn run_command<A, F>(help: Help, action: &str, run: F) -> !
-where
-    A: Args,
-    F: FnOnce(A) -> anyhow::Result<()>,
-{
-    let options = match A::from_env() {
-        Ok(opts) => opts,
-        Err(err) => {
-            match err.downcast_ref::<Error>() {
-                Some(Error::Help) => {
-                    term::help(help.name, help.version, help.description, help.usage);
-                    process::exit(0);
-                }
-                Some(Error::Usage) => {
-                    term::usage(help.name, help.usage);
-                    process::exit(1);
-                }
-                _ => {}
-            }
-            term::failure(help.name, &err);
-            process::exit(1);
-        }
-    };
-
-    match run(options) {
-        Ok(()) => process::exit(0),
-        Err(err) => {
-            term::format::error(&format!("{} failed", action), &err);
-            process::exit(1);
-        }
-    }
 }
 
 pub fn parse_value<T: FromStr>(flag: &str, value: OsString) -> anyhow::Result<T>

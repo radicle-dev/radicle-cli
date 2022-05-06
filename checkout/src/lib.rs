@@ -6,8 +6,8 @@ use anyhow::Context as _;
 
 use librad::git::Urn;
 
-use rad_common::{keys, profile, project};
-use rad_terminal::args::{Args, Error, Help};
+use rad_common::args::{Args, Error, Help};
+use rad_common::{fmt, keys, profile, project};
 use rad_terminal::components as term;
 
 pub const HELP: Help = Help {
@@ -72,7 +72,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
 pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     let profile = profile::default()?;
-    let signer = keys::signer(&profile)?;
+    let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer.clone())?;
     let project = project::get(&storage, &options.urn)?
         .context("project could not be found in local storage")?;
@@ -143,7 +143,13 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
             };
             for peer in &project.remotes {
                 if peer != storage.peer_id() {
-                    setup.run(peer, &profile, &storage)?;
+                    if let Some(upstream) = setup.run(peer, &profile, &storage)? {
+                        term::success!(
+                            "Remote-tracking branch {} created for {}",
+                            term::format::highlight(&upstream),
+                            term::format::tertiary(fmt::peer(peer))
+                        );
+                    }
                 }
             }
         }

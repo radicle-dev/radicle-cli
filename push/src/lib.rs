@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 
+use rad_common::args::{Args, Error, Help};
 use rad_common::seed;
 use rad_common::seed::SeedOptions;
-use rad_terminal::args::{Args, Error, Help};
 
 use anyhow::anyhow;
 
