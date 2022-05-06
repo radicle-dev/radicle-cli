@@ -108,12 +108,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         Ok(profiles) => profiles,
         _ => vec![],
     };
-    let initialized = !profiles.is_empty() && profile::default().is_ok();
 
-    if options.init || profiles.is_empty() || !initialized {
-        if !initialized {
-            term::warning("Found profile(s) but could not load active one. Initializing...");
-        }
+    if !profiles.is_empty() && profile::default().is_err() {
+        term::warning("Warning: Found profile(s) but could not load active one. Initializing...");
+        init(options)
+    } else if options.init || profiles.is_empty() {
         init(options)
     } else {
         authenticate(&profiles, options)
@@ -149,9 +148,8 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 
-    spinner.finish();
-
     let (profile_id, signer) = if let Ok(sock) = sock {
+        spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");
 
         let profile_id = keys::add(&profile, pass, sock.clone())?;
@@ -161,7 +159,9 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
         (profile_id, signer)
     } else {
-        let signer = term::secret_key(&profile)?.to_signer(&profile)?;
+        let signer = term::secret_key_from_pwhash(&profile, pass)?.to_signer(&profile)?;
+
+        spinner.finish();
 
         (profile.id().clone(), signer)
     };

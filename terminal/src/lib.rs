@@ -276,6 +276,14 @@ pub mod components {
         message: String,
     }
 
+    impl Drop for Spinner {
+        fn drop(&mut self) {
+            if !self.progress.is_finished() {
+                self.finish()
+            }
+        }
+    }
+
     impl Spinner {
         pub fn finish(&self) {
             self.progress.finish_and_clear();
@@ -289,12 +297,12 @@ pub mod components {
 
         pub fn failed(self) {
             self.progress.finish_and_clear();
-            self::eprintln(style("!!").red().reverse(), self.message);
+            self::eprintln(style("!!").red().reverse(), &self.message);
         }
 
         pub fn error(self, err: anyhow::Error) {
             self.progress.finish_and_clear();
-            self::eprintln(style("!!").red().reverse(), self.message);
+            self::eprintln(style("!!").red().reverse(), &self.message);
             self::eprintln("  ", style(err).red());
         }
 
@@ -509,9 +517,18 @@ pub mod components {
 
     pub fn secret_key(profile: &Profile) -> Result<keys::ZeroizingSecretKey, anyhow::Error> {
         let passphrase = secret_input();
+        let _spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
         let secret_box = pwhash(passphrase);
+
+        secret_key_from_pwhash(profile, secret_box)
+    }
+
+    pub fn secret_key_from_pwhash(
+        profile: &Profile,
+        pwhash: crypto::Pwhash<keys::CachedPrompt>,
+    ) -> Result<keys::ZeroizingSecretKey, anyhow::Error> {
         let file_storage: FileStorage<_, PublicKey, _, _> =
-            FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), secret_box);
+            FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), pwhash);
         let keystore = file_storage.get_key()?;
 
         Ok(keys::ZeroizingSecretKey::new(keystore.secret_key))
