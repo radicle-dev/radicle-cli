@@ -13,6 +13,9 @@
         "state": {
             "type": "string"
         },
+        "labels": {
+            "type": "object"
+        },
         "comments": {
             "type": "array",
             "items": {
@@ -23,6 +26,9 @@
                     },
                     "author": {
                         "type": "string"
+                    },
+                    "reactions": {
+                        "type": "object"
                     }
                 }
             }
