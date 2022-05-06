@@ -111,16 +111,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     if options.init || profiles.is_empty() {
         init(options)
-    } else if profile::default().is_err() {
-        if profiles.len() > 1 {
-            // Show profile selector.
-            term::warning("Warning: Active profile could not be loaded.");
-            authenticate(&profiles, options)
-        } else {
-            anyhow::bail!(
-                "Profile could not be loaded. Create a new profile with `rad auth --init`."
-            )
-        }
     } else {
         authenticate(&profiles, options)
     }
@@ -202,7 +192,15 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 }
 
 pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+    let profile = match profile::default() {
+        Ok(profile) => profile,
+        Err(_) => {
+            anyhow::bail!(
+                "Active profile could not be loaded.\n\
+                To create a new profile, run `rad auth --init`."
+            )
+        }
+    };
 
     if !options.active {
         term::info!(
