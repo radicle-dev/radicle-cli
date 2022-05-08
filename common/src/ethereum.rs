@@ -2,6 +2,7 @@
 use std::convert::TryFrom;
 use std::env;
 use std::ffi::OsString;
+use std::fmt::Debug;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -10,7 +11,6 @@ use coins_bip32::path::DerivationPath;
 use anyhow::anyhow;
 use anyhow::Context as _;
 use ethers::abi::Detokenize;
-use ethers::prelude::builders::ContractCall;
 use ethers::prelude::*;
 use ethers::types::transaction::eip712::Eip712;
 use ethers::types::Chain;
@@ -22,7 +22,7 @@ pub mod signer;
 
 mod walletconnect;
 
-use self::signer::Signer as ExtendedSigner;
+use self::signer::{ContractCall, ExtendedMiddleware, ExtendedSigner};
 use self::walletconnect::WalletConnect;
 
 /// Radicle's ENS domain.
@@ -32,6 +32,7 @@ pub const SIGNER_OPTIONS: &str = r#"
     --ledger-hdpath <hdpath>     Account derivation path when using a Ledger hardware device
     --keystore <file>            Keystore file containing encrypted private key (default: none)
     --walletconnect              Use WalletConnect
+    --legacy                     Send transactions in legacy mode
 "#;
 
 pub const PROVIDER_OPTIONS: &str = r#"
@@ -52,6 +53,8 @@ pub struct SignerOptions {
     pub keystore: Option<PathBuf>,
     /// Walletconnect account (default: false).
     pub walletconnect: bool,
+    /// Legacy transaction (default: false).
+    pub legacy: bool,
 }
 
 impl SignerOptions {
@@ -65,6 +68,7 @@ impl SignerOptions {
                 .ok()
                 .and_then(|v| DerivationPath::from_str(v.as_str()).ok()),
             walletconnect: false,
+            legacy: false,
         };
 
         while let Some(arg) = parser.next()? {
@@ -85,7 +89,7 @@ impl SignerOptions {
                     options.walletconnect = true;
                 }
                 Long("legacy") => {
-                    std::env::set_var("RAD_SIGNER_LEGACY", "true");
+                    options.legacy = true;
                 }
                 _ => unparsed.push(args::format(arg)),
             }
@@ -161,31 +165,61 @@ pub enum Wallet {
     WalletConnect(WalletConnect),
 }
 
+#[derive(Debug)]
+pub enum TypedWallet {
+    Legacy(Wallet),
+    Modern(Wallet),
+}
+
+impl TypedWallet {
+    fn wallet(&self) -> &Wallet {
+        match self {
+            Self::Legacy(wallet) => wallet,
+            Self::Modern(wallet) => wallet,
+        }
+    }
+
+    fn own_wallet(self) -> Wallet {
+        match self {
+            Self::Legacy(wallet) => wallet,
+            Self::Modern(wallet) => wallet,
+        }
+    }
+
+    fn wrapper(&self) -> fn(Wallet) -> Self {
+        match self {
+            Self::Legacy(_) => Self::Legacy,
+            Self::Modern(_) => Self::Modern,
+        }
+    }
+}
+
 #[async_trait::async_trait]
-impl ExtendedSigner for Wallet {
+impl Signer for TypedWallet {
     type Error = WalletError;
 
     fn chain_id(&self) -> u64 {
-        match self {
-            Self::Ledger(s) => s.chain_id(),
-            Self::Local(s) => s.chain_id(),
-            Self::WalletConnect(s) => s.chain_id(),
+        match self.wallet() {
+            Wallet::Ledger(s) => s.chain_id(),
+            Wallet::Local(s) => s.chain_id(),
+            Wallet::WalletConnect(s) => s.chain_id(),
         }
     }
 
     fn address(&self) -> Address {
-        match self {
-            Self::Ledger(s) => s.address(),
-            Self::Local(s) => s.address(),
-            Self::WalletConnect(s) => s.address(),
+        match self.wallet() {
+            Wallet::Ledger(s) => s.address(),
+            Wallet::Local(s) => s.address(),
+            Wallet::WalletConnect(s) => s.address(),
         }
     }
 
     fn with_chain_id<T: Into<u64>>(self, chain_id: T) -> Self {
-        match self {
-            Self::Ledger(s) => Self::Ledger(s.with_chain_id(chain_id)),
-            Self::Local(s) => Self::Local(s.with_chain_id(chain_id)),
-            Self::WalletConnect(_s) => unimplemented!(),
+        let wrapper = self.wrapper();
+        match self.own_wallet() {
+            Wallet::Ledger(s) => (wrapper)(Wallet::Ledger(s.with_chain_id(chain_id))),
+            Wallet::Local(s) => (wrapper)(Wallet::Local(s.with_chain_id(chain_id))),
+            Wallet::WalletConnect(_s) => unimplemented!(),
         }
     }
 
@@ -193,10 +227,10 @@ impl ExtendedSigner for Wallet {
         &self,
         payload: &T,
     ) -> Result<Signature, Self::Error> {
-        match self {
-            Self::Ledger(s) => s.sign_typed_data(payload).await.map_err(WalletError::from),
-            Self::Local(s) => s.sign_typed_data(payload).await.map_err(WalletError::from),
-            Self::WalletConnect(_s) => unimplemented!(),
+        match self.wallet() {
+            Wallet::Ledger(s) => s.sign_typed_data(payload).await.map_err(WalletError::from),
+            Wallet::Local(s) => s.sign_typed_data(payload).await.map_err(WalletError::from),
+            Wallet::WalletConnect(_s) => unimplemented!(),
         }
     }
 
@@ -204,10 +238,10 @@ impl ExtendedSigner for Wallet {
         &self,
         message: S,
     ) -> Result<Signature, Self::Error> {
-        match self {
-            Self::Ledger(s) => s.sign_message(message).await.map_err(WalletError::from),
-            Self::Local(s) => s.sign_message(message).await.map_err(WalletError::from),
-            Self::WalletConnect(s) => s.sign_message(message).await.map_err(WalletError::from),
+        match self.wallet() {
+            Wallet::Ledger(s) => s.sign_message(message).await.map_err(WalletError::from),
+            Wallet::Local(s) => s.sign_message(message).await.map_err(WalletError::from),
+            Wallet::WalletConnect(s) => s.sign_message(message).await.map_err(WalletError::from),
         }
     }
 
@@ -215,42 +249,59 @@ impl ExtendedSigner for Wallet {
         &self,
         message: &ethers::types::transaction::eip2718::TypedTransaction,
     ) -> Result<Signature, Self::Error> {
-        match self {
-            Self::Ledger(s) => s.sign_transaction(message).await.map_err(WalletError::from),
-            Self::Local(s) => s.sign_transaction(message).await.map_err(WalletError::from),
-            Self::WalletConnect(s) => s.sign_transaction(message).await.map_err(WalletError::from),
+        match self.wallet() {
+            Wallet::Ledger(s) => s.sign_transaction(message).await.map_err(WalletError::from),
+            Wallet::Local(s) => s.sign_transaction(message).await.map_err(WalletError::from),
+            Wallet::WalletConnect(s) => {
+                s.sign_transaction(message).await.map_err(WalletError::from)
+            }
         }
     }
+}
 
+#[async_trait::async_trait]
+impl ExtendedSigner for TypedWallet {
     async fn send_transaction(
         &self,
         message: &ethers::types::transaction::eip2718::TypedTransaction,
     ) -> Result<H256, Self::Error> {
-        match self {
-            Self::Ledger(_) => unimplemented!(),
-            Self::Local(_) => unimplemented!(),
-            Self::WalletConnect(s) => s.send_transaction(message).await.map_err(WalletError::from),
+        match self.wallet() {
+            Wallet::Ledger(_) => unimplemented!(),
+            Wallet::Local(_) => unimplemented!(),
+            Wallet::WalletConnect(s) => {
+                s.send_transaction(message).await.map_err(WalletError::from)
+            }
         }
     }
 
     fn is_walletconnect(&self) -> bool {
+        match self.wallet() {
+            Wallet::Ledger(_) => false,
+            Wallet::Local(_) => false,
+            Wallet::WalletConnect(_) => true,
+        }
+    }
+
+    fn is_legacy(&self) -> bool {
         match self {
-            Self::Ledger(_) => false,
-            Self::Local(_) => false,
-            Self::WalletConnect(_) => true,
+            Self::Legacy(_) => true,
+            Self::Modern(_) => false,
         }
     }
 }
 
 impl Wallet {
     /// Open a wallet from the given options and provider.
-    pub async fn open<P>(options: SignerOptions, provider: Provider<P>) -> anyhow::Result<Wallet>
+    pub async fn open<P>(
+        options: SignerOptions,
+        provider: Provider<P>,
+    ) -> anyhow::Result<TypedWallet>
     where
         P: JsonRpcClient + Clone + 'static,
     {
         let chain_id = provider.get_chainid().await?.as_u64();
 
-        if let Some(keypath) = &options.keystore {
+        let wallet = if let Some(keypath) = &options.keystore {
             let password = term::secret_input_with_prompt("Keystore password");
             let spinner = term::spinner("Decrypting keystore...");
             let signer = LocalWallet::decrypt_keystore(keypath, password.unsecure())
@@ -277,6 +328,12 @@ impl Wallet {
             Ok(Wallet::WalletConnect(signer))
         } else {
             Err(WalletError::NoWallet.into())
+        };
+
+        if options.legacy {
+            wallet.map(TypedWallet::Legacy)
+        } else {
+            wallet.map(TypedWallet::Modern)
         }
     }
 }
@@ -285,13 +342,9 @@ impl Wallet {
 pub async fn transaction<M, D>(call: ContractCall<M, D>) -> anyhow::Result<TransactionReceipt>
 where
     D: Detokenize,
-    M: Middleware + 'static,
+    M: ExtendedMiddleware + 'static,
 {
-    let call = if std::env::var_os("RAD_SIGNER_LEGACY").is_some() {
-        call.legacy()
-    } else {
-        call
-    };
+    let call = call.set_tx_type();
     let receipt = loop {
         let spinner = term::spinner("Waiting for transaction to be signed...");
         let tx = match call.send().await {
@@ -348,7 +401,7 @@ pub fn hex(bytes: impl AsRef<[u8]>) -> String {
 pub async fn get_wallet(
     signer_opts: SignerOptions,
     provider: Provider<Http>,
-) -> anyhow::Result<(Wallet, Provider<Http>)> {
+) -> anyhow::Result<(TypedWallet, Provider<Http>)> {
     use rad_terminal::args::Error;
 
     term::tip!("Accessing your wallet...");

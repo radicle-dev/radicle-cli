@@ -2,14 +2,11 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use ethers::prelude::{Address, Chain, Http, Provider};
+use ethers::prelude::{Address, Chain, Http, Provider, Signer, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
-use rad_common::ethereum::{
-    signer::{Signer, SignerMiddleware},
-    ProviderOptions, SignerOptions,
-};
+use rad_common::ethereum::{ProviderOptions, SignerOptions};
 use rad_common::{ethereum, keys, person, profile, seed};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
@@ -156,8 +153,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let name = term::text_input("ENS name", name)?;
             let provider = ethereum::provider(options.provider)?;
             let signer_opts = options.signer;
+            let legacy = signer_opts.legacy;
             let (wallet, provider) = rt.block_on(ethereum::get_wallet(signer_opts, provider))?;
-            rt.block_on(setup(&name, id, provider, wallet, &storage))?;
+            rt.block_on(setup(&name, id, provider, wallet, &storage, legacy))?;
         }
         Operation::SetLocal(name) => set_ens_payload(&name, &storage)?,
     }
@@ -189,14 +187,15 @@ async fn setup(
     name: &str,
     id: LocalIdentity,
     provider: Provider<Http>,
-    signer: ethereum::Wallet,
+    signer: ethereum::TypedWallet,
     storage: &Storage,
+    legacy: bool,
 ) -> anyhow::Result<()> {
     let urn = id.urn();
     let chain_id = signer.chain_id();
     let signer = SignerMiddleware::new(provider, signer);
     let radicle_name = name.ends_with(ethereum::RADICLE_DOMAIN);
-    let resolver = match PublicResolver::get(name, signer).await {
+    let resolver = match PublicResolver::get(name, signer, legacy).await {
         Ok(resolver) => resolver,
         Err(err) => {
             if let resolver::Error::NameNotFound { .. } = err {

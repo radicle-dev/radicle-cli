@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
-use ethers::prelude::{Http, Middleware, ProviderError};
+use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
 use ethers::types::{Address, Bytes};
 use ethers::{
     abi::{Abi, Detokenize, ParamType},
     contract::{AbiError, Contract, ContractError},
-    prelude::builders::ContractCall,
     providers::{ens::ENS_ADDRESS, Provider},
 };
 
-use rad_common::ethereum::{self, signer::SignerMiddlewareError};
+use rad_common::ethereum::{
+    self,
+    signer::{ContractCall, ExtendedMiddleware},
+};
 
 pub const RADICLE_ID_KEY: &str = "eth.radicle.id";
 pub const RADICLE_SEED_ID_KEY: &str = "eth.radicle.seed.id";
@@ -22,6 +24,8 @@ const PUBLIC_RESOLVER_ABI: &str = include_str!(concat!(
 
 pub struct PublicResolver<M> {
     contract: Contract<M>,
+    legacy: bool,
+    client: Arc<M>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -35,22 +39,31 @@ pub enum Error<M: Middleware> {
     #[error(transparent)]
     Abi(#[from] ethers::abi::Error),
     #[error(transparent)]
-    SignerMiddleware(#[from] SignerMiddlewareError<Provider<Http>, ethereum::Wallet>),
+    SignerMiddleware(#[from] SignerMiddlewareError<Provider<Http>, ethereum::TypedWallet>),
 }
 
 impl<M> PublicResolver<M>
 where
-    M: Middleware,
+    M: ExtendedMiddleware,
     Error<M>: From<<M as Middleware>::Error>,
 {
-    pub fn new(addr: Address, client: impl Into<Arc<M>>) -> Self {
+    pub fn new(addr: Address, client: impl Into<Arc<M>>, legacy: bool) -> Self {
         let abi: Abi = serde_json::from_str(PUBLIC_RESOLVER_ABI).expect("The ABI is valid");
-        let contract = Contract::new(addr, abi, client);
+        let client: Arc<M> = client.into();
+        let contract = Contract::new(addr, abi, Arc::clone(&client));
 
-        Self { contract }
+        Self {
+            contract,
+            legacy,
+            client,
+        }
     }
 
-    pub async fn get(name: &str, client: impl Into<Arc<M>>) -> Result<Self, Error<M>> {
+    pub async fn get(
+        name: &str,
+        client: impl Into<Arc<M>>,
+        legacy: bool,
+    ) -> Result<Self, Error<M>> {
         let client = client.into();
         let bytes = client
             .call(
@@ -66,11 +79,13 @@ where
                 name: name.to_owned(),
             });
         }
-        Ok(Self::new(resolver, client))
+        Ok(Self::new(resolver, client, legacy))
     }
 
     pub fn multicall(&self, calls: Vec<Bytes>) -> Result<ContractCall<M, Vec<Bytes>>, AbiError> {
-        self.contract.method("multicall", calls)
+        self.contract
+            .method("multicall", calls)
+            .map(|tx| self.to_contract_call(tx))
     }
 
     pub async fn text(&self, name: &str, key: &str) -> Result<Option<String>, Error<M>> {
@@ -106,7 +121,9 @@ where
     pub fn set_address(&self, name: &str, addr: Address) -> Result<ContractCall<M, ()>, AbiError> {
         let node = ethers::providers::ens::namehash(name);
 
-        self.contract.method("setAddr", (node, addr))
+        self.contract
+            .method("setAddr", (node, addr))
+            .map(|tx| self.to_contract_call(tx))
     }
 
     pub fn set_text(
@@ -119,5 +136,17 @@ where
 
         self.contract
             .method("setText", (node, key.to_owned(), val.to_owned()))
+            .map(|tx| self.to_contract_call(tx))
+    }
+
+    fn to_contract_call<T: Detokenize>(
+        &self,
+        inner: ethers::contract::builders::ContractCall<M, T>,
+    ) -> ContractCall<M, T> {
+        ContractCall {
+            inner,
+            client: Arc::clone(&self.client),
+            legacy: self.legacy,
+        }
     }
 }
