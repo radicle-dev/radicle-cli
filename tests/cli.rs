@@ -10,8 +10,8 @@ mod auth {
     use super::*;
 
     const NAME_MISSING: &str = "missing argument for option '--name'";
-    const PASSWORD_MISSING: &str = "missing argument for option '--password'";
-    const INIT_MISSING: &str = "invalid option '--password'";
+    const PASSPHRASE_MISSING: &str = "missing argument for option '--passphrase'";
+    const INIT_MISSING: &str = "invalid option '--passphrase'";
 
     #[assay(
         setup = test::setup::lnk_home()?,
@@ -19,7 +19,7 @@ mod auth {
     )]
     fn can_be_initialized() {
         let status = Command::cargo_bin("rad-auth")?
-            .args(["--init", "--name", "user1", "--password", test::USER_PASS])
+            .args(["--init", "--name", "user1", "--passphrase", test::USER_PASS])
             .status();
         assert!(status?.success());
     }
@@ -35,19 +35,19 @@ mod auth {
     }
 
     #[assay]
-    fn password_missing() {
+    fn passphrase_missing() {
         let output = Command::cargo_bin("rad-auth")?
-            .args(["--init", "--password"])
+            .args(["--init", "--passphrase"])
             .output()?;
         let result = String::from_utf8_lossy(&output.stderr);
 
-        assert!(result.contains(PASSWORD_MISSING), "{}", result);
+        assert!(result.contains(PASSPHRASE_MISSING), "{}", result);
     }
 
     #[assay]
     fn init_missing() {
         let output = Command::cargo_bin("rad-auth")?
-            .args(["--password"])
+            .args(["--passphrase"])
             .output()?;
         let result = String::from_utf8_lossy(&output.stderr);
 
