@@ -2,11 +2,8 @@ use std::fmt;
 use std::str::FromStr;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
-use librad::crypto::keystore::FileStorage;
 use librad::crypto::BoxedSigner;
-use librad::keystore::Keystore;
 use librad::profile::Profile;
-use librad::{crypto::keystore::crypto, PublicKey};
 
 use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
 
@@ -168,18 +165,6 @@ pub fn signer(profile: &Profile) -> anyhow::Result<BoxedSigner> {
     Ok(signer)
 }
 
-#[cfg(not(test))]
-pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<keys::CachedPrompt> {
-    let prompt = keys::CachedPrompt::new(secret);
-    crypto::Pwhash::new(prompt, crypto::KdfParams::recommended())
-}
-
-#[cfg(test)]
-pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<keys::CachedPrompt> {
-    let prompt = keys::CachedPrompt::new(secret);
-    crypto::Pwhash::new(prompt, *crypto::KDF_PARAMS_TEST)
-}
-
 pub fn theme() -> ColorfulTheme {
     ColorfulTheme {
         success_prefix: style("ok".to_owned()).for_stderr().green().reverse(),
@@ -273,20 +258,8 @@ pub fn secret_input() -> SecUtf8 {
 pub fn secret_key(profile: &Profile) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
     let passphrase = secret_input();
     let _spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
-    let secret_box = pwhash(passphrase);
 
-    secret_key_from_pwhash(profile, secret_box)
-}
-
-pub fn secret_key_from_pwhash(
-    profile: &Profile,
-    pwhash: crypto::Pwhash<keys::CachedPrompt>,
-) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
-    let file_storage: FileStorage<_, PublicKey, _, _> =
-        FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), pwhash);
-    let keystore = file_storage.get_key()?;
-
-    Ok(keys::signer::ZeroizingSecretKey::new(keystore.secret_key))
+    keys::load_secret_key(profile, passphrase)
 }
 
 // TODO: This prompt shows success just for entering a password,

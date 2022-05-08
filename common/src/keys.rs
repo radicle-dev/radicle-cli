@@ -1,19 +1,20 @@
 //! SSH and key-related functions.
 use anyhow::{Context as _, Error, Result};
 
+use librad::crypto::keystore::crypto;
 use librad::crypto::keystore::crypto::Pwhash;
+use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
+use librad::crypto::keystore::{FileStorage, Keystore};
 use librad::git::storage::Storage;
-
-use librad::keystore::pinentry::Pinentry;
 use librad::profile::{Profile, ProfileId};
-use librad::PeerId;
+use librad::{PeerId, PublicKey};
 
 use lnk_clib::keys;
 use lnk_clib::keys::ssh::SshAuthSock;
 
 pub use lnk_clib::keys::LIBRAD_KEY_FILE as KEY_FILE;
 
-use crate::signer::ToSigner;
+use crate::signer::{ToSigner, ZeroizingSecretKey};
 
 /// Get the radicle signer and storage.
 pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<Storage, Error> {
@@ -109,4 +110,48 @@ pub fn to_ssh_fingerprint(peer_id: &PeerId) -> Result<String, std::io::Error> {
     let encoded = base64::encode(sha);
 
     Ok(format!("SHA256:{}", encoded.trim_end_matches('=')))
+}
+
+/// Get a profile's secret key by providing a passphrase.
+pub fn load_secret_key(
+    profile: &Profile,
+    passphrase: SecUtf8,
+) -> Result<ZeroizingSecretKey, anyhow::Error> {
+    let pwhash = pwhash(passphrase);
+    let file_storage: FileStorage<_, PublicKey, _, _> = FileStorage::new(
+        &profile.paths().keys_dir().join(keys::LIBRAD_KEY_FILE),
+        pwhash,
+    );
+    let keystore = file_storage.get_key()?;
+
+    Ok(ZeroizingSecretKey::new(keystore.secret_key))
+}
+
+#[derive(Clone)]
+pub struct CachedPrompt(pub SecUtf8);
+
+impl CachedPrompt {
+    pub fn new(secret: SecUtf8) -> Self {
+        Self(secret)
+    }
+}
+
+impl Pinentry for CachedPrompt {
+    type Error = std::io::Error;
+
+    fn get_passphrase(&self) -> Result<SecUtf8, Self::Error> {
+        Ok(self.0.clone())
+    }
+}
+
+#[cfg(not(test))]
+pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<CachedPrompt> {
+    let prompt = CachedPrompt::new(secret);
+    crypto::Pwhash::new(prompt, crypto::KdfParams::recommended())
+}
+
+#[cfg(test)]
+pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<CachedPrompt> {
+    let prompt = CachedPrompt::new(secret);
+    crypto::Pwhash::new(prompt, *crypto::KDF_PARAMS_TEST)
 }

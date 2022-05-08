@@ -132,16 +132,15 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     let name = options
         .name
         .unwrap_or_else(|| term::text_input("Name", None).unwrap());
-    let pass = term::pwhash(
-        options
-            .password
-            .map_or_else(term::secret_input_with_confirmation, |password| {
-                SecUtf8::from(password)
-            }),
-    );
+    let passphrase = options
+        .password
+        .map_or_else(term::secret_input_with_confirmation, |password| {
+            SecUtf8::from(password)
+        });
+    let pwhash = keys::pwhash(passphrase.clone());
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
-    let (profile, peer_id) = lnk_profile::create(None, pass.clone())?;
+    let (profile, peer_id) = lnk_profile::create(None, pwhash.clone())?;
 
     git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 
@@ -149,14 +148,14 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");
 
-        let profile_id = keys::add(&profile, pass, sock.clone())?;
+        let profile_id = keys::add(&profile, pwhash, sock.clone())?;
         let signer = sock.to_signer(&profile)?;
 
         spinner.finish();
 
         (profile_id, signer)
     } else {
-        let signer = term::secret_key_from_pwhash(&profile, pass)?.to_signer(&profile)?;
+        let signer = keys::load_secret_key(&profile, passphrase)?.to_signer(&profile)?;
 
         spinner.finish();
 
@@ -253,7 +252,7 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
                 std::io::stdin().read_line(&mut input)?;
                 SecUtf8::from(input.trim_end())
             };
-            let pass = term::pwhash(secret_input);
+            let pass = keys::pwhash(secret_input);
             let spinner = term::spinner("Unlocking...");
 
             keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
