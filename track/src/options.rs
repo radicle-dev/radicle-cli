@@ -6,8 +6,8 @@ use anyhow::Context as _;
 
 use librad::PeerId;
 
-use rad_common::args::{Args, Error};
-use rad_common::seed::{Address, SeedOptions};
+use radicle_common::args::{Args, Error};
+use radicle_common::seed::{Address, SeedOptions};
 
 /// Tool options.
 #[derive(Debug)]

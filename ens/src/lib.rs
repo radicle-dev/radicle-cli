@@ -6,10 +6,10 @@ use ethers::prelude::{Address, Http, Provider, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::ethereum::{ProviderOptions, SignerOptions};
-use rad_common::{ethereum, keys, person, profile, seed};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::ethereum::{ProviderOptions, SignerOptions};
+use radicle_common::{ethereum, keys, person, profile, seed};
+use radicle_terminal as term;
 
 use crate::resolver::PublicResolver;
 

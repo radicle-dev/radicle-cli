@@ -54,8 +54,6 @@ rad = { path = "./rad" }
 lnk-profile = { version = "0" }
 rad-clone = { path = "./clone" }
 rad-auth = { path = "./auth" }
-rad-common = { path = "./common" }
-rad-terminal = { path = "./terminal" }
 rad-init = { path = "./init" }
 rad-self = { path = "./self" }
 rad-inspect = { path = "./inspect" }
@@ -70,6 +68,8 @@ rad-help = { path = "./help" }
 rad-ls = { path = "./ls" }
 rad-rm = { path = "./rm" }
 link-identities = { version = "0" }
+radicle-common = { path = "./common" }
+radicle-terminal = { path = "./terminal" }
 radicle-git-helpers = { version = "0" }
 url = { version = "2" }
 

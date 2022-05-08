@@ -6,9 +6,9 @@ use anyhow::Context as _;
 
 use librad::git::Urn;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::{fmt, keys, profile, project};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::{fmt, keys, profile, project};
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "checkout",

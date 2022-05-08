@@ -6,9 +6,9 @@ use anyhow::{anyhow, bail, Context as _};
 
 use librad::PeerId;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::{git, keys, profile, project};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::{git, keys, profile, project};
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "init",
@@ -186,8 +186,8 @@ pub fn init(options: Options) -> anyhow::Result<()> {
             spinner.failed();
             term::blank();
 
-            use rad_common::identities::git::validation;
-            use rad_common::identities::git::Error;
+            use radicle_common::identities::git::validation;
+            use radicle_common::identities::git::Error;
 
             match err.downcast_ref::<Error>() {
                 Some(Error::Validation(validation::Error::UrlMismatch { found, .. })) => {

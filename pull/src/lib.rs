@@ -3,12 +3,12 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::git;
-use rad_common::project;
-use rad_common::seed;
-use rad_common::seed::SeedOptions;
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::git;
+use radicle_common::project;
+use radicle_common::seed;
+use radicle_common::seed::SeedOptions;
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "pull",

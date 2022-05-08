@@ -8,10 +8,10 @@ use librad::git::tracking;
 use librad::git::Urn;
 use url::Url;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::seed::{self, SeedOptions};
-use rad_common::{git, keys, profile, project};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::seed::{self, SeedOptions};
+use radicle_common::{git, keys, profile, project};
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "clone",
@@ -190,7 +190,7 @@ pub fn clone_repository(url: Url) -> anyhow::Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use rad_common::seed;
+    use radicle_common::seed;
 
     #[test]
     fn test_args_ok() {

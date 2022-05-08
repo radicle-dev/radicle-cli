@@ -13,6 +13,6 @@ lexopt = { version = "0.2" }
 librad = "0"
 lnk-clib = "0"
 lnk-profile = "0"
-rad-common = { path = "../common" }
-rad-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }
+radicle-terminal = { path = "../terminal" }
 url = { version = "*" }

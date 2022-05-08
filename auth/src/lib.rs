@@ -2,14 +2,14 @@
 use std::ffi::OsString;
 
 use anyhow::Context as _;
-use rad_common::signer::ToSigner;
+use radicle_common::signer::ToSigner;
 use zeroize::Zeroizing;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::{git, keys, person, profile};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::{git, keys, person, profile};
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "auth",
@@ -282,7 +282,7 @@ mod tests {
 
     use super::*;
 
-    use rad_common::test;
+    use radicle_common::test;
 
     fn create_auth_options(name: &str) -> Options {
         Options {

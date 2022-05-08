@@ -16,8 +16,8 @@ librad = "0"
 lexopt = "0.2"
 lnk-clib = "0"
 lnk-profile = "0"
-rad-terminal = { path = "../terminal" }
-rad-common = { path = "../common" }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }
 rad-self = { path = "../self" }
 rad-inspect = { path = "../inspect" }
 rad-ls = { path = "../ls" }

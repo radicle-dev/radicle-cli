@@ -4,7 +4,7 @@ use anyhow::Result;
 use assay::assay;
 use assert_cmd::prelude::*;
 
-use rad_common::test;
+use radicle_common::test;
 
 mod auth {
     use super::*;

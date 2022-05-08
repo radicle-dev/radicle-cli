@@ -10,7 +10,7 @@ use librad::{crypto::keystore::crypto, PublicKey};
 
 use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
 
-use rad_common::signer::ToSigner;
+use radicle_common::signer::ToSigner;
 
 use super::keys;
 use super::spinner::spinner;

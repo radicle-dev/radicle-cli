@@ -10,5 +10,5 @@ description = "Manage radicle project tracking relationships"
 lexopt = { version = "0.2" }
 anyhow = { version = "1.0" }
 librad = { version = "0" }
-rad-terminal = { path = "../terminal" }
-rad-common = { path = "../common" }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }

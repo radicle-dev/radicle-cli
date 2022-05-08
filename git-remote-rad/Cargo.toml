@@ -14,7 +14,7 @@ lexopt = { version = "0.2" }
 ethers = { version = "0.6" }
 link-identities = { version = "0" }
 radicle-git-helpers = { version = "0" }
-rad-common = { path = "../common" }
+radicle-common = { path = "../common" }
 librad = { version = "0" }
 url = { version = "*" }
 tokio = { version = "1.10", features = ["rt", "macros"] }

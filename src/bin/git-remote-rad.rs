@@ -1,8 +1,8 @@
 use link_identities::git::Urn;
 use radicle_git_helpers::remote_helper;
 
-use rad_common::profile;
-use rad_terminal as term;
+use radicle_common::profile;
+use radicle_terminal as term;
 
 use anyhow::anyhow;
 use futures_lite::future;

@@ -11,10 +11,10 @@ use anyhow::anyhow;
 use anyhow::Context;
 use regex::Regex;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::ethereum;
-use rad_common::ethereum::{ProviderOptions, SignerOptions};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::ethereum;
+use radicle_common::ethereum::{ProviderOptions, SignerOptions};
+use radicle_terminal as term;
 
 use crate::governance::Governance;
 

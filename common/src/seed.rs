@@ -51,7 +51,7 @@ pub struct Address {
 impl Address {
     /// ```
     /// use std::str::FromStr;
-    /// use rad_common::seed as seed;
+    /// use radicle_common::seed as seed;
     ///
     /// let addr = seed::Address::from_str("willow.radicle.garden").unwrap();
     /// assert_eq!(addr.url().to_string(), "https://willow.radicle.garden/");

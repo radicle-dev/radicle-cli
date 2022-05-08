@@ -4824,9 +4824,9 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "rad-common",
  "rad-help",
- "rad-terminal",
+ "radicle-common",
+ "radicle-terminal",
 ]
 
 [[package]]
@@ -4836,8 +4836,8 @@ dependencies = [
  "anyhow",
  "ethers",
  "lexopt",
- "rad-common",
- "rad-terminal",
+ "radicle-common",
+ "radicle-terminal",
  "tokio",
 ]
 
@@ -4871,8 +4871,8 @@ dependencies = [
  "lexopt",
  "librad",
  "lnk-profile",
- "rad-common",
- "rad-terminal",
+ "radicle-common",
+ "radicle-terminal",
  "zeroize",
 ]
 
@@ -4884,9 +4884,9 @@ dependencies = [
  "lexopt",
  "librad",
  "lnk-profile",
- "rad-common",
  "rad-init",
- "rad-terminal",
+ "radicle-common",
+ "radicle-terminal",
 ]
 
 [[package]]
@@ -4897,16 +4897,254 @@ dependencies = [
  "lexopt",
  "librad",
  "rad-checkout",
- "rad-common",
  "rad-init",
  "rad-sync",
- "rad-terminal",
  "rad-track",
+ "radicle-common",
+ "radicle-terminal",
  "url",
 ]
 
 [[package]]
-name = "rad-common"
+name = "rad-ens"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethers",
+ "lexopt",
+ "librad",
+ "radicle-common",
+ "radicle-terminal",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "rad-gov"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethers",
+ "lexopt",
+ "librad",
+ "radicle-common",
+ "radicle-terminal",
+ "regex",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "rad-help"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "lnk-clib",
+ "lnk-profile",
+ "rad-account",
+ "rad-auth",
+ "rad-checkout",
+ "rad-clone",
+ "rad-ens",
+ "rad-init",
+ "rad-inspect",
+ "rad-ls",
+ "rad-pull",
+ "rad-push",
+ "rad-remote",
+ "rad-self",
+ "rad-sync",
+ "rad-track",
+ "rad-untrack",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-init"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "lnk-profile",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-inspect"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "colored_json",
+ "lexopt",
+ "librad",
+ "link-identities",
+ "lnk-profile",
+ "radicle-common",
+ "radicle-terminal",
+ "serde_json",
+]
+
+[[package]]
+name = "rad-ls"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-pull"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-sync",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-push"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "rad-sync",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-remote"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-rm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-untrack",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-self"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "lnk-profile",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-sync"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fastrand",
+ "lexopt",
+ "librad",
+ "lnk-clib",
+ "lnk-profile",
+ "radicle-common",
+ "radicle-terminal",
+ "url",
+]
+
+[[package]]
+name = "rad-track"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "rad-untrack"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "rad-track",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
+name = "radicle-cli"
+version = "0.5.1"
+dependencies = [
+ "anyhow",
+ "assay",
+ "assert_cmd",
+ "atty",
+ "colored 1.9.3",
+ "ethers",
+ "futures",
+ "futures-lite",
+ "lexopt",
+ "librad",
+ "link-identities",
+ "lnk-profile",
+ "log",
+ "rad",
+ "rad-account",
+ "rad-auth",
+ "rad-checkout",
+ "rad-clone",
+ "rad-ens",
+ "rad-gov",
+ "rad-help",
+ "rad-init",
+ "rad-inspect",
+ "rad-ls",
+ "rad-pull",
+ "rad-push",
+ "rad-remote",
+ "rad-rm",
+ "rad-self",
+ "rad-sync",
+ "rad-track",
+ "rad-untrack",
+ "radicle-common",
+ "radicle-git-helpers",
+ "radicle-terminal",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "radicle-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -4937,261 +5175,6 @@ dependencies = [
  "url",
  "walletconnect",
  "zeroize",
-]
-
-[[package]]
-name = "rad-ens"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ethers",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
- "serde_json",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "rad-gov"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ethers",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
- "regex",
- "serde_json",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "rad-help"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "lnk-clib",
- "lnk-profile",
- "rad-account",
- "rad-auth",
- "rad-checkout",
- "rad-clone",
- "rad-common",
- "rad-ens",
- "rad-init",
- "rad-inspect",
- "rad-ls",
- "rad-pull",
- "rad-push",
- "rad-remote",
- "rad-self",
- "rad-sync",
- "rad-terminal",
- "rad-track",
- "rad-untrack",
-]
-
-[[package]]
-name = "rad-init"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "lnk-profile",
- "rad-common",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-inspect"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "colored_json",
- "lexopt",
- "librad",
- "link-identities",
- "lnk-profile",
- "rad-common",
- "rad-terminal",
- "serde_json",
-]
-
-[[package]]
-name = "rad-ls"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-pull"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-sync",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-push"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "rad-common",
- "rad-sync",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-remote"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-rm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
- "rad-untrack",
-]
-
-[[package]]
-name = "rad-self"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "lnk-profile",
- "rad-common",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-sync"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fastrand",
- "lexopt",
- "librad",
- "lnk-clib",
- "lnk-profile",
- "rad-common",
- "rad-terminal",
- "url",
-]
-
-[[package]]
-name = "rad-terminal"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "console",
- "dialoguer",
- "indicatif",
- "lexopt",
- "librad",
- "lnk-profile",
- "rad-common",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "rad-track"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
-]
-
-[[package]]
-name = "rad-untrack"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "librad",
- "rad-common",
- "rad-terminal",
- "rad-track",
-]
-
-[[package]]
-name = "radicle-cli"
-version = "0.5.1"
-dependencies = [
- "anyhow",
- "assay",
- "assert_cmd",
- "atty",
- "colored 1.9.3",
- "ethers",
- "futures",
- "futures-lite",
- "lexopt",
- "librad",
- "link-identities",
- "lnk-profile",
- "log",
- "rad",
- "rad-account",
- "rad-auth",
- "rad-checkout",
- "rad-clone",
- "rad-common",
- "rad-ens",
- "rad-gov",
- "rad-help",
- "rad-init",
- "rad-inspect",
- "rad-ls",
- "rad-pull",
- "rad-push",
- "rad-remote",
- "rad-rm",
- "rad-self",
- "rad-sync",
- "rad-terminal",
- "rad-track",
- "rad-untrack",
- "radicle-git-helpers",
- "tokio",
- "url",
 ]
 
 [[package]]
@@ -5273,6 +5256,23 @@ dependencies = [
 name = "radicle-std-ext"
 version = "0.1.0"
 source = "git+https://github.com/radicle-dev/radicle-link?rev=a9485b78b5c78d252c92f61d990cf34622d1c8f1#a9485b78b5c78d252c92f61d990cf34622d1c8f1"
+
+[[package]]
+name = "radicle-terminal"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "console",
+ "dialoguer",
+ "indicatif",
+ "lexopt",
+ "librad",
+ "lnk-profile",
+ "radicle-common",
+ "thiserror",
+ "zeroize",
+]
 
 [[package]]
 name = "radium"

@@ -11,8 +11,8 @@ anyhow = "1.0"
 lexopt = "0.2.0"
 librad = "0"
 lnk-profile = "0"
-rad-terminal = { path = "../terminal" }
-rad-common = { path = "../common" }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }
 atty = "0.2"
 zeroize = "1.1"
 

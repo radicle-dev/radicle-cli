@@ -1,13 +1,13 @@
 use anyhow::{anyhow, Context};
 
-use rad_common::args;
-use rad_common::ethereum;
-use rad_common::ethereum::ethers::abi::Detokenize;
-use rad_common::ethereum::ethers::prelude::builders::ContractCall;
-use rad_common::ethereum::ethers::prelude::*;
-use rad_common::ethereum::SignerOptions;
-use rad_common::ethereum::WalletConnect;
-use rad_common::ethereum::{Wallet, WalletError};
+use radicle_common::args;
+use radicle_common::ethereum;
+use radicle_common::ethereum::ethers::abi::Detokenize;
+use radicle_common::ethereum::ethers::prelude::builders::ContractCall;
+use radicle_common::ethereum::ethers::prelude::*;
+use radicle_common::ethereum::SignerOptions;
+use radicle_common::ethereum::WalletConnect;
+use radicle_common::ethereum::{Wallet, WalletError};
 
 use crate as term;
 

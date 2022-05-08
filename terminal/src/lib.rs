@@ -10,7 +10,7 @@ pub mod textbox;
 use std::process;
 
 use dialoguer::console::style;
-use rad_common::args::{Args, Error, Help};
+use radicle_common::args::{Args, Error, Help};
 
 pub use io::*;
 pub use spinner::spinner;

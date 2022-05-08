@@ -11,7 +11,7 @@ use ethers::{
 
 use std::str::FromStr;
 
-use rad_common::ethereum;
+use radicle_common::ethereum;
 
 const RADICLE_GOVERNANCE_ADDRESS: &str = "0x690e775361AD66D1c4A25d89da9fCd639F5198eD";
 const PUBLIC_RESOLVER_ABI: &str =

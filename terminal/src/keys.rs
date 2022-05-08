@@ -1,7 +1,7 @@
 use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
 
-pub use rad_common::keys::*;
-pub use rad_common::signer;
+pub use radicle_common::keys::*;
+pub use radicle_common::signer;
 
 #[derive(Clone)]
 pub struct CachedPrompt(pub SecUtf8);

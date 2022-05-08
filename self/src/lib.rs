@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 
-use rad_common::args::{Args, Error, Help};
-use rad_common::{keys, person, profile};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::{keys, person, profile};
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "self",

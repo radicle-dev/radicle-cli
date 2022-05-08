@@ -11,5 +11,5 @@ ethers = { version = "0.6.2", features = ["ledger"] }
 tokio = { version = "1.10", features = ["rt", "macros"] }
 anyhow = { version = "1.0" }
 lexopt = "0.2"
-rad-terminal = { path = "../terminal" }
-rad-common = { path = "../common" }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }

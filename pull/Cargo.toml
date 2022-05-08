@@ -10,6 +10,6 @@ description = "Pull radicle project refs into a working copy"
 anyhow = "1.0"
 librad = "0"
 lexopt = "0.2"
-rad-terminal = { path = "../terminal" }
-rad-common = { path = "../common" }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }
 rad-sync = { path = "../sync" }

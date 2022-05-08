@@ -1,12 +1,12 @@
 [package]
-name = "rad-terminal"
+name = "radicle-terminal"
 version = "0.1.0"
 edition = "2018"
 license = "GPL-3.0-or-later"
 
 [features]
 default = []
-ethereum = ["rad-common/ethereum"]
+ethereum = ["radicle-common/ethereum"]
 
 [dependencies]
 async-trait = "0.1.51"
@@ -20,5 +20,5 @@ lnk-profile = { version = "0" }
 thiserror = "1.0"
 zeroize = "1.1"
 
-[dependencies.rad-common]
+[dependencies.radicle-common]
 path = "../common"

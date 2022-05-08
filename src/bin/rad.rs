@@ -19,7 +19,7 @@ fn main() {
         Ok(_) => process::exit(0),
         Err(err) => {
             if let Some(err) = err {
-                rad_terminal::error(&format!("Error: rad: {}", err));
+                radicle_terminal::error(&format!("Error: rad: {}", err));
             }
             process::exit(1);
         }

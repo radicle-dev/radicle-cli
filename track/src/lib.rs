@@ -10,11 +10,11 @@ use librad::git::tracking;
 use librad::profile::Profile;
 use librad::PeerId;
 
-use rad_common::args::Help;
-use rad_common::project::PeerInfo;
-use rad_common::Url;
-use rad_common::{git, keys, profile, project, seed};
-use rad_terminal as term;
+use radicle_common::args::Help;
+use radicle_common::project::PeerInfo;
+use radicle_common::Url;
+use radicle_common::{git, keys, profile, project, seed};
+use radicle_terminal as term;
 
 mod options;
 pub use options::Options;
@@ -141,7 +141,7 @@ pub fn track(
         seed::set_peer_seed(&addr.url(), &peer)?;
         term::success!(
             "Saving seed configuration for {} to local git config...",
-            term::format::tertiary(rad_common::fmt::peer(&peer))
+            term::format::tertiary(radicle_common::fmt::peer(&peer))
         );
     }
 

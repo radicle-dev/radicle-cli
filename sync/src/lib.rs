@@ -4,11 +4,11 @@ use librad::git::{identities, tracking, Urn};
 use librad::profile::Profile;
 use librad::PeerId;
 
-use rad_common::args;
-use rad_common::args::{Args, Error, Help};
-use rad_common::seed::SeedOptions;
-use rad_common::{git, keys, person, profile, project, seed, seed::Scope};
-use rad_terminal as term;
+use radicle_common::args;
+use radicle_common::args::{Args, Error, Help};
+use radicle_common::seed::SeedOptions;
+use radicle_common::{git, keys, person, profile, project, seed, seed::Scope};
+use radicle_terminal as term;
 
 use anyhow::anyhow;
 use anyhow::Context as _;

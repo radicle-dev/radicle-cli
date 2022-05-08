@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 
-use rad_common::args::{Args, Error, Help};
-use rad_terminal as term;
+use radicle_common::args::{Args, Error, Help};
+use radicle_terminal as term;
 
 pub const HELP: Help = Help {
     name: "help",
@@ -55,7 +55,7 @@ impl Args for Options {
 pub fn run(_options: Options) -> anyhow::Result<()> {
     println!("Usage: rad <command> [--help]");
 
-    if rad_common::profile::default().is_err() {
+    if radicle_common::profile::default().is_err() {
         println!();
         println!(
             "{}",
