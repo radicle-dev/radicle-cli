@@ -3,13 +3,10 @@ use std::ffi::OsString;
 use anyhow::anyhow;
 use git2::Oid;
 
-use librad::git::refs::Refs;
 use librad::git::storage::ReadOnly;
-use librad::git::storage::ReadOnlyStorage;
 use librad::git::Storage;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::patch::Metadata;
 use radicle_common::{git, keys, patch, profile, project};
 use radicle_terminal as term;
 
@@ -23,6 +20,7 @@ Usage
     rad patch [<option>...]
 
 Options
+
     --list    List all patches (default: false)
     --help    Print help
 "#,
@@ -74,7 +72,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if options.list {
         list(&storage, &project, &repo)?;
     } else {
-        create(&storage, &project, &repo, options.verbose)?;
+        create(&project, &repo, options.verbose)?;
     }
 
     Ok(())
@@ -116,7 +114,6 @@ fn list(
 }
 
 fn create(
-    _storage: &Storage,
     project: &project::Metadata,
     repo: &git2::Repository,
     verbose: bool,
@@ -218,10 +215,10 @@ fn list_by_state(
     table: &mut term::Table<2>,
     state: patch::State,
 ) -> anyhow::Result<()> {
-    let mut patches: Vec<patch::Metadata> = list_patches(&storage, None, project)?;
+    let mut patches: Vec<patch::Metadata> = patch::all(&storage, None, project)?;
 
     for (_, info) in project::tracked(project, storage)? {
-        let mut theirs = list_patches(&storage, Some(info), project)?;
+        let mut theirs = patch::all(&storage, Some(info), project)?;
         patches.append(&mut theirs);
     }
 
@@ -319,49 +316,6 @@ where
         table.push([author_info.join(" "), name]);
     }
     Ok(())
-}
-
-/// List patches on the local device. Returns a given peer's patches or this peer's
-/// patches if `peer` is `None`.
-pub fn list_patches<S>(
-    storage: &S,
-    peer: Option<project::PeerInfo>,
-    project: &project::Metadata,
-) -> anyhow::Result<Vec<Metadata>>
-where
-    S: AsRef<ReadOnly>,
-{
-    let storage = storage.as_ref();
-    let mut patches: Vec<Metadata> = vec![];
-
-    let peer_id = peer.clone().map(|p| p.id);
-    let info = match peer {
-        Some(info) => info,
-        None => patch::self_info(storage, project)?,
-    };
-
-    if let Ok(refs) = Refs::load(&storage, &project.urn, peer_id) {
-        let blobs = match refs {
-            Some(refs) => refs.tags().collect(),
-            None => vec![],
-        };
-        for (_, oid) in blobs {
-            match storage.find_object(oid) {
-                Ok(Some(object)) => {
-                    let tag = object.peel_to_tag()?;
-
-                    if let Some(patch) = patch::from_tag(tag, info.clone())? {
-                        patches.push(patch);
-                    }
-                }
-                Ok(None) | Err(_) => {
-                    term::warning(&format!("Could not find object for id {}.", oid))
-                }
-            }
-        }
-    }
-
-    Ok(patches)
 }
 
 pub fn sync(current_branch: String) -> anyhow::Result<()> {

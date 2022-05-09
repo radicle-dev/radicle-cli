@@ -110,7 +110,7 @@ impl TryFrom<Url> for Origin {
 }
 
 /// Project peer information.
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub struct PeerInfo {
     /// Peer id.

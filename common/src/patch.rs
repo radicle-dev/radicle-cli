@@ -2,7 +2,10 @@
 use anyhow::Result;
 use git2::Oid;
 
+use librad::git::refs::Refs;
 use librad::git::storage::ReadOnly;
+use librad::git::storage::ReadOnlyStorage;
+use serde::Serialize;
 
 use crate::{person, project};
 
@@ -18,6 +21,8 @@ pub enum State {
 /// branch.
 ///
 /// A patch is represented by an annotated tag, prefixed with `patches/`.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Metadata {
     /// ID of a patch. This is the portion of the tag name following the `patches/` prefix.
     pub id: String,
@@ -26,6 +31,7 @@ pub struct Metadata {
     /// Message attached to the patch. This is the message of the annotated tag.
     pub message: Option<String>,
     /// Head commit that the author wants to merge with this patch.
+    #[serde(with = "string")]
     pub commit: Oid,
 }
 
@@ -63,6 +69,52 @@ where
     })
 }
 
+/// List patches on the local device. Returns a given peer's patches or this peer's
+/// patches if `peer` is `None`.
+pub fn all<S>(
+    storage: &S,
+    peer: Option<project::PeerInfo>,
+    project: &project::Metadata,
+) -> anyhow::Result<Vec<Metadata>>
+where
+    S: AsRef<ReadOnly>,
+{
+    let storage = storage.as_ref();
+    let mut patches: Vec<Metadata> = vec![];
+
+    let peer_id = peer.clone().map(|p| p.id);
+    let info = match peer {
+        Some(info) => info,
+        None => self_info(storage, project)?,
+    };
+
+    if let Ok(refs) = Refs::load(&storage, &project.urn, peer_id) {
+        let blobs = match refs {
+            Some(refs) => refs.tags().collect(),
+            None => vec![],
+        };
+        for (_, oid) in blobs {
+            match storage.find_object(oid) {
+                Ok(Some(object)) => {
+                    let tag = object.peel_to_tag()?;
+
+                    if let Some(patch) = from_tag(tag, info.clone())? {
+                        patches.push(patch);
+                    }
+                }
+                Ok(None) => {
+                    continue;
+                }
+                Err(err) => {
+                    return Err(err.into());
+                }
+            }
+        }
+    }
+
+    Ok(patches)
+}
+
 pub fn state(repo: &git2::Repository, patch: &Metadata) -> State {
     match merge_base(repo, patch) {
         Ok(Some(merge_base)) => match merge_base == patch.commit {
@@ -81,4 +133,18 @@ pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<Oi
     };
 
     Ok(merge_base)
+}
+
+mod string {
+    use std::fmt::Display;
+
+    use serde::Serializer;
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Display,
+        S: Serializer,
+    {
+        serializer.collect_str(value)
+    }
 }
