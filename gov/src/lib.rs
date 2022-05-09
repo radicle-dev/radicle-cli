@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use ethers::abi::token::{LenientTokenizer, Token, Tokenizer};
 use ethers::abi::AbiParser;
-use ethers::prelude::{Middleware, SignerMiddleware};
+use ethers::prelude::{signer::SignerMiddleware, Middleware};
 use ethers::types::{Address, U256};
 
 use anyhow::anyhow;
@@ -12,7 +12,7 @@ use anyhow::Context;
 use regex::Regex;
 
 use rad_common::ethereum;
-use rad_common::ethereum::{ProviderOptions, SignerOptions};
+use rad_common::ethereum::{signer::ExtendedMiddleware, ProviderOptions, SignerOptions};
 use rad_terminal::args::{Args, Error, Help};
 use rad_terminal::components as term;
 
@@ -128,9 +128,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     let provider = ethereum::provider(options.provider)?;
     let signer_opts = options.signer;
+    let legacy = signer_opts.legacy;
     let (wallet, provider) = rt.block_on(ethereum::get_wallet(signer_opts, provider))?;
     let signer = SignerMiddleware::new(provider, wallet);
-    let governance = Governance::new(signer);
+    let governance = Governance::new(signer, legacy);
 
     match options.command {
         Command::Execute { id } => {
@@ -152,7 +153,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
 async fn run_execute<M>(id: U256, governance: Governance<M>) -> anyhow::Result<()>
 where
-    M: Middleware + 'static,
+    M: ExtendedMiddleware + 'static,
     crate::governance::Error<M>: From<<M as Middleware>::Error>,
 {
     let call = governance.execute_proposal(id).await?;
@@ -162,7 +163,7 @@ where
 
 async fn run_propose<M>(file: OsString, governance: Governance<M>) -> anyhow::Result<()>
 where
-    M: Middleware + 'static,
+    M: ExtendedMiddleware + 'static,
     crate::governance::Error<M>: From<<M as Middleware>::Error>,
 {
     let spinner = term::spinner(&format!(
@@ -245,7 +246,7 @@ where
 
 async fn run_queue<M>(id: U256, governance: Governance<M>) -> anyhow::Result<()>
 where
-    M: Middleware + 'static,
+    M: ExtendedMiddleware + 'static,
     crate::governance::Error<M>: From<<M as Middleware>::Error>,
 {
     let call = governance.queue_proposal(id).await?;
@@ -255,7 +256,7 @@ where
 
 async fn run_vote<M>(id: U256, governance: Governance<M>) -> anyhow::Result<()>
 where
-    M: Middleware + 'static,
+    M: ExtendedMiddleware + 'static,
     crate::governance::Error<M>: From<<M as Middleware>::Error>,
 {
     let proposal = governance.get_proposal(id).await?;

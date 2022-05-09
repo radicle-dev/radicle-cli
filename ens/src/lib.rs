@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use ethers::prelude::{Address, Http, Provider, SignerMiddleware};
+use ethers::prelude::{Address, Chain, Http, Provider, Signer, SignerMiddleware};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
@@ -153,8 +153,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let name = term::text_input("ENS name", name)?;
             let provider = ethereum::provider(options.provider)?;
             let signer_opts = options.signer;
+            let legacy = signer_opts.legacy;
             let (wallet, provider) = rt.block_on(ethereum::get_wallet(signer_opts, provider))?;
-            rt.block_on(setup(&name, id, provider, wallet, &storage))?;
+            rt.block_on(setup(&name, id, provider, wallet, &storage, legacy))?;
         }
         Operation::SetLocal(name) => set_ens_payload(&name, &storage)?,
     }
@@ -186,13 +187,15 @@ async fn setup(
     name: &str,
     id: LocalIdentity,
     provider: Provider<Http>,
-    signer: ethereum::Wallet,
+    signer: ethereum::TypedWallet,
     storage: &Storage,
+    legacy: bool,
 ) -> anyhow::Result<()> {
     let urn = id.urn();
+    let chain_id = signer.chain_id();
     let signer = SignerMiddleware::new(provider, signer);
     let radicle_name = name.ends_with(ethereum::RADICLE_DOMAIN);
-    let resolver = match PublicResolver::get(name, signer).await {
+    let resolver = match PublicResolver::get(name, signer, legacy).await {
         Ok(resolver) => resolver,
         Err(err) => {
             if let resolver::Error::NameNotFound { .. } = err {
@@ -290,27 +293,31 @@ async fn setup(
     let call = resolver.multicall(calls)?;
     ethereum::transaction(call).await?;
 
-    let spinner = term::spinner("Updating local identity...");
-    match person::set_ens_payload(
-        person::Ens {
-            name: name.to_owned(),
-        },
-        storage,
-    ) {
-        Ok(doc) => {
-            spinner.finish();
-            term::blob(serde_json::to_string(&doc.payload())?);
+    if chain_id == u64::from(Chain::Mainnet) {
+        let spinner = term::spinner("Updating local identity...");
+        match person::set_ens_payload(
+            person::Ens {
+                name: name.to_owned(),
+            },
+            storage,
+        ) {
+            Ok(doc) => {
+                spinner.finish();
+                term::blob(serde_json::to_string(&doc.payload())?);
+            }
+            Err(err) => {
+                spinner.failed();
+                return Err(err);
+            }
         }
-        Err(err) => {
-            spinner.failed();
-            return Err(err);
-        }
-    }
 
-    term::info!(
-        "Successfully associated local 🌱 identity with {}",
-        term::format::highlight(name)
-    );
+        term::info!(
+            "Successfully associated local 🌱 identity with {}",
+            term::format::highlight(name)
+        );
+    } else {
+        term::warning("Warning: Skipping local ENS setup");
+    }
 
     term::blank();
     term::tip!("To view your profile, visit:");
