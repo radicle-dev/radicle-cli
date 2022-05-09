@@ -68,7 +68,7 @@ where
     let peer_id = peer.clone().map(|p| p.id);
     let info = match peer {
         Some(info) => info,
-        None => project::PeerInfo::get(storage.peer_id(), project, storage)?,
+        None => project::PeerInfo::get(storage.peer_id(), project, storage),
     };
 
     if let Ok(refs) = Refs::load(&storage, &project.urn, peer_id) {

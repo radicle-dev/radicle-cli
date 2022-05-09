@@ -137,11 +137,7 @@ impl PeerInfo {
         }
     }
 
-    pub fn get<S: AsRef<ReadOnly>>(
-        peer_id: &PeerId,
-        project: &Metadata,
-        storage: &S,
-    ) -> Result<PeerInfo> {
+    pub fn get<S: AsRef<ReadOnly>>(peer_id: &PeerId, project: &Metadata, storage: &S) -> PeerInfo {
         let delegate = project.delegates.iter().any(|d| d.contains(peer_id));
 
         if let Ok(delegate_urn) = Urn::try_from(Reference::rad_self(
@@ -149,21 +145,21 @@ impl PeerInfo {
             Some(*peer_id),
         )) {
             if let Ok(Some(person)) = identities::person::get(&storage, &delegate_urn) {
-                return Ok(PeerInfo {
+                return PeerInfo {
                     id: *peer_id,
                     person: Some(PeerIdentity {
                         urn: person.urn(),
                         name: person.subject().name.to_string(),
                     }),
                     delegate,
-                });
+                };
             }
         }
-        Ok(PeerInfo {
+        PeerInfo {
             id: *peer_id,
             person: None,
             delegate,
-        })
+        }
     }
 }
 
@@ -506,8 +502,7 @@ where
     for tracked in entries {
         let tracked = tracked?;
         if let Some(peer) = tracked.peer_id() {
-            let peer_info = PeerInfo::get(&peer, project, storage)?;
-            remotes.insert(peer, peer_info);
+            remotes.insert(peer, PeerInfo::get(&peer, project, storage));
         }
     }
     Ok(remotes)
