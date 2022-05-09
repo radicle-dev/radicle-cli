@@ -428,7 +428,7 @@ impl<'a> Issues<'a> {
         Ok(())
     }
 
-    pub fn all(&self, project: &Urn) -> Result<Vec<Issue>, Error> {
+    pub fn all(&self, project: &Urn) -> Result<Vec<(ObjectId, Issue)>, Error> {
         let cobs = self
             .store
             .list(project, &TYPENAME)
@@ -437,9 +437,9 @@ impl<'a> Issues<'a> {
         let mut issues = Vec::new();
         for cob in cobs {
             let issue: Result<Issue, _> = cob.history().try_into();
-            issues.push(issue.unwrap());
+            issues.push((*cob.id(), issue.unwrap()));
         }
-        issues.sort_by_key(|i| i.timestamp);
+        issues.sort_by_key(|(_, i)| i.timestamp);
 
         Ok(issues)
     }
@@ -876,8 +876,8 @@ mod test {
         let issues = issues.all(&project.urn()).unwrap();
 
         // Issues are sorted by timestamp.
-        assert_eq!(issues[0].title(), "My first issue");
-        assert_eq!(issues[1].title(), "My second issue");
-        assert_eq!(issues[2].title(), "My third issue");
+        assert_eq!(issues[0].1.title(), "My first issue");
+        assert_eq!(issues[1].1.title(), "My second issue");
+        assert_eq!(issues[2].1.title(), "My third issue");
     }
 }

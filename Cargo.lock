@@ -4994,6 +4994,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-issue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "automerge 0.1.0",
+ "lazy_static",
+ "lexopt",
+ "librad",
+ "radicle-common",
+ "radicle-terminal",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rad-ls"
 version = "0.1.0"
 dependencies = [
@@ -5127,6 +5142,7 @@ dependencies = [
  "rad-help",
  "rad-init",
  "rad-inspect",
+ "rad-issue",
  "rad-ls",
  "rad-pull",
  "rad-push",

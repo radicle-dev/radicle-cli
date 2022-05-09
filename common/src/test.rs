@@ -29,9 +29,9 @@ pub mod setup {
 pub mod teardown {
     use super::*;
     pub fn profiles() -> Result<(), BoxedError> {
-        #[cfg(test)]
+        #[cfg(debug_assertions)]
         let params = *crypto::KDF_PARAMS_TEST;
-        #[cfg(not(test))]
+        #[cfg(not(debug_assertions))]
         let params = crypto::KdfParams::recommended();
 
         if let Ok(profiles) = profile::list() {

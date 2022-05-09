@@ -122,9 +122,9 @@ pub fn load_secret_key(
         &profile.paths().keys_dir().join(keys::LIBRAD_KEY_FILE),
         pwhash,
     );
-    let keystore = file_storage.get_key()?;
+    let keypair = file_storage.get_key()?;
 
-    Ok(ZeroizingSecretKey::new(keystore.secret_key))
+    Ok(ZeroizingSecretKey::new(keypair.secret_key))
 }
 
 #[cfg(not(debug_assertions))]

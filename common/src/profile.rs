@@ -1,12 +1,29 @@
 //! User profile related functions.
-use anyhow::{anyhow, Error, Result};
+use std::fmt;
 
-use librad::git::storage::ReadOnly;
-pub use librad::profile::{Profile, ProfileId};
+use anyhow::{anyhow, Error, Result};
+use serde::{de::DeserializeOwned, Serialize};
+
+pub use librad::profile::{LnkHome, Profile, ProfileId};
+
+use librad::PeerId;
+use librad::{git::storage::ReadOnly, keystore::crypto::Crypto};
 
 use lnk_profile;
 
 use crate::args;
+
+/// Create a new profile.
+pub fn create<C: Crypto>(
+    home: impl Into<LnkHome>,
+    crypto: C,
+) -> Result<(Profile, PeerId), lnk_profile::Error>
+where
+    C::Error: fmt::Debug + fmt::Display + Send + Sync + 'static,
+    C::SecretBox: Serialize + DeserializeOwned,
+{
+    lnk_profile::create(Some(home.into()), crypto)
+}
 
 /// Get the default profile. Fails if there is no profile.
 pub fn default() -> Result<Profile, Error> {

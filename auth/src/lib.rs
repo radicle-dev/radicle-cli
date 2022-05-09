@@ -6,6 +6,7 @@ use radicle_common::signer::ToSigner;
 use zeroize::Zeroizing;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
+use librad::profile::LnkHome;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{git, keys, person, profile};
@@ -140,7 +141,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     let pwhash = keys::pwhash(passphrase.clone());
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
-    let (profile, peer_id) = lnk_profile::create(None, pwhash.clone())?;
+    let (profile, peer_id) = profile::create(LnkHome::default(), pwhash.clone())?;
 
     git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 
