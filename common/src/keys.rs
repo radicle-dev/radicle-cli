@@ -127,31 +127,12 @@ pub fn load_secret_key(
     Ok(ZeroizingSecretKey::new(keystore.secret_key))
 }
 
-#[derive(Clone)]
-pub struct CachedPrompt(pub SecUtf8);
-
-impl CachedPrompt {
-    pub fn new(secret: SecUtf8) -> Self {
-        Self(secret)
-    }
+#[cfg(not(debug_assertions))]
+pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<SecUtf8> {
+    crypto::Pwhash::new(secret, crypto::KdfParams::recommended())
 }
 
-impl Pinentry for CachedPrompt {
-    type Error = std::io::Error;
-
-    fn get_passphrase(&self) -> Result<SecUtf8, Self::Error> {
-        Ok(self.0.clone())
-    }
-}
-
-#[cfg(not(test))]
-pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<CachedPrompt> {
-    let prompt = CachedPrompt::new(secret);
-    crypto::Pwhash::new(prompt, crypto::KdfParams::recommended())
-}
-
-#[cfg(test)]
-pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<CachedPrompt> {
-    let prompt = CachedPrompt::new(secret);
-    crypto::Pwhash::new(prompt, *crypto::KDF_PARAMS_TEST)
+#[cfg(debug_assertions)]
+pub fn pwhash(secret: SecUtf8) -> crypto::Pwhash<SecUtf8> {
+    crypto::Pwhash::new(secret, *crypto::KDF_PARAMS_TEST)
 }
