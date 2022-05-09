@@ -93,7 +93,7 @@ fn list(
 
     table.push([
         format!("[{}]", term::format::secondary("Open")),
-        "".to_owned(),
+        String::new(),
     ]);
     table.push(blank.clone());
     list_by_state(storage, repo, project, &mut table, patch::State::Open)?;
@@ -102,7 +102,7 @@ fn list(
 
     table.push([
         format!("[{}]", term::format::positive("Merged")),
-        "".to_owned(),
+        String::new(),
     ]);
     table.push(blank);
     list_by_state(storage, repo, project, &mut table, patch::State::Merged)?;
@@ -221,18 +221,14 @@ fn list_by_state(
         let mut theirs = patch::all(&storage, Some(info), project)?;
         patches.append(&mut theirs);
     }
+    patches.retain(|patch| state == patch::state(repo, patch));
 
-    let filtered: Vec<&patch::Metadata> = patches
-        .iter()
-        .filter(|patch| state == patch::state(repo, patch))
-        .collect();
-
-    if !filtered.is_empty() {
-        for patch in filtered {
-            print_patch(storage, patch, table)?;
+    if !patches.is_empty() {
+        for patch in patches {
+            print(storage, &patch, table)?;
         }
     } else {
-        table.push(["No patches found.".to_owned(), "".to_owned()]);
+        table.push(["No patches found.".to_owned(), String::new()]);
     }
 
     Ok(())
@@ -244,18 +240,16 @@ pub fn create_patch(repo: &git2::Repository, message: &str, verbose: bool) -> an
     let current_branch = head.shorthand().unwrap_or("HEAD (no branch)");
     let patch_tag_name = format!("{}{}", patch::TAG_PREFIX, &current_branch);
     let mut spinner = term::spinner("Adding tag...");
+
     match git::add_tag(repo, message, &patch_tag_name) {
-        Ok(_) => {
-            if verbose {
-                spinner.finish();
-            }
-        }
+        Ok(_) => {}
         Err(err) => {
             spinner.failed();
             return Err(err);
         }
     };
 
+    spinner.message("Pushing tag...".to_owned());
     match git::push_tag(&patch_tag_name) {
         Ok(output) => {
             if verbose {
@@ -268,11 +262,10 @@ pub fn create_patch(repo: &git2::Repository, message: &str, verbose: bool) -> an
         }
     };
 
-    spinner.message("Setting up branch...".to_owned());
+    spinner.message("Pushing branch...".to_owned());
     match git::push_branch(current_branch) {
         Ok(output) => {
             if verbose {
-                spinner.finish();
                 term::blob(output);
             }
         }
@@ -288,7 +281,7 @@ pub fn create_patch(repo: &git2::Repository, message: &str, verbose: bool) -> an
 }
 
 /// Adds patch details as a new row to `table` and render later.
-pub fn print_patch<S>(
+pub fn print<S>(
     storage: &S,
     patch: &patch::Metadata,
     table: &mut term::Table<2>,
