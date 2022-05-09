@@ -326,19 +326,21 @@ pub fn push_project(
 
     // Sync project delegates to seed.
     for delegate in proj.delegates.iter() {
-        spinner.message(format!("Syncing delegate {}...", &delegate.encode_id()));
+        if let project::Delegate::Indirect { urn, .. } = &delegate {
+            spinner.message(format!("Syncing delegate {}...", urn.encode_id()));
 
-        match seed::push_delegate(monorepo, seed, delegate, peer_id) {
-            Ok(output) => {
-                if options.verbose {
-                    spinner.finish();
-                    term::blob(output);
+            match seed::push_delegate(monorepo, seed, urn, peer_id) {
+                Ok(output) => {
+                    if options.verbose {
+                        spinner.finish();
+                        term::blob(output);
+                    }
                 }
-            }
-            Err(err) => {
-                spinner.failed();
-                term::blank();
-                return Err(err);
+                Err(err) => {
+                    spinner.failed();
+                    term::blank();
+                    return Err(err);
+                }
             }
         }
     }
@@ -491,21 +493,21 @@ pub fn fetch(
             project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
 
         for delegate in &proj.delegates {
-            spinner.message(format!(
-                "Fetching project delegate {}...",
-                delegate.encode_id()
-            ));
-            match seed::fetch_identity(monorepo, seed, delegate) {
-                Ok(output) => {
-                    if options.verbose {
-                        spinner.finish();
-                        term::blob(output);
+            if let project::Delegate::Indirect { urn, .. } = &delegate {
+                spinner.message(format!("Fetching project delegate {}...", urn.encode_id()));
+
+                match seed::fetch_identity(monorepo, seed, urn) {
+                    Ok(output) => {
+                        if options.verbose {
+                            spinner.finish();
+                            term::blob(output);
+                        }
                     }
-                }
-                Err(err) => {
-                    spinner.failed();
-                    term::blank();
-                    return Err(err);
+                    Err(err) => {
+                        spinner.failed();
+                        term::blank();
+                        return Err(err);
+                    }
                 }
             }
         }

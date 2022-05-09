@@ -7,7 +7,7 @@ use librad::git::storage::ReadOnly;
 use librad::git::storage::ReadOnlyStorage;
 use serde::Serialize;
 
-use crate::{person, project};
+use crate::project;
 
 pub const TAG_PREFIX: &str = "patches/";
 
@@ -52,29 +52,12 @@ pub fn from_tag(tag: git2::Tag, info: project::PeerInfo) -> Result<Option<Metada
     Ok(patch)
 }
 
-pub fn self_info<S>(storage: &S, project: &project::Metadata) -> Result<project::PeerInfo>
-where
-    S: AsRef<ReadOnly>,
-{
-    let storage = storage.as_ref();
-    let urn = storage.config()?.user()?.unwrap();
-    let peer_id = storage.peer_id();
-    let name = person::get(storage, &urn)?.map(|p| p.subject().name.to_string());
-    let delegate = project.remotes.contains(peer_id);
-
-    Ok(project::PeerInfo {
-        id: *peer_id,
-        name,
-        delegate,
-    })
-}
-
 /// List patches on the local device. Returns a given peer's patches or this peer's
 /// patches if `peer` is `None`.
 pub fn all<S>(
-    storage: &S,
-    peer: Option<project::PeerInfo>,
     project: &project::Metadata,
+    peer: Option<project::PeerInfo>,
+    storage: &S,
 ) -> anyhow::Result<Vec<Metadata>>
 where
     S: AsRef<ReadOnly>,
@@ -85,7 +68,7 @@ where
     let peer_id = peer.clone().map(|p| p.id);
     let info = match peer {
         Some(info) => info,
-        None => self_info(storage, project)?,
+        None => project::PeerInfo::get(storage.peer_id(), project, storage)?,
     };
 
     if let Ok(refs) = Refs::load(&storage, &project.urn, peer_id) {

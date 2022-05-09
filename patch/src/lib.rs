@@ -215,10 +215,10 @@ fn list_by_state(
     table: &mut term::Table<2>,
     state: patch::State,
 ) -> anyhow::Result<()> {
-    let mut patches: Vec<patch::Metadata> = patch::all(&storage, None, project)?;
+    let mut patches: Vec<patch::Metadata> = patch::all(project, None, &storage)?;
 
     for (_, info) in project::tracked(project, storage)? {
-        let mut theirs = patch::all(&storage, Some(info), project)?;
+        let mut theirs = patch::all(project, Some(info), &storage)?;
         patches.append(&mut theirs);
     }
     patches.retain(|patch| state == patch::state(repo, patch));
@@ -298,7 +298,7 @@ where
 
         let mut author_info = vec![term::format::italic(format!(
             "└── Opened by {}",
-            &patch.peer.name.as_ref().unwrap_or(&"".to_owned())
+            &patch.peer.name()
         ))];
 
         if you {

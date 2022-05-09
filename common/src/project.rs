@@ -5,9 +5,10 @@ use std::iter;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context as _, Error, Result};
+use anyhow::{anyhow, Context as _, Result};
 use either::Either;
 use git2::Repository;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use librad::canonical::Cstring;
@@ -109,22 +110,97 @@ impl TryFrom<Url> for Origin {
     }
 }
 
+/// Project indirect contributor identity.
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct PeerIdentity {
+    pub urn: Urn,
+    pub name: String,
+}
+
 /// Project peer information.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub struct PeerInfo {
     /// Peer id.
     pub id: PeerId,
-    /// Peer name, if known.
-    pub name: Option<String>,
+    /// Peer identity, if known.
+    pub person: Option<PeerIdentity>,
     /// Whether or not this peer belongs to a project delegate.
     pub delegate: bool,
+}
+
+impl PeerInfo {
+    pub fn name(&self) -> String {
+        match &self.person {
+            Some(person) => person.name.clone(),
+            None => self.id.default_encoding(),
+        }
+    }
+
+    pub fn get<S: AsRef<ReadOnly>>(
+        peer_id: &PeerId,
+        project: &Metadata,
+        storage: &S,
+    ) -> Result<PeerInfo> {
+        let delegate = project.delegates.iter().any(|d| d.contains(peer_id));
+
+        if let Ok(delegate_urn) = Urn::try_from(Reference::rad_self(
+            Namespace::from(project.urn.clone()),
+            Some(*peer_id),
+        )) {
+            if let Ok(Some(person)) = identities::person::get(&storage, &delegate_urn) {
+                return Ok(PeerInfo {
+                    id: *peer_id,
+                    person: Some(PeerIdentity {
+                        urn: person.urn(),
+                        name: person.subject().name.to_string(),
+                    }),
+                    delegate,
+                });
+            }
+        }
+        Ok(PeerInfo {
+            id: *peer_id,
+            person: None,
+            delegate,
+        })
+    }
+}
+
+/// Project delegate.
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum Delegate {
+    /// Direct delegation, ie. public key.
+    Direct { id: PeerId },
+    /// Indirect delegation, ie. a personal identity.
+    Indirect { urn: Urn, ids: HashSet<PeerId> },
+}
+
+use std::fmt;
+impl fmt::Display for Delegate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Direct { id } => write!(f, "{}", id.default_encoding()),
+            Self::Indirect { urn, .. } => write!(f, "{}", urn.encode_id()),
+        }
+    }
+}
+
+impl Delegate {
+    pub fn contains(&self, other: &PeerId) -> bool {
+        match self {
+            Self::Direct { id } => id == other,
+            Self::Indirect { ids, .. } => ids.contains(other),
+        }
+    }
 }
 
 /// Project metadata.
 ///
 /// Can be constructed from a [`librad::identities::Project`].
-#[derive(Debug)]
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Metadata {
     /// Project URN.
     pub urn: Urn,
@@ -135,22 +211,22 @@ pub struct Metadata {
     /// Default branch of project.
     pub default_branch: String,
     /// List of delegates.
-    pub delegates: HashSet<Urn>,
+    pub delegates: Vec<Delegate>,
     /// List of remotes.
     pub remotes: HashSet<PeerId>,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("project doesn't have a default branch")]
+    MissingDefaultBranch,
+}
+
 impl TryFrom<librad::identities::Project> for Metadata {
-    type Error = anyhow::Error;
+    type Error = Error;
 
     fn try_from(project: librad::identities::Project) -> Result<Self, Self::Error> {
         let subject = project.subject();
-        let delegates = project
-            .delegations()
-            .iter()
-            .indirect()
-            .map(|indirect| indirect.urn())
-            .collect();
         let remotes = project
             .delegations()
             .iter()
@@ -164,8 +240,29 @@ impl TryFrom<librad::identities::Project> for Metadata {
         let default_branch = subject
             .default_branch
             .clone()
-            .ok_or(anyhow!("project is missing a default branch"))?
+            .ok_or(Error::MissingDefaultBranch)?
             .to_string();
+
+        let mut delegates = Vec::new();
+        for delegate in project.delegations().iter() {
+            match delegate {
+                Either::Left(pk) => {
+                    delegates.push(Delegate::Direct {
+                        id: PeerId::from(*pk),
+                    });
+                }
+                Either::Right(indirect) => {
+                    delegates.push(Delegate::Indirect {
+                        urn: indirect.urn(),
+                        ids: indirect
+                            .delegations()
+                            .iter()
+                            .map(|pk| PeerId::from(*pk))
+                            .collect(),
+                    });
+                }
+            }
+        }
 
         Ok(Self {
             urn: project.urn(),
@@ -191,7 +288,7 @@ pub fn payload(name: String, description: String, default_branch: String) -> pay
 }
 
 /// Create a new project identity.
-pub fn create(payload: payload::Project, storage: &Storage) -> Result<Project, Error> {
+pub fn create(payload: payload::Project, storage: &Storage) -> anyhow::Result<Project> {
     let whoami = person::local(storage)?;
     let payload = ProjectPayload::new(payload);
     let delegations = identities::IndirectDelegation::try_from_iter(iter::once(Either::Right(
@@ -209,7 +306,7 @@ pub fn init(
     storage: &Storage,
     paths: &Paths,
     signer: BoxedSigner,
-) -> Result<(), Error> {
+) -> anyhow::Result<()> {
     if let Some(branch) = project.subject().default_branch.clone() {
         let branch = RefLike::try_from(branch.to_string())?.into();
         let settings = transport::Settings {
@@ -249,7 +346,9 @@ where
 }
 
 /// List projects on the local device. Includes the project head if available.
-pub fn list<S>(storage: &S) -> Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>, Error>
+pub fn list<S>(
+    storage: &S,
+) -> anyhow::Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -299,7 +398,7 @@ pub fn get_local_head<S>(
     storage: &S,
     urn: &Urn,
     branch: &str,
-) -> Result<Option<git_repository::ObjectId>, Error>
+) -> anyhow::Result<Option<git_repository::ObjectId>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -318,7 +417,7 @@ pub fn get_remote_head<S>(
     urn: &Urn,
     peer: &PeerId,
     branch: &str,
-) -> Result<Option<git2::Oid>, Error>
+) -> anyhow::Result<Option<git2::Oid>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -337,7 +436,7 @@ where
 }
 
 /// Get project metadata.
-pub fn get<S>(storage: &S, urn: &Urn) -> Result<Option<Metadata>, Error>
+pub fn get<S>(storage: &S, urn: &Urn) -> anyhow::Result<Option<Metadata>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -362,7 +461,7 @@ where
 }
 
 /// Get the repository's "rad" remote.
-pub fn rad_remote(repo: &Repository) -> Result<Remote<LocalUrl>, Error> {
+pub fn rad_remote(repo: &Repository) -> anyhow::Result<Remote<LocalUrl>> {
     match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
         Ok(Some(remote)) => Ok(remote),
         Ok(None) => Err(anyhow!(
@@ -389,7 +488,7 @@ pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, 
 }
 
 /// Get the project URN and repository of the current working directory.
-pub fn cwd() -> Result<(Urn, Repository), Error> {
+pub fn cwd() -> anyhow::Result<(Urn, Repository)> {
     let repo = git::repository()?;
     let urn = self::rad_remote(&repo)?.url.urn;
 
@@ -407,18 +506,8 @@ where
     for tracked in entries {
         let tracked = tracked?;
         if let Some(peer) = tracked.peer_id() {
-            let person = self::person(storage, &project.urn, &peer)?;
-            let name = person.map(|p| p.subject().name.to_string());
-            let delegate = project.remotes.contains(&peer);
-
-            remotes.insert(
-                peer,
-                PeerInfo {
-                    id: peer,
-                    name,
-                    delegate,
-                },
-            );
+            let peer_info = PeerInfo::get(&peer, project, storage)?;
+            remotes.insert(peer, peer_info);
         }
     }
     Ok(remotes)

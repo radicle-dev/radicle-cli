@@ -213,7 +213,7 @@ pub fn show(
         let mut header = vec![term::format::bold(peer.id)];
 
         if let Some(meta) = &peer.meta {
-            if let Some(name) = &meta.name {
+            if let Some(name) = meta.person.as_ref().map(|p| &p.name) {
                 header.push(term::format::tertiary(name));
             }
             if meta.delegate {
