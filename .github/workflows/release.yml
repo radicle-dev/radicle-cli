@@ -104,7 +104,7 @@ jobs:
         with:
           profile: minimal
       - name: Build the release binaries
-        run: cargo build --release
+        run: env OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl@1.1 LIBUSB_STATIC=1 cargo build --release
       - name: Build the release archive
         shell: bash
         run: |

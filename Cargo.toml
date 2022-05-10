@@ -164,3 +164,7 @@ rev = "a9485b78b5c78d252c92f61d990cf34622d1c8f1"
 [patch.crates-io.automerge]
 git = "https://github.com/automerge/automerge-rs"
 rev = "291557a019acac283e54ea31a9fad81ed65736ab"
+
+[patch.crates-io.libusb1-sys]
+git = "https://github.com/radicle-dev/rusb.git"
+rev = "b58761e7961efab082aea6d22a58a199dc687c5e"
