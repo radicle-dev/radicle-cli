@@ -4971,6 +4971,7 @@ dependencies = [
  "rad-ens",
  "rad-init",
  "rad-inspect",
+ "rad-issue",
  "rad-ls",
  "rad-pull",
  "rad-push",

@@ -24,6 +24,7 @@ rad-ls = { path = "../ls" }
 rad-track = { path = "../track" }
 rad-untrack = { path = "../untrack" }
 rad-init = { path = "../init" }
+rad-issue = { path = "../issue" }
 rad-auth = { path = "../auth" }
 rad-clone = { path = "../clone" }
 rad-checkout = { path = "../checkout" }

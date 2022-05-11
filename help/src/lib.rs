@@ -15,6 +15,7 @@ const COMMANDS: &[Help] = &[
     rad_init::HELP,
     rad_self::HELP,
     rad_inspect::HELP,
+    rad_issue::HELP,
     rad_clone::HELP,
     rad_ls::HELP,
     rad_remote::HELP,
