@@ -1,5 +1,4 @@
 //! Patch-related functions and types.
-use anyhow::Result;
 use git2::Oid;
 
 use librad::git::refs::Refs;
@@ -10,6 +9,14 @@ use serde::Serialize;
 use crate::project;
 
 pub const TAG_PREFIX: &str = "patches/";
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("git: {0}")]
+    Git(#[from] git2::Error),
+    #[error("storage: {0}")]
+    Storage(#[from] librad::git::storage::Error),
+}
 
 #[derive(PartialEq, Eq)]
 pub enum State {
@@ -38,7 +45,7 @@ pub struct Metadata {
 /// Tries to construct a patch from ['git2::Tag'] and ['project::PeerInfo'].
 /// If the tag name matches the radicle patch prefix, a new patch metadata is
 /// created.
-pub fn from_tag(tag: git2::Tag, info: project::PeerInfo) -> Result<Option<Metadata>> {
+pub fn from_tag(tag: git2::Tag, info: project::PeerInfo) -> Result<Option<Metadata>, Error> {
     let patch = tag
         .name()
         .and_then(|name| name.strip_prefix(TAG_PREFIX))
@@ -58,7 +65,7 @@ pub fn all<S>(
     project: &project::Metadata,
     peer: Option<project::PeerInfo>,
     storage: &S,
-) -> anyhow::Result<Vec<Metadata>>
+) -> Result<Vec<Metadata>, Error>
 where
     S: AsRef<ReadOnly>,
 {
@@ -108,7 +115,7 @@ pub fn state(repo: &git2::Repository, patch: &Metadata) -> State {
     }
 }
 
-pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<Oid>> {
+pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<Oid>, Error> {
     let head = repo.head()?;
     let merge_base = match repo.merge_base(head.target().unwrap(), patch.commit) {
         Ok(commit) => Some(commit),
