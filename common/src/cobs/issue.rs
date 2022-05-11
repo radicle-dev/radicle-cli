@@ -91,6 +91,7 @@ pub struct Comment {
     pub author: Urn,
     pub body: String,
     pub reactions: HashMap<Reaction, usize>,
+    pub replies: Vec<Comment>,
     pub timestamp: Timestamp,
 }
 
@@ -219,35 +220,16 @@ impl TryFrom<Automerge> for Issue {
         let mut comments = Vec::new();
         for i in 0..doc.length(&comments_id) {
             let (_val, comment_id) = doc.get(&comments_id, i as usize)?.unwrap();
-            let (author, _) = doc.get(&comment_id, "author")?.unwrap();
-            let (body, _) = doc.get(&comment_id, "body")?.unwrap();
-            let (timestamp, _) = doc.get(&comment_id, "timestamp")?.unwrap();
-            let (_, reactions_id) = doc.get(&comment_id, "reactions")?.unwrap();
+            let comment = lookup::comment(&doc, &comment_id)?;
 
-            let author = self::author(author)?;
-            let body = body.into_string().unwrap();
-            let timestamp = Timestamp::try_from(timestamp).unwrap();
-
-            let mut reactions: HashMap<_, usize> = HashMap::new();
-            for reaction in doc.keys(&reactions_id) {
-                let key = Reaction::from_str(&reaction).unwrap();
-                let count = reactions.entry(key).or_default();
-
-                *count += 1;
-            }
-
-            comments.push(Comment {
-                author,
-                body,
-                reactions,
-                timestamp,
-            });
+            comments.push(comment);
         }
 
         // Labels.
         let mut labels = HashSet::new();
         for key in doc.keys(&labels_id) {
             let label = Label::new(key).unwrap();
+
             labels.insert(label);
         }
 
@@ -428,6 +410,34 @@ impl<'a> Issues<'a> {
         Ok(())
     }
 
+    pub fn reply(
+        &self,
+        project: &Urn,
+        issue_id: &ObjectId,
+        comment_ix: usize,
+        reply: &str,
+    ) -> Result<(), Error> {
+        let author = self.whoami.urn();
+        let mut issue = self.get_raw(project, issue_id)?.unwrap();
+        let changes = events::reply(&mut issue, comment_ix, &author, reply, Timestamp::now())?;
+
+        let _cob = self
+            .store
+            .update(
+                &self.whoami,
+                project,
+                UpdateObjectSpec {
+                    object_id: *issue_id,
+                    typename: TYPENAME.clone(),
+                    message: Some("Reply".to_owned()),
+                    changes,
+                },
+            )
+            .unwrap();
+
+        Ok(())
+    }
+
     pub fn all(&self, project: &Urn) -> Result<Vec<(ObjectId, Issue)>, Error> {
         let cobs = self
             .store
@@ -511,6 +521,50 @@ mod cobs {
     }
 }
 
+mod lookup {
+    use std::convert::TryFrom;
+    use std::str::FromStr;
+
+    use super::{Automerge, AutomergeError, Comment, HashMap, Reaction, Timestamp};
+
+    pub fn comment(doc: &Automerge, obj_id: &automerge::ObjId) -> Result<Comment, AutomergeError> {
+        let (author, _) = doc.get(&obj_id, "author")?.unwrap();
+        let (body, _) = doc.get(&obj_id, "body")?.unwrap();
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
+        let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
+
+        let author = super::author(author)?;
+        let body = body.into_string().unwrap();
+        let timestamp = Timestamp::try_from(timestamp).unwrap();
+
+        let mut reactions: HashMap<_, usize> = HashMap::new();
+        for reaction in doc.keys(&reactions_id) {
+            let key = Reaction::from_str(&reaction).unwrap();
+            let count = reactions.entry(key).or_default();
+
+            *count += 1;
+        }
+
+        let mut replies = Vec::new();
+        if let Some((_, replies_id)) = doc.get(&obj_id, "replies")? {
+            for i in 0..doc.length(&replies_id) {
+                let (_, reply_id) = doc.get(&replies_id, i as usize)?.unwrap();
+                let reply = comment(doc, &reply_id)?;
+
+                replies.push(reply);
+            }
+        }
+
+        Ok(Comment {
+            author,
+            body,
+            reactions,
+            replies,
+            timestamp,
+        })
+    }
+}
+
 mod events {
     use super::*;
     use automerge::{
@@ -541,6 +595,7 @@ mod events {
                     let comments = tx.put_object(&issue, "comments", ObjType::List)?;
                     let comment = tx.insert_object(&comments, 0, ObjType::Map)?;
 
+                    // Nb. The top-level comment doesn't have a `replies` field.
                     tx.put(&comment, "body", description)?;
                     tx.put(&comment, "author", author.to_string())?;
                     tx.put(&comment, "timestamp", timestamp)?;
@@ -574,7 +629,7 @@ mod events {
                     tx.put(&comment, "author", author.to_string())?;
                     tx.put(&comment, "body", body)?;
                     tx.put(&comment, "timestamp", timestamp)?;
-                    tx.put_object(&comment, "labels", ObjType::Map)?;
+                    tx.put_object(&comment, "replies", ObjType::List)?;
                     tx.put_object(&comment, "reactions", ObjType::Map)?;
 
                     Ok(comment)
@@ -619,7 +674,7 @@ mod events {
     ) -> Result<EntryContents, AutomergeError> {
         issue
             .transact_with::<_, _, AutomergeError, _, ()>(
-                |_| CommitOptions::default().with_message("Close issue".to_owned()),
+                |_| CommitOptions::default().with_message("Label issue".to_owned()),
                 |tx| {
                     let (_, obj_id) = tx.get(ObjId::Root, "issue")?.unwrap();
                     let (_, labels_id) = tx.get(&obj_id, "labels")?.unwrap();
@@ -627,6 +682,41 @@ mod events {
                     for label in labels {
                         tx.put(&labels_id, label.name(), true)?;
                     }
+                    Ok(())
+                },
+            )
+            .map_err(|failure| failure.error)?;
+
+        let change = issue.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok(EntryContents::Automerge(change))
+    }
+
+    pub fn reply(
+        issue: &mut Automerge,
+        comment_ix: usize,
+        author: &Urn,
+        body: &str,
+        timestamp: Timestamp,
+    ) -> Result<EntryContents, AutomergeError> {
+        issue
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Reply".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "issue")?.unwrap();
+                    let (_, comments_id) = tx.get(&obj_id, "comments")?.unwrap();
+                    let (_, comment_id) = tx.get(&comments_id, comment_ix)?.unwrap();
+                    let (_, replies_id) = tx.get(&comment_id, "replies")?.unwrap();
+
+                    let length = tx.length(&replies_id);
+                    let reply = tx.insert_object(&replies_id, length, ObjType::Map)?;
+
+                    // Nb. Replies don't themselves have replies.
+                    tx.put(&reply, "author", author.to_string())?;
+                    tx.put(&reply, "body", body)?;
+                    tx.put(&reply, "timestamp", timestamp)?;
+                    tx.put_object(&reply, "reactions", ObjType::Map)?;
+
                     Ok(())
                 },
             )
@@ -645,7 +735,7 @@ mod events {
     ) -> Result<EntryContents, AutomergeError> {
         issue
             .transact_with::<_, _, AutomergeError, _, ()>(
-                |_| CommitOptions::default().with_message("Close issue".to_owned()),
+                |_| CommitOptions::default().with_message("React".to_owned()),
                 |tx| {
                     let (_, obj_id) = tx.get(ObjId::Root, "issue")?.unwrap();
                     let (_, comments_id) = tx.get(&obj_id, "comments")?.unwrap();
@@ -768,6 +858,27 @@ mod test {
         // TODO: Test multiple reactions from same author and different authors
 
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_issue_reply() {
+        let (storage, profile, whoami, project) = setup();
+        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let project = project.urn();
+        let issue_id = issues
+            .create(&project, "My first issue", "Blah blah blah.")
+            .unwrap();
+
+        issues.comment(&project, &issue_id, "Ho ho ho.").unwrap();
+        issues.reply(&project, &issue_id, 1, "Hi hi hi.").unwrap();
+        issues.reply(&project, &issue_id, 1, "Ha ha ha.").unwrap();
+
+        let issue = issues.get(&project, &issue_id).unwrap().unwrap();
+        let reply1 = &issue.comments()[0].replies[0];
+        let reply2 = &issue.comments()[0].replies[1];
+
+        assert_eq!(reply1.body, "Hi hi hi.");
+        assert_eq!(reply2.body, "Ha ha ha.");
     }
 
     #[test]
