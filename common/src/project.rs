@@ -117,6 +117,22 @@ pub struct PeerIdentity {
     pub name: String,
 }
 
+impl PeerIdentity {
+    pub fn get<S: AsRef<ReadOnly>>(
+        urn: &Urn,
+        storage: &S,
+    ) -> Result<Option<Self>, identities::Error> {
+        let person = identities::person::get(&storage, urn)?;
+        if let Some(person) = person {
+            return Ok(Some(PeerIdentity {
+                urn: person.urn(),
+                name: person.subject().name.to_string(),
+            }));
+        }
+        Ok(None)
+    }
+}
+
 /// Project peer information.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]

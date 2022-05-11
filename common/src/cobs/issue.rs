@@ -1,3 +1,4 @@
+#![allow(clippy::large_enum_variant)]
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::convert::{Infallible, TryFrom, TryInto};
@@ -14,9 +15,12 @@ use librad::collaborative_objects::{
     UpdateObjectSpec,
 };
 use librad::git::identities::local::LocalIdentity;
+use librad::git::storage::ReadOnly;
 use librad::git::Storage;
 use librad::git::Urn;
 use librad::paths::Paths;
+
+use crate::project;
 
 lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.issue").unwrap();
@@ -37,6 +41,14 @@ pub enum Error {
 
     #[error(transparent)]
     Automerge(#[from] AutomergeError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ResolveError {
+    #[error("identity {urn} was not found")]
+    NotFound { urn: Urn },
+    #[error(transparent)]
+    Identities(#[from] librad::git::identities::Error),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
@@ -117,11 +129,27 @@ pub type Replies = Vec<Comment>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Comment<R = ()> {
-    pub author: Urn,
+    pub author: Author,
     pub body: String,
     pub reactions: HashMap<Reaction, usize>,
     pub replies: R,
     pub timestamp: Timestamp,
+}
+
+impl Comment<()> {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.author.resolve(storage)
+    }
+}
+
+impl Comment<Replies> {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.author.resolve(storage)?;
+        for reply in &mut self.replies {
+            reply.resolve(storage)?;
+        }
+        Ok(())
+    }
 }
 
 pub fn author(val: Value) -> Result<Urn, AutomergeError> {
@@ -164,9 +192,38 @@ impl<'a> TryFrom<Value<'a>> for State {
 /// A discussion thread.
 pub type Discussion = Vec<Comment<Replies>>;
 
+/// Issue author.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Author {
+    Urn { urn: Urn },
+    Resolved(project::PeerIdentity),
+}
+
+impl Author {
+    pub fn urn(&self) -> &Urn {
+        match self {
+            Self::Urn { ref urn } => urn,
+            Self::Resolved(project::PeerIdentity { urn, .. }) => urn,
+        }
+    }
+
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        match self {
+            Self::Urn { urn } => {
+                let id = project::PeerIdentity::get(urn, storage)?
+                    .ok_or_else(|| ResolveError::NotFound { urn: urn.clone() })?;
+                *self = Self::Resolved(id);
+            }
+            Self::Resolved(_) => {}
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Issue {
-    pub author: Urn,
+    pub author: Author,
     pub title: String,
     pub state: State,
     pub comment: Comment,
@@ -176,7 +233,7 @@ pub struct Issue {
 }
 
 impl Issue {
-    pub fn author(&self) -> &Urn {
+    pub fn author(&self) -> &Author {
         &self.author
     }
 
@@ -206,6 +263,18 @@ impl Issue {
 
     pub fn timestamp(&self) -> Timestamp {
         self.timestamp
+    }
+}
+
+impl Issue {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.author.resolve(storage)?;
+        self.comment.resolve(storage)?;
+
+        for comment in &mut self.discussion {
+            comment.resolve(storage)?;
+        }
+        Ok(())
     }
 }
 
@@ -270,7 +339,9 @@ impl TryFrom<Automerge> for Issue {
             labels.insert(label);
         }
 
-        let author = self::author(author)?;
+        let author = Author::Urn {
+            urn: self::author(author)?,
+        };
         let state = State::try_from(state).unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
@@ -562,7 +633,9 @@ mod lookup {
     use std::convert::TryFrom;
     use std::str::FromStr;
 
-    use super::{Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp};
+    use super::{
+        Author, Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp,
+    };
 
     pub fn comment(
         doc: &Automerge,
@@ -573,7 +646,9 @@ mod lookup {
         let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
         let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
 
-        let author = super::author(author)?;
+        let author = Author::Urn {
+            urn: super::author(author)?,
+        };
         let body = body.into_string().unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
@@ -879,7 +954,7 @@ mod test {
         let timestamp = Timestamp::now();
 
         assert_eq!(issue.title(), "My first issue");
-        assert_eq!(issue.author(), &author);
+        assert_eq!(issue.author().urn(), &author);
         assert_eq!(issue.description(), "Blah blah blah.");
         assert_eq!(issue.comments().len(), 0);
         assert_eq!(issue.state(), State::Open);
@@ -996,10 +1071,32 @@ mod test {
         let c2 = &issue.comments()[1];
 
         assert_eq!(&c1.body, "Ho ho ho.");
-        assert_eq!(&c1.author, &author);
+        assert_eq!(c1.author.urn(), &author);
         assert_eq!(&c2.body, "Ha ha ha.");
-        assert_eq!(&c2.author, &author);
+        assert_eq!(c2.author.urn(), &author);
         assert!(c1.timestamp >= now);
+    }
+
+    #[test]
+    fn test_issue_resolve() {
+        let (storage, profile, whoami, project) = setup();
+        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let issue_id = issues
+            .create(&project.urn(), "My first issue", "Blah blah blah.")
+            .unwrap();
+
+        issues
+            .comment(&project.urn(), &issue_id, "Ho ho ho.")
+            .unwrap();
+
+        let mut issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
+        issue.resolve(&storage).unwrap();
+
+        let c1 = &issue.comments()[0];
+
+        assert!(matches!(issue.author(), Author::Resolved(id) if id.name == "cloudhead"));
+        assert!(matches!(&issue.comment.author, Author::Resolved(id) if id.name == "cloudhead"));
+        assert!(matches!(&c1.author, Author::Resolved(id) if id.name == "cloudhead"));
     }
 
     #[test]
