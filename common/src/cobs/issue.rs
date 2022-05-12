@@ -20,6 +20,8 @@ use librad::git::Storage;
 use librad::git::Urn;
 use librad::paths::Paths;
 
+use crate::cobs::shared;
+use crate::cobs::shared::*;
 use crate::project;
 
 lazy_static! {
@@ -44,122 +46,6 @@ pub enum Error {
 
     #[error(transparent)]
     Automerge(#[from] AutomergeError),
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum ResolveError {
-    #[error("identity {urn} was not found")]
-    NotFound { urn: Urn },
-    #[error(transparent)]
-    Identities(#[from] librad::git::identities::Error),
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
-pub struct Reaction {
-    pub emoji: char,
-}
-
-impl Reaction {
-    pub fn new(emoji: char) -> Result<Self, Infallible> {
-        Ok(Self { emoji })
-    }
-}
-
-impl FromStr for Reaction {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut chars = s.chars();
-        let first = chars.next().ok_or(String::new())?;
-
-        // Reactions should not consist of more than a single emoji.
-        if chars.next().is_some() {
-            return Err(String::new());
-        }
-        Ok(Reaction::new(first).unwrap())
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct Label(String);
-
-impl Label {
-    pub fn new(name: impl Into<String>) -> Result<Self, Infallible> {
-        Ok(Self(name.into()))
-    }
-
-    pub fn name(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
-impl From<Label> for String {
-    fn from(Label(name): Label) -> Self {
-        name
-    }
-}
-
-/// Local id of a comment in an issue.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-pub struct CommentId {
-    /// Represents the index of the comment in the thread,
-    /// with `0` being the top-level comment.
-    ix: usize,
-}
-
-impl CommentId {
-    /// Root comment.
-    pub const fn root() -> Self {
-        Self { ix: 0 }
-    }
-}
-
-impl From<usize> for CommentId {
-    fn from(ix: usize) -> Self {
-        Self { ix }
-    }
-}
-
-impl From<CommentId> for usize {
-    fn from(id: CommentId) -> Self {
-        id.ix
-    }
-}
-
-/// Comment replies.
-pub type Replies = Vec<Comment>;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Comment<R = ()> {
-    pub author: Author,
-    pub body: String,
-    pub reactions: HashMap<Reaction, usize>,
-    pub replies: R,
-    pub timestamp: Timestamp,
-}
-
-impl Comment<()> {
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
-        self.author.resolve(storage)
-    }
-}
-
-impl Comment<Replies> {
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
-        self.author.resolve(storage)?;
-        for reply in &mut self.replies {
-            reply.resolve(storage)?;
-        }
-        Ok(())
-    }
-}
-
-pub fn author(val: Value) -> Result<Urn, AutomergeError> {
-    let author = val.into_string().unwrap();
-    let author = Urn::from_str(&author).unwrap();
-
-    Ok(author)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -189,38 +75,6 @@ impl<'a> TryFrom<Value<'a>> for State {
             "closed" => Ok(Self::Closed),
             _ => Err("invalid state name"),
         }
-    }
-}
-
-/// A discussion thread.
-pub type Discussion = Vec<Comment<Replies>>;
-
-/// Issue author.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Author {
-    Urn { urn: Urn },
-    Resolved(project::PeerIdentity),
-}
-
-impl Author {
-    pub fn urn(&self) -> &Urn {
-        match self {
-            Self::Urn { ref urn } => urn,
-            Self::Resolved(project::PeerIdentity { urn, .. }) => urn,
-        }
-    }
-
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
-        match self {
-            Self::Urn { urn } => {
-                let id = project::PeerIdentity::get(urn, storage)?
-                    .ok_or_else(|| ResolveError::NotFound { urn: urn.clone() })?;
-                *self = Self::Resolved(id);
-            }
-            Self::Resolved(_) => {}
-        }
-        Ok(())
     }
 }
 
@@ -343,7 +197,7 @@ impl TryFrom<Automerge> for Issue {
         }
 
         let author = Author::Urn {
-            urn: self::author(author)?,
+            urn: shared::author(author)?,
         };
         let state = State::try_from(state).unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
@@ -357,51 +211,6 @@ impl TryFrom<Automerge> for Issue {
             labels,
             timestamp,
         })
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct Timestamp {
-    seconds: u64,
-}
-
-impl Timestamp {
-    pub fn new(seconds: u64) -> Self {
-        Self { seconds }
-    }
-
-    pub fn now() -> Self {
-        let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-
-        Self {
-            seconds: duration.as_secs(),
-        }
-    }
-
-    pub fn as_secs(&self) -> u64 {
-        self.seconds
-    }
-}
-
-impl From<Timestamp> for ScalarValue {
-    fn from(ts: Timestamp) -> Self {
-        ScalarValue::Timestamp(ts.seconds as i64)
-    }
-}
-
-impl<'a> TryFrom<Value<'a>> for Timestamp {
-    type Error = String;
-
-    fn try_from(val: Value) -> Result<Self, Self::Error> {
-        if let Value::Scalar(scalar) = val {
-            if let ScalarValue::Timestamp(ts) = scalar.borrow() {
-                return Ok(Self {
-                    seconds: *ts as u64,
-                });
-            }
-        }
-        Err(String::from("value is not a timestamp"))
     }
 }
 
@@ -641,6 +450,7 @@ mod lookup {
     use std::convert::TryFrom;
     use std::str::FromStr;
 
+    use super::shared;
     use super::{
         Author, Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp,
     };
@@ -655,7 +465,7 @@ mod lookup {
         let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
 
         let author = Author::Urn {
-            urn: super::author(author)?,
+            urn: shared::author(author)?,
         };
         let body = body.into_string().unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
@@ -852,10 +662,9 @@ mod events {
             .transact_with::<_, _, AutomergeError, _, ()>(
                 |_| CommitOptions::default().with_message("Reply".to_owned()),
                 |tx| {
-                    let CommentId { ix } = comment_id;
                     let (_, obj_id) = tx.get(ObjId::Root, "issue")?.unwrap();
                     let (_, discussion_id) = tx.get(&obj_id, "discussion")?.unwrap();
-                    let (_, comment_id) = tx.get(&discussion_id, ix)?.unwrap();
+                    let (_, comment_id) = tx.get(&discussion_id, usize::from(comment_id))?.unwrap();
                     let (_, replies_id) = tx.get(&comment_id, "replies")?.unwrap();
 
                     let length = tx.length(&replies_id);
@@ -892,7 +701,8 @@ mod events {
                     let (_, comment_id) = if comment_id == CommentId::root() {
                         tx.get(&obj_id, "comment")?.unwrap()
                     } else {
-                        tx.get(&discussion_id, comment_id.ix - 1)?.unwrap()
+                        tx.get(&discussion_id, usize::from(comment_id) - 1)?
+                            .unwrap()
                     };
                     let (_, reactions_id) = tx.get(&comment_id, "reactions")?.unwrap();
 

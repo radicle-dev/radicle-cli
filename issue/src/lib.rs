@@ -10,6 +10,7 @@ use radicle_common::{cobs, keys, person, profile, project};
 use radicle_terminal as term;
 
 use cobs::issue::*;
+use cobs::Label;
 
 pub const HELP: Help = Help {
     name: "issue",
