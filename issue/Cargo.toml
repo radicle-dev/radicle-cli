@@ -15,4 +15,5 @@ librad = { version = "0" }
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
 serde_json = { version = "1.0" }
+serde_yaml = { version = "0.8" }
 serde = { version = "1.0" }

@@ -28,6 +28,9 @@ lazy_static! {
         serde_json::from_slice(include_bytes!("issue.json")).unwrap();
 }
 
+/// Identifier for an issue.
+pub type IssueId = ObjectId;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Create error: {0}")]
@@ -414,20 +417,25 @@ impl<'a> Issues<'a> {
         Ok(Self { store, whoami })
     }
 
-    pub fn create(&self, project: &Urn, title: &str, description: &str) -> Result<ObjectId, Error> {
+    pub fn create(
+        &self,
+        project: &Urn,
+        title: &str,
+        description: &str,
+        labels: &[Label],
+    ) -> Result<IssueId, Error> {
         let author = self.whoami.urn();
         let timestamp = Timestamp::now();
-        let history = events::create(&author, title, description, timestamp)?;
+        let history = events::create(&author, title, description, timestamp, labels)?;
 
         cobs::create(history, project, &self.whoami, &self.store)
     }
 
-    pub fn comment(
-        &self,
-        project: &Urn,
-        issue_id: &ObjectId,
-        body: &str,
-    ) -> Result<ObjectId, Error> {
+    pub fn remove(&self, _project: &Urn, _issue_id: &IssueId) -> Result<(), Error> {
+        todo!()
+    }
+
+    pub fn comment(&self, project: &Urn, issue_id: &IssueId, body: &str) -> Result<IssueId, Error> {
         let author = self.whoami.urn();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
         let timestamp = Timestamp::now();
@@ -449,7 +457,7 @@ impl<'a> Issues<'a> {
         Ok(*cob.id()) // TODO: Return something other than doc id.
     }
 
-    pub fn close(&self, project: &Urn, issue_id: &ObjectId) -> Result<(), Error> {
+    pub fn close(&self, project: &Urn, issue_id: &IssueId) -> Result<(), Error> {
         let author = self.whoami.urn();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
         let changes = events::lifecycle(&mut issue, &author, State::Closed)?;
@@ -470,7 +478,7 @@ impl<'a> Issues<'a> {
         Ok(())
     }
 
-    pub fn label(&self, project: &Urn, issue_id: &ObjectId, labels: &[Label]) -> Result<(), Error> {
+    pub fn label(&self, project: &Urn, issue_id: &IssueId, labels: &[Label]) -> Result<(), Error> {
         let author = self.whoami.urn();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
         let changes = events::label(&mut issue, &author, labels)?;
@@ -494,7 +502,7 @@ impl<'a> Issues<'a> {
     pub fn react(
         &self,
         project: &Urn,
-        issue_id: &ObjectId,
+        issue_id: &IssueId,
         comment_id: CommentId,
         reaction: Reaction,
     ) -> Result<(), Error> {
@@ -521,7 +529,7 @@ impl<'a> Issues<'a> {
     pub fn reply(
         &self,
         project: &Urn,
-        issue_id: &ObjectId,
+        issue_id: &IssueId,
         comment_id: CommentId,
         reply: &str,
     ) -> Result<(), Error> {
@@ -546,7 +554,7 @@ impl<'a> Issues<'a> {
         Ok(())
     }
 
-    pub fn all(&self, project: &Urn) -> Result<Vec<(ObjectId, Issue)>, Error> {
+    pub fn all(&self, project: &Urn) -> Result<Vec<(IssueId, Issue)>, Error> {
         let cobs = self
             .store
             .list(project, &TYPENAME)
@@ -562,7 +570,7 @@ impl<'a> Issues<'a> {
         Ok(issues)
     }
 
-    pub fn get(&self, project: &Urn, id: &ObjectId) -> Result<Option<Issue>, Error> {
+    pub fn get(&self, project: &Urn, id: &IssueId) -> Result<Option<Issue>, Error> {
         let cob = self
             .store
             .retrieve(project, &TYPENAME, id)
@@ -576,7 +584,7 @@ impl<'a> Issues<'a> {
         }
     }
 
-    pub fn get_raw(&self, project: &Urn, id: &ObjectId) -> Result<Option<Automerge>, Error> {
+    pub fn get_raw(&self, project: &Urn, id: &IssueId) -> Result<Option<Automerge>, Error> {
         let cob = self
             .store
             .retrieve(project, &TYPENAME, id)
@@ -611,7 +619,7 @@ mod cobs {
         project: &Urn,
         whoami: &LocalIdentity,
         store: &CollaborativeObjects,
-    ) -> Result<ObjectId, Error> {
+    ) -> Result<IssueId, Error> {
         let cob = store
             .create(
                 whoami,
@@ -707,7 +715,14 @@ mod events {
         title: &str,
         description: &str,
         timestamp: Timestamp,
+        labels: &[Label],
     ) -> Result<EntryContents, AutomergeError> {
+        let title = title.trim();
+        // TODO: Return error.
+        if title.is_empty() {
+            panic!("Empty issue title");
+        }
+
         // TODO: Set actor id of document?
         let mut doc = Automerge::new();
         let _issue = doc
@@ -720,16 +735,20 @@ mod events {
                     tx.put(&issue, "author", author.to_string())?;
                     tx.put(&issue, "state", State::Open)?;
                     tx.put(&issue, "timestamp", timestamp)?;
-                    tx.put_object(&issue, "labels", ObjType::Map)?;
                     tx.put_object(&issue, "discussion", ObjType::List)?;
 
-                    let comment = tx.put_object(&issue, "comment", ObjType::Map)?;
+                    let labels_id = tx.put_object(&issue, "labels", ObjType::Map)?;
+                    for label in labels {
+                        tx.put(&labels_id, label.name().trim(), true)?;
+                    }
 
                     // Nb. The top-level comment doesn't have a `replies` field.
-                    tx.put(&comment, "body", description)?;
-                    tx.put(&comment, "author", author.to_string())?;
-                    tx.put(&comment, "timestamp", timestamp)?;
-                    tx.put_object(&comment, "reactions", ObjType::Map)?;
+                    let comment_id = tx.put_object(&issue, "comment", ObjType::Map)?;
+
+                    tx.put(&comment_id, "body", description.trim())?;
+                    tx.put(&comment_id, "author", author.to_string())?;
+                    tx.put(&comment_id, "timestamp", timestamp)?;
+                    tx.put_object(&comment_id, "reactions", ObjType::Map)?;
 
                     Ok(issue)
                 },
@@ -757,7 +776,7 @@ mod events {
                     let comment = tx.insert_object(&discussion_id, length, ObjType::Map)?;
 
                     tx.put(&comment, "author", author.to_string())?;
-                    tx.put(&comment, "body", body)?;
+                    tx.put(&comment, "body", body.trim())?;
                     tx.put(&comment, "timestamp", timestamp)?;
                     tx.put_object(&comment, "replies", ObjType::List)?;
                     tx.put_object(&comment, "reactions", ObjType::Map)?;
@@ -810,7 +829,7 @@ mod events {
                     let (_, labels_id) = tx.get(&obj_id, "labels")?.unwrap();
 
                     for label in labels {
-                        tx.put(&labels_id, label.name(), true)?;
+                        tx.put(&labels_id, label.name().trim(), true)?;
                     }
                     Ok(())
                 },
@@ -844,7 +863,7 @@ mod events {
 
                     // Nb. Replies don't themselves have replies.
                     tx.put(&reply, "author", author.to_string())?;
-                    tx.put(&reply, "body", body)?;
+                    tx.put(&reply, "body", body.trim())?;
                     tx.put(&reply, "timestamp", timestamp)?;
                     tx.put_object(&reply, "reactions", ObjType::Map)?;
 
@@ -948,7 +967,7 @@ mod test {
         let author = whoami.urn();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
-            .create(&project.urn(), "My first issue", "Blah blah blah.")
+            .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
         let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
         let timestamp = Timestamp::now();
@@ -966,7 +985,7 @@ mod test {
         let (storage, profile, whoami, project) = setup();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
-            .create(&project.urn(), "My first issue", "Blah blah blah.")
+            .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
         issues.close(&project.urn(), &issue_id).unwrap();
@@ -981,7 +1000,7 @@ mod test {
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let project = project.urn();
         let issue_id = issues
-            .create(&project, "My first issue", "Blah blah blah.")
+            .create(&project, "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
         let reaction = Reaction::new('🥳').unwrap();
@@ -1003,7 +1022,7 @@ mod test {
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let project = project.urn();
         let issue_id = issues
-            .create(&project, "My first issue", "Blah blah blah.")
+            .create(&project, "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
         issues.comment(&project, &issue_id, "Ho ho ho.").unwrap();
@@ -1028,7 +1047,7 @@ mod test {
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let project = project.urn();
         let issue_id = issues
-            .create(&project, "My first issue", "Blah blah blah.")
+            .create(&project, "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
         let bug_label = Label::new("bug").unwrap();
@@ -1055,7 +1074,7 @@ mod test {
         let author = whoami.urn();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
-            .create(&project.urn(), "My first issue", "Blah blah blah.")
+            .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
         issues
@@ -1082,7 +1101,7 @@ mod test {
         let (storage, profile, whoami, project) = setup();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
-            .create(&project.urn(), "My first issue", "Blah blah blah.")
+            .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
         issues
@@ -1111,6 +1130,7 @@ mod test {
                 "My first issue",
                 "Blah blah blah.",
                 Timestamp::new(1),
+                &[],
             )
             .unwrap(),
             &project.urn(),
@@ -1125,6 +1145,7 @@ mod test {
                 "My second issue",
                 "Blah blah blah.",
                 Timestamp::new(2),
+                &[],
             )
             .unwrap(),
             &project.urn(),
@@ -1139,6 +1160,7 @@ mod test {
                 "My third issue",
                 "Blah blah blah.",
                 Timestamp::new(3),
+                &[],
             )
             .unwrap(),
             &project.urn(),
