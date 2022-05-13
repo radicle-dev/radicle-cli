@@ -1,22 +1,16 @@
+#![allow(clippy::large_enum_variant)]
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
-use std::convert::{Infallible, TryFrom, TryInto};
-use std::ops::ControlFlow;
+use std::collections::HashMap;
+use std::convert::{Infallible, TryFrom};
+
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
+use automerge::{Automerge, AutomergeError, ScalarValue, Value};
 use serde::{Deserialize, Serialize};
 
-use librad::collaborative_objects::{
-    CollaborativeObjects, EntryContents, History, NewObjectSpec, ObjectId, TypeName,
-    UpdateObjectSpec,
-};
-use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnly;
-use librad::git::Storage;
 use librad::git::Urn;
-use librad::paths::Paths;
 
 use crate::project;
 
@@ -210,5 +204,71 @@ impl<'a> TryFrom<Value<'a>> for Timestamp {
             }
         }
         Err(String::from("value is not a timestamp"))
+    }
+}
+
+pub mod lookup {
+    use std::convert::TryFrom;
+    use std::str::FromStr;
+
+    use super::{
+        Author, Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp,
+    };
+
+    pub fn comment(
+        doc: &Automerge,
+        obj_id: &automerge::ObjId,
+    ) -> Result<Comment<()>, AutomergeError> {
+        let (author, _) = doc.get(&obj_id, "author")?.unwrap();
+        let (body, _) = doc.get(&obj_id, "body")?.unwrap();
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
+        let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
+
+        let author = Author::Urn {
+            urn: super::author(author)?,
+        };
+        let body = body.into_string().unwrap();
+        let timestamp = Timestamp::try_from(timestamp).unwrap();
+
+        let mut reactions: HashMap<_, usize> = HashMap::new();
+        for reaction in doc.keys(&reactions_id) {
+            let key = Reaction::from_str(&reaction).unwrap();
+            let count = reactions.entry(key).or_default();
+
+            *count += 1;
+        }
+
+        Ok(Comment {
+            author,
+            body,
+            reactions,
+            replies: (),
+            timestamp,
+        })
+    }
+
+    pub fn thread(
+        doc: &Automerge,
+        obj_id: &automerge::ObjId,
+    ) -> Result<Comment<Replies>, AutomergeError> {
+        let comment = self::comment(doc, obj_id)?;
+
+        let mut replies = Vec::new();
+        if let Some((_, replies_id)) = doc.get(&obj_id, "replies")? {
+            for i in 0..doc.length(&replies_id) {
+                let (_, reply_id) = doc.get(&replies_id, i as usize)?.unwrap();
+                let reply = self::comment(doc, &reply_id)?;
+
+                replies.push(reply);
+            }
+        }
+
+        Ok(Comment {
+            author: comment.author,
+            body: comment.body,
+            reactions: comment.reactions,
+            replies,
+            timestamp: comment.timestamp,
+        })
     }
 }

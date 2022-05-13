@@ -1,10 +1,10 @@
 //! Patch-related functions and types.
-use git2::Oid;
-
 use librad::git::refs::Refs;
 use librad::git::storage::ReadOnly;
 use librad::git::storage::ReadOnlyStorage;
 use serde::Serialize;
+
+use radicle_git_ext as git;
 
 use crate::project;
 
@@ -28,7 +28,7 @@ pub enum State {
 /// branch.
 ///
 /// A patch is represented by an annotated tag, prefixed with `patches/`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
     /// ID of a patch. This is the portion of the tag name following the `patches/` prefix.
@@ -38,8 +38,7 @@ pub struct Metadata {
     /// Message attached to the patch. This is the message of the annotated tag.
     pub message: Option<String>,
     /// Head commit that the author wants to merge with this patch.
-    #[serde(with = "string")]
-    pub commit: Oid,
+    pub commit: git::Oid,
 }
 
 /// Tries to construct a patch from ['git2::Tag'] and ['project::PeerInfo'].
@@ -53,7 +52,7 @@ pub fn from_tag(tag: git2::Tag, info: project::PeerInfo) -> Result<Option<Metada
             id: id.to_owned(),
             peer: info,
             message: tag.message().map(|m| m.to_string()),
-            commit: tag.target_id(),
+            commit: tag.target_id().into(),
         });
 
     Ok(patch)
@@ -115,26 +114,12 @@ pub fn state(repo: &git2::Repository, patch: &Metadata) -> State {
     }
 }
 
-pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<Oid>, Error> {
+pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<git::Oid>, Error> {
     let head = repo.head()?;
-    let merge_base = match repo.merge_base(head.target().unwrap(), patch.commit) {
+    let merge_base = match repo.merge_base(head.target().unwrap(), *patch.commit) {
         Ok(commit) => Some(commit),
         Err(_) => None,
     };
 
-    Ok(merge_base)
-}
-
-mod string {
-    use std::fmt::Display;
-
-    use serde::Serializer;
-
-    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: Display,
-        S: Serializer,
-    {
-        serializer.collect_str(value)
-    }
+    Ok(merge_base.map(|o| o.into()))
 }

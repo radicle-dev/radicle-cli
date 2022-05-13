@@ -1,10 +1,8 @@
 #![allow(clippy::large_enum_variant)]
-use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
-use std::convert::{Infallible, TryFrom, TryInto};
+use std::convert::{TryFrom, TryInto};
 use std::ops::ControlFlow;
 use std::str::FromStr;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use lazy_static::lazy_static;
@@ -22,7 +20,6 @@ use librad::paths::Paths;
 
 use crate::cobs::shared;
 use crate::cobs::shared::*;
-use crate::project;
 
 lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.issue").unwrap();
@@ -177,13 +174,13 @@ impl TryFrom<Automerge> for Issue {
         assert_eq!(labels.to_objtype(), Some(ObjType::Map));
 
         // Top-level comment.
-        let comment = lookup::comment(&doc, &comment_id)?;
+        let comment = shared::lookup::comment(&doc, &comment_id)?;
 
         // Discussion thread.
         let mut discussion: Discussion = Vec::new();
         for i in 0..doc.length(&discussion_id) {
             let (_val, comment_id) = doc.get(&discussion_id, i as usize)?.unwrap();
-            let comment = lookup::thread(&doc, &comment_id)?;
+            let comment = shared::lookup::thread(&doc, &comment_id)?;
 
             discussion.push(comment);
         }
@@ -446,73 +443,6 @@ mod cobs {
     }
 }
 
-mod lookup {
-    use std::convert::TryFrom;
-    use std::str::FromStr;
-
-    use super::shared;
-    use super::{
-        Author, Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp,
-    };
-
-    pub fn comment(
-        doc: &Automerge,
-        obj_id: &automerge::ObjId,
-    ) -> Result<Comment<()>, AutomergeError> {
-        let (author, _) = doc.get(&obj_id, "author")?.unwrap();
-        let (body, _) = doc.get(&obj_id, "body")?.unwrap();
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
-        let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
-
-        let author = Author::Urn {
-            urn: shared::author(author)?,
-        };
-        let body = body.into_string().unwrap();
-        let timestamp = Timestamp::try_from(timestamp).unwrap();
-
-        let mut reactions: HashMap<_, usize> = HashMap::new();
-        for reaction in doc.keys(&reactions_id) {
-            let key = Reaction::from_str(&reaction).unwrap();
-            let count = reactions.entry(key).or_default();
-
-            *count += 1;
-        }
-
-        Ok(Comment {
-            author,
-            body,
-            reactions,
-            replies: (),
-            timestamp,
-        })
-    }
-
-    pub fn thread(
-        doc: &Automerge,
-        obj_id: &automerge::ObjId,
-    ) -> Result<Comment<Replies>, AutomergeError> {
-        let comment = self::comment(doc, obj_id)?;
-
-        let mut replies = Vec::new();
-        if let Some((_, replies_id)) = doc.get(&obj_id, "replies")? {
-            for i in 0..doc.length(&replies_id) {
-                let (_, reply_id) = doc.get(&replies_id, i as usize)?.unwrap();
-                let reply = self::comment(doc, &reply_id)?;
-
-                replies.push(reply);
-            }
-        }
-
-        Ok(Comment {
-            author: comment.author,
-            body: comment.body,
-            reactions: comment.reactions,
-            replies,
-            timestamp: comment.timestamp,
-        })
-    }
-}
-
 mod events {
     use super::*;
     use automerge::{
@@ -731,49 +661,13 @@ mod events {
 
 #[cfg(test)]
 mod test {
-    use std::env;
-    use std::path::Path;
-
-    use librad::crypto::keystore::crypto::{Pwhash, KDF_PARAMS_TEST};
-    use librad::crypto::keystore::pinentry::SecUtf8;
-    use librad::git::identities::Project;
-
-    use librad::profile::{Profile, LNK_HOME};
 
     use super::*;
-    use crate::{keys, person, project, test};
-
-    fn setup() -> (Storage, Profile, LocalIdentity, Project) {
-        let tempdir = env::temp_dir().join("rad").join("home");
-        let home = env::var(LNK_HOME)
-            .map(|s| Path::new(&s).to_path_buf())
-            .unwrap_or_else(|_| tempdir.to_path_buf());
-
-        env::set_var(LNK_HOME, home);
-
-        let name = "cloudhead";
-        let pass = Pwhash::new(SecUtf8::from(test::USER_PASS), *KDF_PARAMS_TEST);
-        let (profile, _peer_id) = lnk_profile::create(None, pass.clone()).unwrap();
-        let signer = test::signer(&profile, pass).unwrap();
-        let storage = keys::storage(&profile, signer.clone()).unwrap();
-        let person = person::create(&profile, name, signer, &storage).unwrap();
-
-        person::set_local(&storage, &person).unwrap();
-
-        let whoami = person::local(&storage).unwrap();
-        let payload = project::payload(
-            "nakamoto".to_owned(),
-            "Bitcoin light-client".to_owned(),
-            "master".to_owned(),
-        );
-        let project = project::create(payload, &storage).unwrap();
-
-        (storage, profile, whoami, project)
-    }
+    use crate::test;
 
     #[test]
     fn test_issue_create_and_get() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
         let timestamp = Timestamp::now();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
@@ -792,7 +686,7 @@ mod test {
 
     #[test]
     fn test_issue_create_and_change_state() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
@@ -806,7 +700,7 @@ mod test {
 
     #[test]
     fn test_issue_react() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let project = project.urn();
         let issue_id = issues
@@ -828,7 +722,7 @@ mod test {
 
     #[test]
     fn test_issue_reply() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let project = project.urn();
         let issue_id = issues
@@ -853,7 +747,7 @@ mod test {
 
     #[test]
     fn test_issue_label() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let project = project.urn();
         let issue_id = issues
@@ -879,7 +773,7 @@ mod test {
 
     #[test]
     fn test_issue_comment() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let now = Timestamp::now();
         let author = whoami.urn();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
@@ -908,7 +802,7 @@ mod test {
 
     #[test]
     fn test_issue_resolve() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
@@ -930,7 +824,7 @@ mod test {
 
     #[test]
     fn test_issue_all() {
-        let (storage, profile, whoami, project) = setup();
+        let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
         let issues = Issues::new(whoami.clone(), profile.paths(), &storage).unwrap();
 
