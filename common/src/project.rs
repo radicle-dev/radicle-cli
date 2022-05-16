@@ -112,7 +112,7 @@ impl TryFrom<Url> for Origin {
 }
 
 /// Project indirect contributor identity.
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct PeerIdentity {
     pub urn: Urn,
     pub name: String,

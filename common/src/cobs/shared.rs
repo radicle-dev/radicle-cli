@@ -72,7 +72,7 @@ impl From<Label> for String {
 }
 
 /// Issue author.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Author {
     Urn { urn: Urn },

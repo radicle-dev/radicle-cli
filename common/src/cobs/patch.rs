@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::ops::{ControlFlow, RangeInclusive};
@@ -15,6 +16,7 @@ use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 use librad::git::Urn;
 use librad::paths::Paths;
+use librad::PeerId;
 
 use radicle_git_ext as git;
 
@@ -147,13 +149,19 @@ impl TryFrom<&History> for Patch {
 pub struct Patches<'a> {
     store: CollaborativeObjects<'a>,
     whoami: LocalIdentity,
+    peer_id: PeerId,
 }
 
 impl<'a> Patches<'a> {
     pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
         let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
+        let peer_id = *storage.peer_id();
 
-        Ok(Self { store, whoami })
+        Ok(Self {
+            store,
+            whoami,
+            peer_id,
+        })
     }
 
     pub fn create(
@@ -169,6 +177,7 @@ impl<'a> Patches<'a> {
         let timestamp = Timestamp::now();
         let history = events::create(
             &author,
+            &self.peer_id,
             title,
             description,
             target,
@@ -248,6 +257,11 @@ impl<'a> TryFrom<Value<'a>> for State {
 /// A patch revision.
 #[derive(Debug, Clone, Serialize)]
 pub struct Revision {
+    /// Author of this revision.
+    /// Note that this doesn't have to match the author of the patch.
+    pub author: Author,
+    /// Peer who published this revision.
+    pub peer: PeerId,
     /// Patch revision number.
     pub version: usize,
     /// Reference to the Git object containing the code.
@@ -355,6 +369,8 @@ mod lookup {
         let (_, discussion_id) = doc.get(&revision_id, "discussion")?.unwrap();
         let (_, _reviews_id) = doc.get(&revision_id, "reviews")?.unwrap();
         let (_, _merges_id) = doc.get(&revision_id, "merges")?.unwrap();
+        let (author, _) = doc.get(&revision_id, "author")?.unwrap();
+        let (peer, _) = doc.get(&revision_id, "peer")?.unwrap();
         let (commit, _) = doc.get(&revision_id, "commit")?.unwrap();
         let (version, _) = doc.get(&revision_id, "version")?.unwrap();
         let (timestamp, _) = doc.get(&revision_id, "timestamp")?.unwrap();
@@ -371,6 +387,10 @@ mod lookup {
             discussion.push(comment);
         }
 
+        let author = Author::Urn {
+            urn: lookup::author(author)?,
+        };
+        let peer = PeerId::from_str(peer.to_str().unwrap()).unwrap();
         let version = version.to_u64().unwrap() as usize;
         let commit = commit.to_str().unwrap().try_into().unwrap();
         let reviews = HashMap::new();
@@ -380,6 +400,8 @@ mod lookup {
         assert_eq!(version, ix);
 
         Ok(Revision {
+            author,
+            peer,
             version,
             commit,
             comment,
@@ -426,6 +448,7 @@ mod events {
 
     pub fn create(
         author: &Urn,
+        peer: &PeerId,
         title: &str,
         description: &str,
         target: &git::OneLevel,
@@ -461,6 +484,8 @@ mod events {
                     {
                         let revision_id = tx.insert_object(&revisions_id, 0, ObjType::Map)?;
 
+                        tx.put(&revision_id, "author", author.to_string())?;
+                        tx.put(&revision_id, "peer", peer.to_string())?;
                         tx.put(&revision_id, "version", 0)?;
                         tx.put(&revision_id, "commit", commit.to_string())?;
                         {
@@ -522,6 +547,8 @@ mod test {
 
         let revision = patch.revisions.head;
 
+        assert_eq!(revision.author, Author::Urn { urn: author });
+        assert_eq!(revision.peer, *storage.peer_id());
         assert_eq!(revision.comment.body, "Blah blah blah.");
         assert_eq!(revision.discussion.len(), 0);
         assert_eq!(revision.version, 0);
