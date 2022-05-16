@@ -291,16 +291,24 @@ impl<'a> TryFrom<Value<'a>> for Verdict {
     }
 }
 
+/// Code location, used for attaching comments.
 #[derive(Debug, Clone, Serialize)]
-pub struct InlineComment {
+pub struct CodeLocation {
     /// Line number commented on.
     pub lines: RangeInclusive<usize>,
     /// Commit commented on.
     pub commit: git::Oid,
     /// File being commented on.
     pub blob: git::Oid,
-    /// Inline comment.
-    pub comment: Comment,
+}
+
+/// Comment on code.
+#[derive(Debug, Clone, Serialize)]
+pub struct CodeComment {
+    /// Code location of the comment.
+    location: CodeLocation,
+    /// Comment.
+    comment: Comment,
 }
 
 /// A patch review on a revision.
@@ -313,7 +321,7 @@ pub struct Review {
     /// Review general comment.
     pub comment: Comment,
     /// Review inline code comments.
-    pub inline: Vec<InlineComment>,
+    pub inline: Vec<CodeComment>,
     /// Review timestamp.
     pub timestamp: Timestamp,
 }
