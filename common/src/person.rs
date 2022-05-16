@@ -23,7 +23,7 @@ lazy_static::lazy_static! {
 }
 
 /// ENS payload.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Ens {
     pub name: String,
 }

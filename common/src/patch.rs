@@ -1,11 +1,16 @@
 //! Patch-related functions and types.
+use std::convert::TryInto;
+
 use librad::git::refs::Refs;
-use librad::git::storage::ReadOnly;
-use librad::git::storage::ReadOnlyStorage;
+use librad::git::storage::{ReadOnly, ReadOnlyStorage};
+use librad::git::Urn;
+use librad::PeerId;
+
+use git_trailers as trailers;
+use radicle_git_ext as git;
 use serde::Serialize;
 
-use radicle_git_ext as git;
-
+use crate::cobs::patch as cob;
 use crate::project;
 
 pub const TAG_PREFIX: &str = "patches/";
@@ -122,4 +127,51 @@ pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<gi
     };
 
     Ok(merge_base.map(|o| o.into()))
+}
+
+/// Create a "patch" tag under:
+///
+/// > /refs/namespaces/<project>/refs/tags/patches/<patch>/<remote>/<revision>
+///
+pub fn create_tag(
+    repo: &git2::Repository,
+    author: &Urn,
+    project: &Urn,
+    patch_id: cob::PatchId,
+    peer_id: &PeerId,
+    commit: git2::Oid,
+    revision: usize,
+) -> Result<git2::Oid, Error> {
+    let commit = repo.find_commit(commit)?;
+    let name = format!("{patch_id}/{peer_id}/{revision}");
+    let trailers = [
+        trailers::Trailer {
+            token: "Rad-Cob".try_into().unwrap(),
+            values: vec![patch_id.to_string().into()],
+        },
+        trailers::Trailer {
+            token: "Rad-Author".try_into().unwrap(),
+            values: vec![author.to_string().into()],
+        },
+        trailers::Trailer {
+            token: "Rad-Peer".try_into().unwrap(),
+            values: vec![peer_id.to_string().into()],
+        },
+    ]
+    .iter()
+    .map(|t| t.display(": ").to_string())
+    .collect::<Vec<_>>()
+    .join("\n");
+
+    repo.set_namespace(&project.to_string())?;
+
+    let oid = repo.tag(
+        &name,
+        commit.as_object(),
+        &repo.signature()?,
+        &trailers,
+        false,
+    )?;
+
+    Ok(oid)
 }
