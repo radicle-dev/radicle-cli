@@ -193,6 +193,22 @@ impl<'a> Patches<'a> {
             Ok(None)
         }
     }
+
+    pub fn all(&self, project: &Urn) -> Result<Vec<(PatchId, Patch)>, Error> {
+        let cobs = self
+            .store
+            .list(project, &TYPENAME)
+            .map_err(|e| Error::List(e.to_string()))?;
+
+        let mut patches = Vec::new();
+        for cob in cobs {
+            let patch: Result<Patch, _> = cob.history().try_into();
+            patches.push((*cob.id(), patch.unwrap()));
+        }
+        patches.sort_by_key(|(_, p)| p.timestamp);
+
+        Ok(patches)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
