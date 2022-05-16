@@ -322,6 +322,14 @@ pub fn push_refs(
             "refs/namespaces/{}/refs/rad/signed_refs:refs/remotes/{}/rad/signed_refs",
             project_id, remote
         ),
+        format!(
+            "refs/namespaces/{}/refs/cobs/*:refs/remotes/{}/cobs/*",
+            project_id, remote
+        ),
+        format!(
+            "refs/namespaces/{}/refs/patches/*:refs/remotes/{}/patches/*",
+            project_id, remote
+        ),
     ];
 
     if let Some(head) = options.head {
