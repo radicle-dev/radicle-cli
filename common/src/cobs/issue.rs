@@ -965,12 +965,12 @@ mod test {
     fn test_issue_create_and_get() {
         let (storage, profile, whoami, project) = setup();
         let author = whoami.urn();
+        let timestamp = Timestamp::now();
         let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
         let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
-        let timestamp = Timestamp::now();
 
         assert_eq!(issue.title(), "My first issue");
         assert_eq!(issue.author().urn(), &author);
