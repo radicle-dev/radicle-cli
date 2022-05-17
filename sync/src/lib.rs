@@ -239,7 +239,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if options.fetch {
         fetch(project_urn, &profile, seed, storage, options)?;
     } else if options.push_self {
-        push_identity(&profile, seed, storage, options)?;
+        push_self(&profile, seed, storage, options)?;
     } else {
         push_project(project_urn, &profile, seed, storage, options)?;
     }
@@ -258,7 +258,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn push_identity(
+pub fn push_self(
     profile: &Profile,
     seed: &Url,
     storage: Storage,
@@ -274,7 +274,12 @@ pub fn push_identity(
         term::format::highlight(seed)
     ));
 
+    let mut spinner = term::spinner("Pushing...");
     let output = seed::push_identity(monorepo, seed, &urn, storage.peer_id())?;
+
+    spinner.message("Local identity synced.".to_owned());
+    spinner.finish();
+
     if options.verbose {
         term::blob(output);
     }
