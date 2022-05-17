@@ -32,6 +32,7 @@ use librad::PeerId;
 
 use lnk_identities;
 
+use crate::person::Ens;
 use crate::{git, person, seed};
 
 /// URL scheme for radicle resources.
@@ -115,18 +116,26 @@ impl TryFrom<Url> for Origin {
 pub struct PeerIdentity {
     pub urn: Urn,
     pub name: String,
+    pub ens: Option<Ens>,
 }
 
 impl PeerIdentity {
+    /// Get the identity of a peer, and if possible the ENS name.
     pub fn get<S: AsRef<ReadOnly>>(
         urn: &Urn,
         storage: &S,
     ) -> Result<Option<Self>, identities::Error> {
         let person = identities::person::get(&storage, urn)?;
         if let Some(person) = person {
+            let ens = match person.payload().get_ext::<Ens>() {
+                Ok(e) => e,
+                _ => None,
+            };
+
             return Ok(Some(PeerIdentity {
                 urn: person.urn(),
                 name: person.subject().name.to_string(),
+                ens,
             }));
         }
         Ok(None)
@@ -134,7 +143,7 @@ impl PeerIdentity {
 }
 
 /// Project peer information.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub struct PeerInfo {
     /// Peer id.
@@ -161,11 +170,17 @@ impl PeerInfo {
             Some(*peer_id),
         )) {
             if let Ok(Some(person)) = identities::person::get(&storage, &delegate_urn) {
+                let ens = match person.payload().get_ext::<Ens>() {
+                    Ok(e) => e,
+                    _ => None,
+                };
+
                 return PeerInfo {
                     id: *peer_id,
                     person: Some(PeerIdentity {
                         urn: person.urn(),
                         name: person.subject().name.to_string(),
+                        ens,
                     }),
                     delegate,
                 };
