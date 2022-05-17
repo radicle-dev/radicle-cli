@@ -138,7 +138,19 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                     anyhow::bail!("a seed node must be specified with `--seed`");
                 };
 
-                seed::fetch_remotes(profile.paths().git_dir(), &seed, &urn, [peer])?;
+                let mut spinner = term::spinner(&format!(
+                    "Syncing remotes from {}...",
+                    term::format::highlight(seed.host_str().unwrap_or("seed"))
+                ));
+
+                if let Err(e) =
+                    term::sync::fetch_remotes(&storage, &seed, &urn, [&peer], &mut spinner)
+                {
+                    spinner.failed();
+                    term::blank();
+
+                    return Err(e);
+                }
                 git::fetch_remote(&mut remote, &repo, signer, &profile)?;
             }
             term::success!(

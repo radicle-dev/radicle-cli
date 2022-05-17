@@ -126,11 +126,16 @@ pub fn track(
     if let Some(seed) = seed {
         if options.sync {
             // Fetch refs from seed...
-            let spinner = term::spinner(&format!(
+            let mut spinner = term::spinner(&format!(
                 "Syncing peer refs from {}...",
                 term::format::highlight(seed.host_str().unwrap_or("seed"))
             ));
-            seed::fetch_remotes(profile.paths().git_dir(), &seed, urn, [peer])?;
+            if let Err(e) = term::sync::fetch_remotes(&storage, &seed, urn, [&peer], &mut spinner) {
+                spinner.failed();
+                term::blank();
+
+                return Err(e);
+            }
 
             spinner.finish();
         }

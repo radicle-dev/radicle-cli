@@ -364,11 +364,14 @@ pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyh
 }
 
 /// Fetch project remotes from a seed.
-pub fn fetch_remotes(
+///
+/// *This is a low-level function that does not perform verification*.
+///
+pub fn fetch_remotes<'a>(
     repo: &Path,
     seed: &Url,
     project: &Urn,
-    remotes: impl IntoIterator<Item = PeerId>,
+    remotes: impl IntoIterator<Item = &'a PeerId>,
 ) -> Result<String, anyhow::Error> {
     let project_id = project.encode_id();
     let url = seed.join(&project_id)?;

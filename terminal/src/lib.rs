@@ -6,6 +6,7 @@ pub mod io;
 pub mod keys;
 pub mod patch;
 pub mod spinner;
+pub mod sync;
 pub mod table;
 pub mod textbox;
 
@@ -16,7 +17,7 @@ use radicle_common::args::{Args, Error, Help};
 
 pub use dialoguer::Editor;
 pub use io::*;
-pub use spinner::spinner;
+pub use spinner::{spinner, Spinner};
 pub use table::Table;
 pub use textbox::TextBox;
 

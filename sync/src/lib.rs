@@ -545,12 +545,12 @@ pub fn fetch(
     // Add the explicitly tracked peers.
     remotes.extend(tracked.clone());
 
-    let spinner = if remotes == proj.remotes {
+    let mut spinner = if remotes == proj.remotes {
         term::spinner("Fetching default remotes...")
     } else {
         term::spinner("Fetching tracked remotes...")
     };
-    match seed::fetch_remotes(monorepo, seed, &project_urn, remotes) {
+    match term::sync::fetch_remotes(&storage, seed, &project_urn, remotes.iter(), &mut spinner) {
         Ok(output) => {
             spinner.finish();
             if options.verbose {
@@ -565,13 +565,13 @@ pub fn fetch(
     // Fetch refs from peer seeds.
     for peer in &tracked {
         if let Ok(seed) = seed::get_peer_seed(peer) {
-            let spinner = term::spinner(&format!(
+            let mut spinner = term::spinner(&format!(
                 "Fetching {} from {}...",
                 term::format::tertiary(peer),
                 term::format::tertiary(&seed)
             ));
 
-            match seed::fetch_remotes(monorepo, &seed, &project_urn, [*peer]) {
+            match term::sync::fetch_remotes(&storage, &seed, &project_urn, [peer], &mut spinner) {
                 Ok(output) => {
                     spinner.finish();
                     if options.verbose {
