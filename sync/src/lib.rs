@@ -275,7 +275,7 @@ pub fn push_self(
     ));
 
     let mut spinner = term::spinner("Pushing...");
-    let output = seed::push_identity(monorepo, seed, &urn, storage.peer_id())?;
+    let output = seed::push_delegate(monorepo, seed, &urn, storage.peer_id())?;
 
     spinner.message("Local identity synced.".to_owned());
     spinner.finish();

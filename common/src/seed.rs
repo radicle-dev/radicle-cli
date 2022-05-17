@@ -246,6 +246,7 @@ pub fn push_delegate(
         [
             "push",
             "--signed",
+            "--atomic",
             url.as_str(),
             &format!(
                 "refs/namespaces/{}/refs/rad/*:refs/remotes/{}/rad/*",
