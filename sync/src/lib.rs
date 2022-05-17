@@ -496,7 +496,10 @@ pub fn fetch(
             if let project::Delegate::Indirect { urn, .. } = &delegate {
                 spinner.message(format!("Fetching project delegate {}...", urn.encode_id()));
 
-                match seed::fetch_identity(monorepo, seed, urn) {
+                match seed::fetch_identity(monorepo, seed, urn).and_then(|out| {
+                    identities::person::verify(&storage, urn)?;
+                    Ok(out)
+                }) {
                     Ok(output) => {
                         if options.verbose {
                             spinner.finish();
@@ -518,7 +521,7 @@ pub fn fetch(
         spinner.finish();
     }
 
-    let spinner = term::spinner("Verifying signatures...");
+    let spinner = term::spinner("Verifying project identity...");
     let proj: project::Metadata = match identities::project::verify(&storage, &project_urn) {
         Ok(Some(proj)) => {
             spinner.finish();
