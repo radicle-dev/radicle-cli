@@ -99,9 +99,7 @@ impl TryFrom<Automerge> for Patch {
             labels.insert(label);
         }
 
-        let author = Author::Urn {
-            urn: shared::author(author)?,
-        };
+        let author = shared::author(author)?;
         let state = State::try_from(state).unwrap();
         let revisions = NonEmpty::from_vec(revisions).unwrap();
         let target =
@@ -387,9 +385,7 @@ mod lookup {
             discussion.push(comment);
         }
 
-        let author = Author::Urn {
-            urn: lookup::author(author)?,
-        };
+        let author = lookup::author(author)?;
         let peer = PeerId::from_str(peer.to_str().unwrap()).unwrap();
         let version = version.to_u64().unwrap() as usize;
         let commit = commit.to_str().unwrap().try_into().unwrap();

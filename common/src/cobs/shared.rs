@@ -155,11 +155,11 @@ impl Comment<Replies> {
     }
 }
 
-pub fn author(val: Value) -> Result<Urn, AutomergeError> {
-    let author = val.into_string().unwrap();
-    let author = Urn::from_str(&author).unwrap();
+pub fn author(val: Value) -> Result<Author, AutomergeError> {
+    let urn = val.into_string().unwrap();
+    let urn = Urn::from_str(&urn).unwrap();
 
-    Ok(author)
+    Ok(Author::Urn { urn })
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Serialize, Deserialize)]
@@ -211,9 +211,7 @@ pub mod lookup {
     use std::convert::TryFrom;
     use std::str::FromStr;
 
-    use super::{
-        Author, Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp,
-    };
+    use super::{Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp};
 
     pub fn comment(
         doc: &Automerge,
@@ -224,9 +222,7 @@ pub mod lookup {
         let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
         let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
 
-        let author = Author::Urn {
-            urn: super::author(author)?,
-        };
+        let author = super::author(author)?;
         let body = body.into_string().unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
