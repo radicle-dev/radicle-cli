@@ -169,19 +169,10 @@ impl PeerInfo {
             Namespace::from(project.urn.clone()),
             Some(*peer_id),
         )) {
-            if let Ok(Some(person)) = identities::person::get(&storage, &delegate_urn) {
-                let ens = match person.payload().get_ext::<Ens>() {
-                    Ok(e) => e,
-                    _ => None,
-                };
-
+            if let Ok(Some(identity)) = PeerIdentity::get(&delegate_urn, &storage) {
                 return PeerInfo {
                     id: *peer_id,
-                    person: Some(PeerIdentity {
-                        urn: person.urn(),
-                        name: person.subject().name.to_string(),
-                        ens,
-                    }),
+                    person: Some(identity),
                     delegate,
                 };
             }
