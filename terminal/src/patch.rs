@@ -1,10 +1,12 @@
+use radicle_common::git;
+
 use crate as term;
 
 /// List all commits between `left` and `right` in the given repository.
 pub fn list_commits(
-    repo: &git2::Repository,
-    left: &git2::Oid,
-    right: &git2::Oid,
+    repo: &git::Repository,
+    left: &git::Oid,
+    right: &git::Oid,
     show_header: bool,
 ) -> anyhow::Result<()> {
     let mut table = term::Table::default();

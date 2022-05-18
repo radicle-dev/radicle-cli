@@ -12,7 +12,6 @@ ethereum = ["radicle-common/ethereum"]
 async-trait = "0.1.51"
 anyhow = "1.0"
 dialoguer = "0.9.0"
-git2 = "0.13"
 indicatif = "0.16.2"
 console = "0.15"
 lexopt = "0.2.0"

@@ -1,7 +1,6 @@
 use std::ffi::OsString;
 
 use anyhow::anyhow;
-use git2::Oid;
 
 use librad::git::storage::ReadOnly;
 use librad::git::Storage;
@@ -81,7 +80,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 fn list(
     storage: &Storage,
     project: &project::Metadata,
-    repo: &git2::Repository,
+    repo: &git::Repository,
 ) -> anyhow::Result<()> {
     term::headline(&format!(
         "🌱 Listing patches for {}.",
@@ -115,7 +114,7 @@ fn list(
 
 fn create(
     project: &project::Metadata,
-    repo: &git2::Repository,
+    repo: &git::Repository,
     verbose: bool,
 ) -> anyhow::Result<()> {
     let head = repo.head()?;
@@ -147,8 +146,8 @@ fn create(
     );
 
     let (ahead, behind) = repo.graph_ahead_behind(
-        head_ref.unwrap_or_else(Oid::zero),
-        master.unwrap_or_else(Oid::zero),
+        head_ref.unwrap_or_else(git::Oid::zero),
+        master.unwrap_or_else(git::Oid::zero),
     )?;
     term::info!(
         "This branch is {} commit(s) ahead, {} commit(s) behind {}.",
@@ -158,8 +157,8 @@ fn create(
     );
 
     let merge_base_ref = repo.merge_base(
-        master.unwrap_or_else(Oid::zero),
-        head_ref.unwrap_or_else(Oid::zero),
+        master.unwrap_or_else(git::Oid::zero),
+        head_ref.unwrap_or_else(git::Oid::zero),
     );
 
     term::patch::list_commits(repo, &merge_base_ref.unwrap(), &head_ref.unwrap(), true)?;
@@ -210,7 +209,7 @@ fn create(
 
 fn list_by_state(
     storage: &Storage,
-    repo: &git2::Repository,
+    repo: &git::Repository,
     project: &project::Metadata,
     table: &mut term::Table<2>,
     state: patch::State,
@@ -235,7 +234,7 @@ fn list_by_state(
 }
 
 /// Create and push tag to monorepo.
-pub fn create_patch(repo: &git2::Repository, message: &str, verbose: bool) -> anyhow::Result<()> {
+pub fn create_patch(repo: &git::Repository, message: &str, verbose: bool) -> anyhow::Result<()> {
     let head = repo.head()?;
     let current_branch = head.shorthand().unwrap_or("HEAD (no branch)");
     let patch_tag_name = format!("{}{}", patch::TAG_PREFIX, &current_branch);

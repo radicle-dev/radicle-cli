@@ -7,7 +7,6 @@ license = "MIT OR Apache-2.0"
 description = "Manage patches for radicle projects"
 
 [dependencies]
-git2 = "0.13"
 anyhow = "1.0"
 librad = "0"
 lexopt = "0.2"
