@@ -364,9 +364,7 @@ where
 }
 
 /// List projects on the local device. Includes the project head if available.
-pub fn list<S>(
-    storage: &S,
-) -> anyhow::Result<Vec<(Urn, Metadata, Option<git_repository::ObjectId>)>>
+pub fn list<S>(storage: &S) -> anyhow::Result<Vec<(Urn, Metadata, Option<git2::Oid>)>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -412,21 +410,18 @@ pub fn list_remote_heads(
 }
 
 /// Get a local head of a project.
-pub fn get_local_head<S>(
-    storage: &S,
-    urn: &Urn,
-    branch: &str,
-) -> anyhow::Result<Option<git_repository::ObjectId>>
+pub fn get_local_head<S>(storage: &S, urn: &Urn, branch: &str) -> anyhow::Result<Option<git2::Oid>>
 where
     S: AsRef<ReadOnly>,
 {
-    let repo = git_repository::Repository::open(storage.as_ref().path())?;
-    let mut repo = repo.to_easy();
-    repo.set_namespace(urn.encode_id())?;
+    let repo = git2::Repository::open_bare(storage.as_ref().path())?;
+    let reference = repo.find_reference(&format!(
+        "refs/namespaces/{}/refs/heads/{}",
+        urn.encode_id(),
+        branch
+    ))?;
 
-    let reference = repo.try_find_reference(format!("heads/{}", branch))?;
-
-    Ok(reference.map(|r| r.id().detach()))
+    Ok(reference.target())
 }
 
 /// Get the head of a project remote.
