@@ -45,18 +45,31 @@ pub enum Error {
     Automerge(#[from] AutomergeError),
 }
 
+/// Reason why an issue was closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CloseReason {
+    Solved,
+    Other,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum State {
     Open,
-    Closed,
+    Closed { reason: CloseReason },
 }
 
 impl From<State> for ScalarValue {
     fn from(state: State) -> Self {
         match state {
             State::Open => ScalarValue::from("open"),
-            State::Closed => ScalarValue::from("closed"),
+            State::Closed {
+                reason: CloseReason::Solved,
+            } => ScalarValue::from("solved"),
+            State::Closed {
+                reason: CloseReason::Other,
+            } => ScalarValue::from("closed"),
         }
     }
 }
@@ -69,7 +82,12 @@ impl<'a> TryFrom<Value<'a>> for State {
 
         match state {
             "open" => Ok(Self::Open),
-            "closed" => Ok(Self::Closed),
+            "closed" => Ok(Self::Closed {
+                reason: CloseReason::Other,
+            }),
+            "solved" => Ok(Self::Closed {
+                reason: CloseReason::Solved,
+            }),
             _ => Err("invalid state name"),
         }
     }
@@ -264,7 +282,13 @@ impl<'a> Issues<'a> {
     pub fn close(&self, project: &Urn, issue_id: &IssueId) -> Result<(), Error> {
         let author = self.whoami.urn();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
-        let changes = events::lifecycle(&mut issue, &author, State::Closed)?;
+        let changes = events::lifecycle(
+            &mut issue,
+            &author,
+            State::Closed {
+                reason: CloseReason::Other,
+            },
+        )?;
         let _cob = self
             .store
             .update(
@@ -692,7 +716,12 @@ mod test {
         issues.close(&project.urn(), &issue_id).unwrap();
 
         let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
-        assert_eq!(issue.state(), State::Closed);
+        assert_eq!(
+            issue.state(),
+            State::Closed {
+                reason: CloseReason::Other
+            }
+        );
     }
 
     #[test]
