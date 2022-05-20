@@ -214,7 +214,7 @@ fn list_by_state(
     table: &mut term::Table<2>,
     state: patch::State,
 ) -> anyhow::Result<()> {
-    let mut patches: Vec<patch::Metadata> = patch::all(project, None, &storage)?;
+    let mut patches: Vec<patch::Tag> = patch::all(project, None, &storage)?;
 
     for (_, info) in project::tracked(project, storage)? {
         let mut theirs = patch::all(project, Some(info), &storage)?;
@@ -280,11 +280,7 @@ pub fn create_patch(repo: &git::Repository, message: &str, verbose: bool) -> any
 }
 
 /// Adds patch details as a new row to `table` and render later.
-pub fn print<S>(
-    storage: &S,
-    patch: &patch::Metadata,
-    table: &mut term::Table<2>,
-) -> anyhow::Result<()>
+pub fn print<S>(storage: &S, patch: &patch::Tag, table: &mut term::Table<2>) -> anyhow::Result<()>
 where
     S: AsRef<ReadOnly>,
 {

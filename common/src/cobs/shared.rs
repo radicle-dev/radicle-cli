@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use librad::git::storage::ReadOnly;
 use librad::git::Urn;
+use librad::PeerId;
+use radicle_git_ext as git;
 
 use crate::project;
 
@@ -211,13 +213,6 @@ impl Comment<Replies> {
     }
 }
 
-pub fn author(val: Value) -> Result<Author, AutomergeError> {
-    let urn = val.into_string().unwrap();
-    let urn = Urn::from_str(&urn).unwrap();
-
-    Ok(Author::Urn { urn })
-}
-
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Timestamp {
@@ -263,11 +258,54 @@ impl<'a> TryFrom<Value<'a>> for Timestamp {
     }
 }
 
+/// Implemented by types that can be converted from a [`Value`].
+pub trait FromValue: Sized {
+    fn from_value(val: Value) -> Result<Self, AutomergeError>;
+}
+
+impl FromValue for PeerId {
+    fn from_value(val: Value) -> Result<PeerId, AutomergeError> {
+        let peer = PeerId::from_str(val.to_str().unwrap()).unwrap();
+
+        Ok(peer)
+    }
+}
+
+impl FromValue for Author {
+    fn from_value(val: Value) -> Result<Author, AutomergeError> {
+        let urn = val.into_string().unwrap();
+        let urn = Urn::from_str(&urn).unwrap();
+
+        Ok(Author::Urn { urn })
+    }
+}
+
+impl FromValue for git::Oid {
+    fn from_value(val: Value) -> Result<git::Oid, AutomergeError> {
+        let oid = val.into_string().unwrap();
+        let oid = git::Oid::from_str(&oid).unwrap();
+
+        Ok(oid)
+    }
+}
+
+impl FromValue for git::OneLevel {
+    fn from_value(val: Value) -> Result<git::OneLevel, AutomergeError> {
+        let one = git::OneLevel::try_from(git::RefLike::try_from(val.to_str().unwrap()).unwrap())
+            .unwrap();
+
+        Ok(one)
+    }
+}
+
 pub mod lookup {
     use std::convert::TryFrom;
     use std::str::FromStr;
 
-    use super::{Automerge, AutomergeError, Comment, HashMap, Reaction, Replies, Timestamp};
+    use super::{
+        Author, Automerge, AutomergeError, Comment, FromValue, HashMap, Reaction, Replies,
+        Timestamp,
+    };
 
     pub fn comment(
         doc: &Automerge,
@@ -278,7 +316,7 @@ pub mod lookup {
         let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
         let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
 
-        let author = super::author(author)?;
+        let author = Author::from_value(author)?;
         let body = body.into_string().unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 

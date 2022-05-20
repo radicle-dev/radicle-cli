@@ -35,7 +35,7 @@ pub enum State {
 /// A patch is represented by an annotated tag, prefixed with `patches/`.
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Metadata {
+pub struct Tag {
     /// ID of a patch. This is the portion of the tag name following the `patches/` prefix.
     pub id: String,
     /// Peer that the patch originated from
@@ -49,11 +49,11 @@ pub struct Metadata {
 /// Tries to construct a patch from ['git2::Tag'] and ['project::PeerInfo'].
 /// If the tag name matches the radicle patch prefix, a new patch metadata is
 /// created.
-pub fn from_tag(tag: git2::Tag, info: project::PeerInfo) -> Result<Option<Metadata>, Error> {
+pub fn from_tag(tag: git2::Tag, info: project::PeerInfo) -> Result<Option<Tag>, Error> {
     let patch = tag
         .name()
         .and_then(|name| name.strip_prefix(TAG_PREFIX))
-        .map(|id| Metadata {
+        .map(|id| Tag {
             id: id.to_owned(),
             peer: info,
             message: tag.message().map(|m| m.to_string()),
@@ -69,12 +69,12 @@ pub fn all<S>(
     project: &project::Metadata,
     peer: Option<project::PeerInfo>,
     storage: &S,
-) -> Result<Vec<Metadata>, Error>
+) -> Result<Vec<Tag>, Error>
 where
     S: AsRef<ReadOnly>,
 {
     let storage = storage.as_ref();
-    let mut patches: Vec<Metadata> = vec![];
+    let mut patches: Vec<Tag> = vec![];
 
     let peer_id = peer.clone().map(|p| p.id);
     let info = match peer {
@@ -109,7 +109,7 @@ where
     Ok(patches)
 }
 
-pub fn state(repo: &git2::Repository, patch: &Metadata) -> State {
+pub fn state(repo: &git2::Repository, patch: &Tag) -> State {
     match merge_base(repo, patch) {
         Ok(Some(merge_base)) => match merge_base == patch.commit {
             true => State::Merged,
@@ -119,7 +119,7 @@ pub fn state(repo: &git2::Repository, patch: &Metadata) -> State {
     }
 }
 
-pub fn merge_base(repo: &git2::Repository, patch: &Metadata) -> Result<Option<git::Oid>, Error> {
+pub fn merge_base(repo: &git2::Repository, patch: &Tag) -> Result<Option<git::Oid>, Error> {
     let head = repo.head()?;
     let merge_base = match repo.merge_base(head.target().unwrap(), *patch.commit) {
         Ok(commit) => Some(commit),

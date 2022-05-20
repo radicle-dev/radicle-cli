@@ -99,12 +99,10 @@ impl TryFrom<Automerge> for Patch {
             labels.insert(label);
         }
 
-        let author = shared::author(author)?;
+        let author = Author::from_value(author)?;
         let state = State::try_from(state).unwrap();
         let revisions = NonEmpty::from_vec(revisions).unwrap();
-        let target =
-            git::OneLevel::try_from(git::RefLike::try_from(target.to_str().unwrap()).unwrap())
-                .unwrap();
+        let target = git::OneLevel::from_value(target)?;
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
         Ok(Self {
@@ -168,7 +166,7 @@ impl<'a> Patches<'a> {
         title: &str,
         description: &str,
         target: &git::OneLevel,
-        commit: &git::Oid,
+        tag: &git::Oid,
         labels: &[Label],
     ) -> Result<PatchId, Error> {
         let author = self.whoami.urn();
@@ -179,7 +177,7 @@ impl<'a> Patches<'a> {
             title,
             description,
             target,
-            commit,
+            tag,
             timestamp,
             labels,
         )?;
@@ -263,7 +261,7 @@ pub struct Revision {
     /// Patch revision number.
     pub version: usize,
     /// Reference to the Git object containing the code.
-    pub commit: git::Oid,
+    pub tag: git::Oid,
     /// "Cover letter" for this changeset.
     pub comment: Comment,
     /// Discussion around this revision.
@@ -369,7 +367,7 @@ mod lookup {
         let (_, _merges_id) = doc.get(&revision_id, "merges")?.unwrap();
         let (author, _) = doc.get(&revision_id, "author")?.unwrap();
         let (peer, _) = doc.get(&revision_id, "peer")?.unwrap();
-        let (commit, _) = doc.get(&revision_id, "commit")?.unwrap();
+        let (tag, _) = doc.get(&revision_id, "tag")?.unwrap();
         let (version, _) = doc.get(&revision_id, "version")?.unwrap();
         let (timestamp, _) = doc.get(&revision_id, "timestamp")?.unwrap();
 
@@ -385,10 +383,10 @@ mod lookup {
             discussion.push(comment);
         }
 
-        let author = lookup::author(author)?;
-        let peer = PeerId::from_str(peer.to_str().unwrap()).unwrap();
+        let author = Author::from_value(author)?;
+        let peer = PeerId::from_value(peer)?;
         let version = version.to_u64().unwrap() as usize;
-        let commit = commit.to_str().unwrap().try_into().unwrap();
+        let tag = tag.to_str().unwrap().try_into().unwrap();
         let reviews = HashMap::new();
         let merges = Vec::new();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
@@ -399,7 +397,7 @@ mod lookup {
             author,
             peer,
             version,
-            commit,
+            tag,
             comment,
             discussion,
             reviews,
@@ -448,7 +446,7 @@ mod events {
         title: &str,
         description: &str,
         target: &git::OneLevel,
-        commit: &git::Oid,
+        tag: &git::Oid,
         timestamp: Timestamp,
         labels: &[Label],
     ) -> Result<EntryContents, AutomergeError> {
@@ -483,7 +481,7 @@ mod events {
                         tx.put(&revision_id, "author", author.to_string())?;
                         tx.put(&revision_id, "peer", peer.to_string())?;
                         tx.put(&revision_id, "version", 0)?;
-                        tx.put(&revision_id, "commit", commit.to_string())?;
+                        tx.put(&revision_id, "tag", tag.to_string())?;
                         {
                             // Top-level comment for first patch revision.
                             // Nb. top-level comment doesn't have a `replies` field.
@@ -523,14 +521,14 @@ mod test {
         let timestamp = Timestamp::now();
         let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
         let target = git::OneLevel::try_from(git::RefLike::try_from("master").unwrap()).unwrap();
-        let commit = git::Oid::from(git2::Oid::zero());
+        let tag = git::Oid::from(git2::Oid::zero());
         let patch_id = patches
             .create(
                 &project.urn(),
                 "My first patch",
                 "Blah blah blah.",
                 &target,
-                &commit,
+                &tag,
                 &[],
             )
             .unwrap();
@@ -548,7 +546,7 @@ mod test {
         assert_eq!(revision.comment.body, "Blah blah blah.");
         assert_eq!(revision.discussion.len(), 0);
         assert_eq!(revision.version, 0);
-        assert_eq!(revision.commit, commit);
+        assert_eq!(revision.tag, tag);
         assert!(revision.reviews.is_empty());
         assert!(revision.merges.is_empty());
     }

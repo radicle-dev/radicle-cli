@@ -193,7 +193,7 @@ impl TryFrom<Automerge> for Issue {
             labels.insert(label);
         }
 
-        let author = shared::author(author)?;
+        let author = Author::from_value(author)?;
         let state = State::try_from(state).unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
