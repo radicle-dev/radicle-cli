@@ -7,6 +7,8 @@ use librad::profile::Profile;
 
 use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
 
+use radicle_common::cobs::issue::Issue;
+use radicle_common::cobs::shared::CommentId;
 use radicle_common::signer::ToSigner;
 
 use super::command;
@@ -323,6 +325,24 @@ pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&
         .unwrap();
 
     selection.map(|i| &profiles[i])
+}
+
+pub fn comment_select(issue: &Issue) -> Option<CommentId> {
+    let selection = dialoguer::Select::with_theme(&theme())
+        .with_prompt("Which comment do you want to react to?")
+        .item(&issue.description().to_string())
+        .items(
+            &issue
+                .comments()
+                .iter()
+                .map(|p| p.body.clone())
+                .collect::<Vec<_>>(),
+        )
+        .default(CommentId::root().into())
+        .interact_opt()
+        .unwrap();
+
+    selection.map(CommentId::from)
 }
 
 pub fn markdown(content: &str) {
