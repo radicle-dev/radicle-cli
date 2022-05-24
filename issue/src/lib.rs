@@ -21,6 +21,8 @@ Usage
 
     rad issue create [--title <title>] [--description <text>]
     rad issue remove <id>
+    rad issue comment <id> [--description <text>]
+    rad issue react <id> [--emoji <char>]
     rad issue list
 
 Options
