@@ -38,6 +38,7 @@ pub struct Metadata {
 #[derive(Debug, PartialEq, Eq)]
 pub enum OperationName {
     Create,
+    Comment,
     Reaction,
     Remove,
     List,
@@ -61,6 +62,10 @@ pub enum Operation {
     Reaction {
         id: cobs::issue::IssueId,
         emoji: String,
+    },
+    Comment {
+        id: cobs::issue::IssueId,
+        description: Option<String>,
     },
     List,
 }
@@ -93,14 +98,17 @@ impl Args for Options {
                 Long("emoji") if op == Some(OperationName::Reaction) => {
                     emoji = Some(parser.value()?.to_string_lossy().into());
                 }
-                Long("description") if op == Some(OperationName::Create) => {
+                Long("description")
+                    if op == Some(OperationName::Create) || op == Some(OperationName::Comment) =>
+                {
                     description = Some(parser.value()?.to_string_lossy().into());
                 }
                 Value(val) if op.is_none() => match val.to_string_lossy().as_ref() {
-                    "c" | "create" => op = Some(OperationName::Create),
+                    "n" | "new" => op = Some(OperationName::Create),
                     "rm" | "remove" => op = Some(OperationName::Remove),
                     "l" | "list" => op = Some(OperationName::List),
                     "r" | "react" => op = Some(OperationName::Reaction),
+                    "c" | "comment" => op = Some(OperationName::Comment),
 
                     unknown => anyhow::bail!("unknown operation '{}'", unknown),
                 },
@@ -130,6 +138,10 @@ impl Args for Options {
                 id: id.ok_or_else(|| anyhow!("an issue id to remove must be provided"))?,
             },
             OperationName::List => Operation::List,
+            OperationName::Comment => Operation::Comment {
+                id: id.ok_or_else(|| anyhow!("an issue id to comment must be provided"))?,
+                description,
+            },
         };
 
         Ok((Options { op }, vec![]))
@@ -208,6 +220,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Operation::Remove { id } => {
             issues.remove(&project, &id)?;
+        }
+        Operation::Comment { id, description } => {
+            let doc = description.unwrap_or("Enter a description...".to_owned());
+            if let Some(text) = term::Editor::new().edit(&doc)? {
+                issues.comment(&project, &id, &text)?;
+            }
         }
     }
 
