@@ -1,3 +1,6 @@
 /target
 /tmp
 errors.err
+
+# MacOS
+.DS_Store

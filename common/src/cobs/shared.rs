@@ -26,6 +26,7 @@ pub enum ResolveError {
 pub type Discussion = Vec<Comment<Replies>>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Reaction {
     pub emoji: char,
 }
