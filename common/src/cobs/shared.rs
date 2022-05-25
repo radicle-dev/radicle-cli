@@ -2,7 +2,7 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::convert::{Infallible, TryFrom};
-
+use std::fmt;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -69,6 +69,61 @@ impl Label {
 impl From<Label> for String {
     fn from(Label(name): Label) -> Self {
         name
+    }
+}
+
+/// RGB color.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct Color(u32);
+
+#[derive(thiserror::Error, Debug)]
+pub enum ColorConversionError {
+    #[error("invalid format: expect '#rrggbb'")]
+    InvalidFormat,
+    #[error(transparent)]
+    ParseInt(#[from] std::num::ParseIntError),
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "#{:06x}", self.0)
+    }
+}
+
+impl FromStr for Color {
+    type Err = ColorConversionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hex = s.replace('#', "").to_lowercase();
+
+        if hex.chars().count() != 6 {
+            return Err(ColorConversionError::InvalidFormat);
+        }
+
+        match u32::from_str_radix(&hex, 16) {
+            Ok(n) => Ok(Color(n)),
+            Err(e) => Err(e.into()),
+        }
+    }
+}
+
+impl Serialize for Color {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let s = self.to_string();
+        serializer.serialize_str(&s)
+    }
+}
+
+impl<'a> Deserialize<'a> for Color {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'a>,
+    {
+        let color = String::deserialize(deserializer)?;
+        Self::from_str(&color).map_err(serde::de::Error::custom)
     }
 }
 
@@ -267,5 +322,30 @@ pub mod lookup {
             replies,
             timestamp: comment.timestamp,
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_color() {
+        let c = Color::from_str("#ffccaa").unwrap();
+        assert_eq!(c.to_string(), "#ffccaa".to_owned());
+        assert_eq!(serde_json::to_string(&c).unwrap(), "\"#ffccaa\"".to_owned());
+        assert_eq!(serde_json::from_str::<'_, Color>("\"#ffccaa\"").unwrap(), c);
+
+        let c = Color::from_str("#0000aa").unwrap();
+        assert_eq!(c.to_string(), "#0000aa".to_owned());
+
+        let c = Color::from_str("#aa0000").unwrap();
+        assert_eq!(c.to_string(), "#aa0000".to_owned());
+
+        let c = Color::from_str("#00aa00").unwrap();
+        assert_eq!(c.to_string(), "#00aa00".to_owned());
+
+        Color::from_str("#aa00").unwrap_err();
+        Color::from_str("#abc").unwrap_err();
     }
 }
