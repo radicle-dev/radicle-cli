@@ -66,6 +66,7 @@ rad-pull = { path = "./pull" }
 rad-sync = { path = "./sync" }
 rad-remote = { path = "./remote" }
 rad-checkout = { path = "./checkout" }
+rad-path = { path = "./path" }
 rad-track = { path = "./track" }
 rad-untrack = { path = "./untrack" }
 rad-help = { path = "./help" }
@@ -118,6 +119,7 @@ members = [
   "rm",
   "issue",
   "patch",
+  "path",
   "push",
   "pull",
   "remote",

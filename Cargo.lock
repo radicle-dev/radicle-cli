@@ -4809,6 +4809,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-path"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "lnk-profile",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
 name = "rad-pull"
 version = "0.1.0"
 dependencies = [
@@ -4934,6 +4946,7 @@ dependencies = [
  "rad-issue",
  "rad-ls",
  "rad-patch",
+ "rad-path",
  "rad-pull",
  "rad-push",
  "rad-remote",
