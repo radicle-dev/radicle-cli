@@ -52,6 +52,14 @@ impl FromStr for Reaction {
     }
 }
 
+/// Describes a label.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+pub struct LabelInfo {
+    pub name: String,
+    pub description: String,
+    pub color: Color,
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Label(String);
