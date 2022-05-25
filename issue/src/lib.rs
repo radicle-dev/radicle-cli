@@ -19,8 +19,8 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad issue create [--title <title>] [--description <text>]
-    rad issue remove <id>
+    rad issue new [--title <title>] [--description <text>]
+    rad issue delete <id>
     rad issue comment <id> [--description <text>]
     rad issue react <id> [--emoji <char>]
     rad issue list
@@ -41,8 +41,8 @@ pub struct Metadata {
 pub enum OperationName {
     Create,
     Comment,
-    Reaction,
-    Remove,
+    React,
+    Delete,
     List,
 }
 
@@ -58,12 +58,12 @@ pub enum Operation {
         title: Option<String>,
         description: Option<String>,
     },
-    Remove {
+    Delete {
         id: cobs::issue::IssueId,
     },
-    Reaction {
+    React {
         id: cobs::issue::IssueId,
-        emoji: String,
+        reaction: cobs::Reaction,
     },
     Comment {
         id: cobs::issue::IssueId,
@@ -86,7 +86,7 @@ impl Args for Options {
         let mut op: Option<OperationName> = None;
         let mut id: Option<cobs::issue::IssueId> = None;
         let mut title: Option<String> = None;
-        let mut emoji: Option<String> = None;
+        let mut reaction: Option<cobs::Reaction> = None;
         let mut description: Option<String> = None;
 
         while let Some(arg) = parser.next()? {
@@ -97,8 +97,13 @@ impl Args for Options {
                 Long("title") if op == Some(OperationName::Create) => {
                     title = Some(parser.value()?.to_string_lossy().into());
                 }
-                Long("emoji") if op == Some(OperationName::Reaction) => {
-                    emoji = Some(parser.value()?.to_string_lossy().into());
+                Long("reaction") if op == Some(OperationName::React) => {
+                    if let Some(emoji) = parser.value()?.to_str() {
+                        reaction = Some(
+                            cobs::Reaction::from_str(emoji)
+                                .map_err(|_| anyhow!("invalid emoji"))?,
+                        );
+                    }
                 }
                 Long("description")
                     if op == Some(OperationName::Create) || op == Some(OperationName::Comment) =>
@@ -107,9 +112,9 @@ impl Args for Options {
                 }
                 Value(val) if op.is_none() => match val.to_string_lossy().as_ref() {
                     "n" | "new" => op = Some(OperationName::Create),
-                    "rm" | "remove" => op = Some(OperationName::Remove),
+                    "d" | "delete" => op = Some(OperationName::Delete),
                     "l" | "list" => op = Some(OperationName::List),
-                    "r" | "react" => op = Some(OperationName::Reaction),
+                    "r" | "react" => op = Some(OperationName::React),
                     "c" | "comment" => op = Some(OperationName::Comment),
 
                     unknown => anyhow::bail!("unknown operation '{}'", unknown),
@@ -132,11 +137,11 @@ impl Args for Options {
 
         let op = match op.unwrap_or_default() {
             OperationName::Create => Operation::Create { title, description },
-            OperationName::Reaction => Operation::Reaction {
+            OperationName::React => Operation::React {
                 id: id.ok_or_else(|| anyhow!("an issue id must be provided"))?,
-                emoji: emoji.ok_or_else(|| anyhow!("a reaction emoji must be provided"))?,
+                reaction: reaction.ok_or_else(|| anyhow!("a reaction emoji must be provided"))?,
             },
-            OperationName::Remove => Operation::Remove {
+            OperationName::Delete => Operation::Delete {
                 id: id.ok_or_else(|| anyhow!("an issue id to remove must be provided"))?,
             },
             OperationName::List => Operation::List,
@@ -165,15 +170,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         } => {
             issues.create(&project, &title, &description, &[])?;
         }
-        Operation::Reaction { id, emoji } => {
+        Operation::React { id, reaction } => {
             if let Some(issue) = issues.get(&project, &id)? {
                 let comment_id = term::comment_select(&issue).unwrap();
-                issues.react(
-                    &project,
-                    &id,
-                    comment_id,
-                    cobs::shared::Reaction::new(char::from_str(&emoji)?)?,
-                )?;
+                issues.react(&project, &id, comment_id, reaction)?;
             }
         }
         Operation::Create { title, description } => {
@@ -220,7 +220,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 println!("{} {}", id, issue.title());
             }
         }
-        Operation::Remove { id } => {
+        Operation::Delete { id } => {
             issues.remove(&project, &id)?;
         }
         Operation::Comment { id, description } => {
