@@ -4,9 +4,10 @@ use anyhow::anyhow;
 
 use librad::git::storage::ReadOnly;
 use librad::git::Storage;
+use librad::profile::Profile;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{git, keys, patch, profile, project};
+use radicle_common::{cobs, git, keys, patch, person, profile, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -17,11 +18,16 @@ pub const HELP: Help = Help {
 Usage
 
     rad patch [<option>...]
+    rad patch [--no-sync]
+
+Create options
+
+    --[no-]sync       Sync patch to seed (default: sync)
 
 Options
 
-    --list    List all patches (default: false)
-    --help    Print help
+    --list            List all patches (default: false)
+    --help            Print help
 "#,
 };
 
@@ -29,6 +35,7 @@ Options
 pub struct Options {
     pub list: bool,
     pub verbose: bool,
+    pub sync: bool,
 }
 
 impl Args for Options {
@@ -38,6 +45,7 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut list = false;
         let mut verbose = false;
+        let mut sync = true;
 
         if let Some(arg) = parser.next()? {
             match arg {
@@ -47,6 +55,12 @@ impl Args for Options {
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
+                Long("sync") => {
+                    sync = true;
+                }
+                Long("no-sync") => {
+                    sync = false;
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -54,7 +68,14 @@ impl Args for Options {
             }
         }
 
-        Ok((Options { list, verbose }, vec![]))
+        Ok((
+            Options {
+                list,
+                sync,
+                verbose,
+            },
+            vec![],
+        ))
     }
 }
 
@@ -71,7 +92,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if options.list {
         list(&storage, &project, &repo)?;
     } else {
-        create(&project, &repo, options.verbose)?;
+        create(&storage, &profile, &project, &repo, &options)?;
     }
 
     Ok(())
@@ -113,9 +134,11 @@ fn list(
 }
 
 fn create(
+    storage: &Storage,
+    profile: &Profile,
     project: &project::Metadata,
     repo: &git::Repository,
-    verbose: bool,
+    options: &Options,
 ) -> anyhow::Result<()> {
     let head = repo.head()?;
     let current_branch = head.shorthand().unwrap_or("HEAD (no branch)");
@@ -138,7 +161,7 @@ fn create(
         .unwrap_or_else(String::new);
 
     term::info!(
-        "Proposing {} ({}) <= {} ({}).",
+        "Proposing {} ({}) <- {} ({}).",
         term::format::highlight(&project.default_branch.clone()),
         term::format::secondary(&master_oid),
         term::format::highlight(&current_branch),
@@ -164,14 +187,6 @@ fn create(
     term::patch::list_commits(repo, &merge_base_ref.unwrap(), &head_ref.unwrap(), true)?;
     term::blank();
 
-    if term::confirm("View changes?") {
-        git::view_diff(repo, &master.unwrap(), &head_ref.unwrap())?;
-    }
-
-    if !term::confirm("Create patch using commit(s) above?") {
-        return Err(anyhow!("Canceled."));
-    }
-
     let title: String = term::text_input("Title", None)?;
     let description = match term::Editor::new().edit("").unwrap() {
         Some(rv) => rv,
@@ -185,13 +200,18 @@ fn create(
     term::markdown(&description);
     term::blank();
 
-    if term::confirm("Submit using title and description?") {
-        term::blank();
+    if term::confirm("Propose patch?") {
+        let message = [title.clone(), description.clone()].join("\n");
+        let tag = create_patch(repo, &message, options.verbose)?;
 
-        let message = [title, description].join("\n");
-        create_patch(repo, &message, verbose)?;
+        let whoami = person::local(storage)?;
+        let patches = cobs::patch::Patches::new(whoami, profile.paths(), storage)?;
+        let target = &project.default_branch;
+        let id = patches.create(&project.urn, &title, &description, target, tag, &[])?;
 
-        if term::confirm("Sync to seed?") {
+        term::info!("Patch {} created", id);
+
+        if options.sync {
             sync(current_branch.to_owned())?;
         }
     } else {
@@ -199,8 +219,8 @@ fn create(
     }
 
     term::blank();
-    term::info!(
-        "🌱 Created patch {}",
+    term::success!(
+        "🌱 Proposed patch {}",
         term::format::highlight(&current_branch)
     );
 
@@ -234,14 +254,18 @@ fn list_by_state(
 }
 
 /// Create and push tag to monorepo.
-pub fn create_patch(repo: &git::Repository, message: &str, verbose: bool) -> anyhow::Result<()> {
+pub fn create_patch(
+    repo: &git::Repository,
+    message: &str,
+    verbose: bool,
+) -> anyhow::Result<git::Oid> {
     let head = repo.head()?;
     let current_branch = head.shorthand().unwrap_or("HEAD (no branch)");
     let patch_tag_name = format!("{}{}", patch::TAG_PREFIX, &current_branch);
-    let mut spinner = term::spinner("Adding tag...");
 
-    match git::add_tag(repo, message, &patch_tag_name) {
-        Ok(_) => {}
+    let mut spinner = term::spinner("Adding tag...");
+    let tag = match git::add_tag(repo, message, &patch_tag_name) {
+        Ok(tag) => tag,
         Err(err) => {
             spinner.failed();
             return Err(err);
@@ -276,7 +300,7 @@ pub fn create_patch(repo: &git::Repository, message: &str, verbose: bool) -> any
 
     spinner.finish();
 
-    Ok(())
+    Ok(tag)
 }
 
 /// Adds patch details as a new row to `table` and render later.

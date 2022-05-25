@@ -340,13 +340,16 @@ pub fn view_diff(
     Ok(())
 }
 
-pub fn add_tag(repo: &git2::Repository, message: &str, patch_tag_name: &str) -> anyhow::Result<()> {
+pub fn add_tag(
+    repo: &git2::Repository,
+    message: &str,
+    patch_tag_name: &str,
+) -> anyhow::Result<git2::Oid> {
     let head = repo.head()?;
     let commit = head.peel(git2::ObjectType::Commit).unwrap();
+    let oid = repo.tag(patch_tag_name, &commit, &repo.signature()?, message, false)?;
 
-    repo.tag(patch_tag_name, &commit, &repo.signature()?, message, false)?;
-
-    Ok(())
+    Ok(oid)
 }
 
 pub fn push_tag(tag_name: &str) -> anyhow::Result<String> {

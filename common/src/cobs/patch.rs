@@ -166,7 +166,7 @@ impl<'a> Patches<'a> {
         title: &str,
         description: &str,
         target: &git::OneLevel,
-        tag: &git::Oid,
+        tag: impl Into<git::Oid>,
         labels: &[Label],
     ) -> Result<PatchId, Error> {
         let author = self.whoami.urn();
@@ -177,7 +177,7 @@ impl<'a> Patches<'a> {
             title,
             description,
             target,
-            tag,
+            &tag.into(),
             timestamp,
             labels,
         )?;
@@ -528,7 +528,7 @@ mod test {
                 "My first patch",
                 "Blah blah blah.",
                 &target,
-                &tag,
+                tag,
                 &[],
             )
             .unwrap();

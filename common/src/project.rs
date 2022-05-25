@@ -21,7 +21,7 @@ use librad::git::tracking;
 use librad::git::types::remote::Remote;
 use librad::git::types::{Namespace, Reference};
 use librad::git::Urn;
-use librad::git_ext::RefLike;
+use librad::git_ext::{OneLevel, RefLike};
 use librad::identities::payload::{self, ProjectPayload};
 use librad::identities::Person;
 use librad::identities::SomeIdentity;
@@ -227,7 +227,7 @@ pub struct Metadata {
     /// Project description.
     pub description: String,
     /// Default branch of project.
-    pub default_branch: String,
+    pub default_branch: OneLevel,
     /// List of delegates.
     pub delegates: Vec<Delegate>,
     /// List of remotes.
@@ -238,6 +238,8 @@ pub struct Metadata {
 pub enum Error {
     #[error("project doesn't have a default branch")]
     MissingDefaultBranch,
+    #[error("default branch error: {0}")]
+    DefaultBranchName(#[from] radicle_git_ext::name::Error),
 }
 
 impl TryFrom<librad::identities::Project> for Metadata {
@@ -255,11 +257,14 @@ impl TryFrom<librad::identities::Project> for Metadata {
                 }
             })
             .collect::<HashSet<PeerId>>();
+
         let default_branch = subject
             .default_branch
             .clone()
             .ok_or(Error::MissingDefaultBranch)?
             .to_string();
+        let default_branch = RefLike::try_from(default_branch)?;
+        let default_branch = OneLevel::from(default_branch);
 
         let mut delegates = Vec::new();
         for delegate in project.delegations().iter() {

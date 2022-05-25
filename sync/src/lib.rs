@@ -308,7 +308,7 @@ pub fn push_project(
     let push_opts = seed::PushOptions {
         head: match options.refs {
             Refs::All => None,
-            Refs::DefaultBranch => Some(proj.default_branch),
+            Refs::DefaultBranch => Some(proj.default_branch.to_string()),
             Refs::Branch(ref branch) => Some(branch.to_owned()),
         },
         all: matches!(options.refs, Refs::All),

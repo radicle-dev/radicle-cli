@@ -279,7 +279,7 @@ pub fn show_local(project: &project::Metadata, storage: &ReadOnly) -> anyhow::Re
                 id,
                 meta: Some(meta),
                 branches: vec![Branch {
-                    name: project.default_branch.clone(),
+                    name: project.default_branch.to_string(),
                     head,
                     message: String::new(),
                 }],
