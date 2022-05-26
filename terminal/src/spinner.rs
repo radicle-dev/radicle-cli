@@ -42,7 +42,9 @@ impl Spinner {
         self.progress.finish_and_clear();
     }
 
-    pub fn message(&mut self, msg: String) {
+    pub fn message(&mut self, msg: impl Into<String>) {
+        let msg = msg.into();
+
         self.progress.set_message(msg.clone());
         self.message = msg;
     }

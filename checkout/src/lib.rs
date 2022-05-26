@@ -7,6 +7,7 @@ use anyhow::Context as _;
 use librad::git::Urn;
 
 use radicle_common::args::{Args, Error, Help};
+use radicle_common::Interactive;
 use radicle_common::{fmt, keys, profile, project};
 use radicle_terminal as term;
 
@@ -129,7 +130,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
             spinner.finish();
 
             // Setup signing.
-            if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo) {
+            if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo, Interactive::Yes) {
                 term::warning(&format!("Warning: Could not setup signing: {:#}", err));
             }
 

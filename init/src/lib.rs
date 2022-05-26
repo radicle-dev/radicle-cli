@@ -1,4 +1,5 @@
 #![allow(clippy::or_fun_call)]
+use std::env;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
@@ -7,6 +8,8 @@ use anyhow::{anyhow, bail, Context as _};
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
+use radicle_common::json;
+use radicle_common::Interactive;
 use radicle_common::{git, keys, profile, project};
 use radicle_terminal as term;
 
@@ -24,6 +27,7 @@ Options
     --name               Name of the project
     --description        Description of the project
     --default-branch     The default branch of the project
+    --no-confirm         Don't ask for confirmation during setup
     --help               Print help
 "#,
 };
@@ -34,6 +38,7 @@ pub struct Options {
     pub name: Option<String>,
     pub description: Option<String>,
     pub branch: Option<String>,
+    pub interactive: Interactive,
 }
 
 impl Args for Options {
@@ -46,6 +51,7 @@ impl Args for Options {
         let mut name = None;
         let mut description = None;
         let mut branch = None;
+        let mut interactive = Interactive::Yes;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -81,6 +87,9 @@ impl Args for Options {
 
                     branch = Some(value);
                 }
+                Long("no-confirm") => {
+                    interactive = Interactive::No;
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -97,6 +106,7 @@ impl Args for Options {
                 name,
                 description,
                 branch,
+                interactive,
             },
             vec![],
         ))
@@ -118,6 +128,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
     let path = options.path.unwrap_or_else(|| cwd.clone());
     let path = path.as_path().canonicalize()?;
+    let interactive = options.interactive;
 
     term::headline(&format!(
         "Initializing local 🌱 project in {}",
@@ -145,18 +156,24 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
+    let cwd = env::current_dir()?;
 
-    let name = options
-        .name
-        .unwrap_or_else(|| term::text_input("Name", None).unwrap());
+    let name = options.name.unwrap_or_else(|| {
+        let default = cwd.file_name().map(|f| f.to_string_lossy().to_string());
+        term::text_input("Name", default).unwrap()
+    });
     let description = options
         .description
         .unwrap_or_else(|| term::text_input("Description", None).unwrap());
-    let branch = options
-        .branch
-        .unwrap_or_else(|| term::text_input("Default branch", Some(head)).unwrap());
+    let branch = options.branch.unwrap_or_else(|| {
+        if interactive.yes() {
+            term::text_input("Default branch", Some(head)).unwrap()
+        } else {
+            head
+        }
+    });
 
-    let spinner = term::spinner("Initializing...");
+    let mut spinner = term::spinner("Initializing...");
     let payload = project::payload(name, description, branch.clone());
 
     match project::create(payload, &storage).and_then(|proj| {
@@ -165,10 +182,19 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         Ok(proj) => {
             let urn = proj.urn();
 
+            spinner.message(format!(
+                "Project {} created",
+                term::format::highlight(&proj.subject().name)
+            ));
             spinner.finish();
 
+            if interactive.no() {
+                term::blob(json::to_string_pretty(&proj.payload())?);
+                term::blank();
+            }
+
             // Setup radicle signing key.
-            self::setup_signing(storage.peer_id(), &repo)?;
+            self::setup_signing(storage.peer_id(), &repo, interactive)?;
 
             term::blank();
             term::info!(
@@ -209,7 +235,11 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 }
 
 /// Setup radicle key as commit signing key in repository.
-pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result<()> {
+pub fn setup_signing(
+    peer_id: &PeerId,
+    repo: &git::Repository,
+    interactive: Interactive,
+) -> anyhow::Result<()> {
     let repo = repo
         .workdir()
         .ok_or(anyhow!("cannot setup signing in bare repository"))?;
@@ -220,11 +250,13 @@ pub fn setup_signing(peer_id: &PeerId, repo: &git::Repository) -> anyhow::Result
             term::format::tertiary(key)
         ));
         true
-    } else {
+    } else if interactive.yes() {
         term::confirm(&format!(
             "Configure 🌱 signing key {} in local checkout?",
             term::format::tertiary(key),
         ))
+    } else {
+        true
     };
 
     if yes {
