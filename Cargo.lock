@@ -4678,6 +4678,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-edit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "link-identities",
+ "radicle-common",
+ "radicle-terminal",
+ "serde_json",
+]
+
+[[package]]
 name = "rad-ens"
 version = "0.1.0"
 dependencies = [
@@ -4938,6 +4951,7 @@ dependencies = [
  "rad-auth",
  "rad-checkout",
  "rad-clone",
+ "rad-edit",
  "rad-ens",
  "rad-gov",
  "rad-help",

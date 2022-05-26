@@ -1,0 +1,16 @@
+[package]
+name = "rad-edit"
+version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Edit a radicle identity doc"
+
+[dependencies]
+anyhow = "1.0"
+librad = "0"
+lexopt = "0.2"
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }
+link-identities = { version = "0" }
+serde_json = "1.0"

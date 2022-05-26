@@ -38,6 +38,7 @@ assets = [
     ["target/release/rad-untrack", "usr/bin/rad-untrack", "755"],
     ["target/release/rad-remote", "usr/bin/rad-remote", "755"],
     ["target/release/rad-gov", "usr/bin/rad-gov", "755"],
+    ["target/release/rad-edit", "usr/bin/rad-edit", "755"],
     ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
     ["rad.1.gz", "usr/share/man/man1/rad.1.gz", "644"],
     ["rad-checkout.1.gz", "usr/share/man/man1/rad-checkout.1.gz", "644"],
@@ -72,6 +73,7 @@ rad-untrack = { path = "./untrack" }
 rad-help = { path = "./help" }
 rad-ls = { path = "./ls" }
 rad-rm = { path = "./rm" }
+rad-edit = { path = "./edit" }
 link-identities = { version = "0" }
 radicle-common = { path = "./common" }
 radicle-terminal = { path = "./terminal" }
@@ -128,7 +130,8 @@ members = [
   "inspect",
   "track",
   "untrack",
-  "gov"
+  "gov",
+  "edit",
 ]
 
 [patch.crates-io.link-crypto]
