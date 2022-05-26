@@ -470,8 +470,8 @@ pub fn fetch(
     let monorepo = profile.paths().git_dir();
 
     // Sync identity and delegates.
-    let proj = if options.identity {
-        let mut spinner = term::spinner("Fetching project identity...");
+    if options.identity {
+        let spinner = term::spinner("Fetching project identity...");
 
         match seed::fetch_identity(monorepo, seed, &project_urn) {
             Ok(output) => {
@@ -493,28 +493,10 @@ pub fn fetch(
                 });
             }
         }
+        let proj =
+            project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?;
 
-        spinner.message("Verifying project identity...".to_owned());
-        let proj: project::Metadata = match identities::project::verify(&storage, &project_urn) {
-            Ok(Some(proj)) => {
-                spinner.finish();
-                proj.into_inner().try_into()?
-            }
-            Ok(None) => {
-                spinner.failed();
-                term::blank();
-                return Err(anyhow!(
-                    "project {} could not be found on local device",
-                    project_urn
-                ));
-            }
-            Err(err) => {
-                spinner.failed();
-                term::blank();
-                return Err(err.into());
-            }
-        };
-
+        let mut spinner = term::spinner("Fetching project delegates...");
         for delegate in &proj.delegates {
             if let project::Delegate::Indirect { urn, .. } = &delegate {
                 spinner.message(format!("Fetching project delegate {}...", urn.encode_id()));
@@ -538,10 +520,29 @@ pub fn fetch(
             }
         }
         spinner.finish();
+    }
 
-        proj
-    } else {
-        project::get(&storage, &project_urn)?.ok_or(anyhow!("project could not be loaded!"))?
+    // Nb. We have to verify the project identity *after* the delegates have been fetched, since
+    // they are required as part of the verification.
+    let spinner = term::spinner("Verifying project identity...");
+    let proj: project::Metadata = match identities::project::verify(&storage, &project_urn) {
+        Ok(Some(proj)) => {
+            spinner.finish();
+            proj.into_inner().try_into()?
+        }
+        Ok(None) => {
+            spinner.failed();
+            term::blank();
+            return Err(anyhow!(
+                "project {} could not be found on local device",
+                project_urn
+            ));
+        }
+        Err(err) => {
+            spinner.failed();
+            term::blank();
+            return Err(err.into());
+        }
     };
 
     // Start with the default set of remotes that should always be tracked.
