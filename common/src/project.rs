@@ -423,13 +423,15 @@ where
     S: AsRef<ReadOnly>,
 {
     let repo = git2::Repository::open_bare(storage.as_ref().path())?;
-    let reference = repo.find_reference(&format!(
-        "refs/namespaces/{}/refs/heads/{}",
-        urn.encode_id(),
-        branch
-    ))?;
+    let reference = repo
+        .find_reference(&format!(
+            "refs/namespaces/{}/refs/heads/{}",
+            urn.encode_id(),
+            branch
+        ))
+        .ok();
 
-    Ok(reference.target())
+    Ok(reference.and_then(|r| r.target()))
 }
 
 /// Get the head of a project remote.
