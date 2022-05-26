@@ -6,9 +6,10 @@ license = "GPL-3.0-or-later"
 
 [features]
 default = []
-ethereum = ["ethers", "coins-bip32", "async-trait", "hex", "walletconnect"]
+ethereum = ["ethers", "coins-bip32", "hex", "walletconnect"]
 
 [dependencies]
+async-trait = "0.1.53"
 automerge = "0.1"
 anyhow = "1.0"
 base64 = "0.13"
@@ -43,10 +44,6 @@ optional = true
 
 [dependencies.coins-bip32]
 version = "0.6.0"
-optional = true
-
-[dependencies.async-trait]
-version = "0.1.53"
 optional = true
 
 [dependencies.hex]
