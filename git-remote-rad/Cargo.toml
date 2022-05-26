@@ -3,7 +3,7 @@ name = "git-remote-rad"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 version = "0.1.0"
 edition = "2018"
-license = "MIT OR Apache-2.0"
+license = "GPL-3.0-or-later"
 description = "Git remote helper for radicle"
 
 [dependencies]

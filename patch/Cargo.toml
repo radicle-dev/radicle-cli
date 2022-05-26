@@ -3,7 +3,7 @@ name = "rad-patch"
 version = "0.1.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
-license = "MIT OR Apache-2.0"
+license = "GPL-3.0-or-later"
 description = "Manage patches for radicle projects"
 
 [dependencies]
