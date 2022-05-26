@@ -240,8 +240,9 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
         term::success!("Profile {} activated", id);
     }
 
+    let profile = selection;
     let signer = if let Ok(sock) = keys::ssh_auth_sock() {
-        if !keys::is_ready(selection, sock.clone())? {
+        if !keys::is_ready(profile, sock.clone())? {
             term::warning("Adding your radicle key to ssh-agent...");
 
             // TODO: We should show the spinner on the passphrase prompt,
@@ -256,17 +257,17 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
             let pass = keys::pwhash(secret_input);
             let spinner = term::spinner("Unlocking...");
 
-            keys::add(selection, pass, sock.clone()).context("invalid passphrase supplied")?;
+            keys::add(profile, pass, sock.clone()).context("invalid passphrase supplied")?;
             spinner.finish();
 
             term::success!("Radicle key added to ssh-agent");
         } else {
             term::success!("Signing key already in ssh-agent");
         }
-        sock.to_signer(&profile)?
+        sock.to_signer(profile)?
     } else {
-        let signer = term::secret_key(&profile)?;
-        signer.to_signer(&profile)?
+        let signer = term::secret_key(profile)?;
+        signer.to_signer(profile)?
     };
 
     git::configure_signing(selection.paths().git_dir(), &signer.peer_id())?;
