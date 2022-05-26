@@ -148,10 +148,10 @@ fn create(
         term::format::highlight(&project.name)
     ));
 
-    let master = repo
+    let target = repo
         .resolve_reference_from_short_name(&format!("rad/{}", &project.default_branch))?
         .target();
-    let master_oid = master
+    let target_oid = target
         .map(|h| format!("{:.7}", h.to_string()))
         .unwrap_or_else(String::new);
 
@@ -161,16 +161,16 @@ fn create(
         .unwrap_or_else(String::new);
 
     term::info!(
-        "Proposing {} ({}) <- {} ({}).",
+        "{} ({}) <- {} ({})",
         term::format::highlight(&project.default_branch.clone()),
-        term::format::secondary(&master_oid),
+        term::format::secondary(&target_oid),
         term::format::highlight(&current_branch),
         term::format::secondary(&head_oid),
     );
 
     let (ahead, behind) = repo.graph_ahead_behind(
         head_ref.unwrap_or_else(git::Oid::zero),
-        master.unwrap_or_else(git::Oid::zero),
+        target.unwrap_or_else(git::Oid::zero),
     )?;
     term::info!(
         "This branch is {} commit(s) ahead, {} commit(s) behind {}.",
@@ -180,7 +180,7 @@ fn create(
     );
 
     let merge_base_ref = repo.merge_base(
-        master.unwrap_or_else(git::Oid::zero),
+        target.unwrap_or_else(git::Oid::zero),
         head_ref.unwrap_or_else(git::Oid::zero),
     );
 
