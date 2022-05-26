@@ -22,12 +22,14 @@ Usage
 
 Options
 
-    --help    Print help
+    --no-confirm    Don't ask for confirmation during checkout
+    --help          Print help
 "#,
 };
 
 pub struct Options {
     pub urn: Urn,
+    pub interactive: Interactive,
 }
 
 impl Args for Options {
@@ -37,9 +39,13 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut urn = None;
+        let mut interactive = Interactive::Yes;
 
         while let Some(arg) = parser.next()? {
             match arg {
+                Long("no-confirm") => {
+                    interactive = Interactive::No;
+                }
                 Long("help") => return Err(Error::Help.into()),
                 Value(val) if urn.is_none() => {
                     let val = val.to_string_lossy();
@@ -54,6 +60,7 @@ impl Args for Options {
         Ok((
             Options {
                 urn: urn.ok_or_else(|| anyhow!("a project URN to checkout must be provided"))?,
+                interactive,
             },
             vec![],
         ))
@@ -78,6 +85,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
     let project = project::get(&storage, &options.urn)?
         .context("project could not be found in local storage")?;
     let path = PathBuf::from(project.name.clone());
+    let interactive = options.interactive;
 
     if path.exists() {
         anyhow::bail!("the local path {:?} already exists", path.as_path());
@@ -130,7 +138,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
             spinner.finish();
 
             // Setup signing.
-            if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo, Interactive::Yes) {
+            if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo, interactive) {
                 term::warning(&format!("Warning: Could not setup signing: {:#}", err));
             }
 

@@ -10,6 +10,7 @@ use url::Url;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::seed::{self, SeedOptions};
+use radicle_common::Interactive;
 use radicle_common::{git, keys, profile, project};
 use radicle_terminal as term;
 
@@ -24,6 +25,7 @@ Usage
 
 Options
 
+    --no-confirm    Don't ask for confirmation during clone
     --seed <host>   Seed to clone from
     --help          Print help
 
@@ -39,6 +41,7 @@ enum Origin {
 #[derive(Debug)]
 pub struct Options {
     origin: Origin,
+    interactive: Interactive,
 }
 
 impl Args for Options {
@@ -48,9 +51,13 @@ impl Args for Options {
         let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
         let mut parser = lexopt::Parser::from_args(unparsed);
         let mut origin: Option<Origin> = None;
+        let mut interactive = Interactive::Yes;
 
         while let Some(arg) = parser.next()? {
             match arg {
+                Long("no-confirm") => {
+                    interactive = Interactive::No;
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -89,14 +96,20 @@ impl Args for Options {
             anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
         })?;
 
-        Ok((Options { origin }, vec![]))
+        Ok((
+            Options {
+                origin,
+                interactive,
+            },
+            vec![],
+        ))
     }
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     match options.origin {
         Origin::Radicle(origin) => {
-            clone_project(origin.urn, origin.seed)?;
+            clone_project(origin.urn, origin.seed, options.interactive)?;
         }
         Origin::Git(url) => {
             clone_repository(url)?;
@@ -105,7 +118,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn clone_project(urn: Urn, seed: Option<seed::Address>) -> anyhow::Result<()> {
+pub fn clone_project(
+    urn: Urn,
+    seed: Option<seed::Address>,
+    interactive: Interactive,
+) -> anyhow::Result<()> {
     rad_sync::run(rad_sync::Options {
         fetch: true,
         refs: rad_sync::Refs::All,
@@ -116,9 +133,12 @@ pub fn clone_project(urn: Urn, seed: Option<seed::Address>) -> anyhow::Result<()
         seed: None,
         identity: true,
         push_self: false,
-        verbose: false,
+        verbose: true,
     })?;
-    let path = rad_checkout::execute(rad_checkout::Options { urn: urn.clone() })?;
+    let path = rad_checkout::execute(rad_checkout::Options {
+        urn: urn.clone(),
+        interactive,
+    })?;
 
     if let Some(seed_url) = seed.map(|s| s.url()) {
         seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
