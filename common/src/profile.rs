@@ -1,5 +1,5 @@
 //! User profile related functions.
-use std::fmt;
+use std::{env, fmt, path};
 
 use anyhow::{anyhow, Error, Result};
 use serde::{de::DeserializeOwned, Serialize};
@@ -13,6 +13,9 @@ use lnk_profile;
 
 use crate::args;
 
+/// Environment var that sets the radicle home directory.
+pub const RAD_HOME: &str = "RAD_HOME";
+
 /// Create a new profile.
 pub fn create<C: Crypto>(
     home: impl Into<LnkHome>,
@@ -23,6 +26,15 @@ where
     C::SecretBox: Serialize + DeserializeOwned,
 {
     lnk_profile::create(Some(home.into()), crypto)
+}
+
+/// Get the radicle home.
+pub fn home() -> LnkHome {
+    let home = env::var(RAD_HOME)
+        .map(|h| LnkHome::Root(path::Path::new(&h).to_path_buf()))
+        .ok();
+
+    home.unwrap_or_default()
 }
 
 /// Get the default profile. Fails if there is no profile.
@@ -37,7 +49,7 @@ pub fn default() -> Result<Profile, Error> {
         hint: "To setup your radicle profile, run `rad auth --init`.",
     };
 
-    match lnk_profile::get(None, None) {
+    match lnk_profile::get(home(), None) {
         Ok(Some(profile)) => Ok(profile),
         Ok(None) => Err(not_active_error.into()),
         Err(_) => Err(error.into()),
@@ -55,7 +67,7 @@ pub fn name(profile: Option<&Profile>) -> Result<String, Error> {
 
 /// List all profiles.
 pub fn list() -> Result<Vec<Profile>, Error> {
-    lnk_profile::list(None).map_err(|e| e.into())
+    lnk_profile::list(home()).map_err(|e| e.into())
 }
 
 /// Get the count of all profiles.
@@ -67,7 +79,7 @@ pub fn count() -> Result<usize, Error> {
 
 /// Set the default profile.
 pub fn set(id: &ProfileId) -> Result<(), Error> {
-    lnk_profile::set(None, id.clone())?;
+    lnk_profile::set(home(), id.clone())?;
 
     Ok(())
 }

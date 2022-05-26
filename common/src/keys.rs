@@ -14,6 +14,7 @@ use lnk_clib::keys::ssh::SshAuthSock;
 
 pub use lnk_clib::keys::LIBRAD_KEY_FILE as KEY_FILE;
 
+use crate::profile;
 use crate::signer::{ToSigner, ZeroizingSecretKey};
 
 /// Get the radicle signer and storage.
@@ -39,8 +40,14 @@ pub fn add<P: Pinentry>(
 where
     <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
 {
-    lnk_profile::ssh_add(None, profile.id().clone(), sock, pass, Vec::new())
-        .context("could not add ssh key")
+    lnk_profile::ssh_add(
+        profile::home(),
+        profile.id().clone(),
+        sock,
+        pass,
+        Vec::new(),
+    )
+    .context("could not add ssh key")
 }
 
 /// Remove a profile's radicle signing key from the ssh-agent
@@ -52,7 +59,7 @@ pub fn remove<P: Pinentry>(
 where
     <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
 {
-    lnk_profile::ssh_remove(None, profile.id().clone(), sock, pass)
+    lnk_profile::ssh_remove(profile::home(), profile.id().clone(), sock, pass)
         .context("could not remove ssh key")
 }
 
@@ -66,7 +73,7 @@ pub fn ssh_auth_sock() -> Result<SshAuthSock, anyhow::Error> {
 
 /// Check whether the radicle signing key has been added to ssh-agent.
 pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
-    lnk_profile::ssh_ready(None, profile.id().clone(), sock)
+    lnk_profile::ssh_ready(profile::home(), profile.id().clone(), sock)
         .context("could not lookup ssh key, is ssh-agent running?")
         .map(|(_, is_ready)| is_ready)
 }
