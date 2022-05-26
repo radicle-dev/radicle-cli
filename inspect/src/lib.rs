@@ -35,6 +35,7 @@ Usage
 
 Options
 
+    --id        Return the ID without the URN scheme
     --payload   Inspect the object's payload
     --refs      Inspect the object's refs on the local device (requires `tree`)
     --history   Show object's history
@@ -49,6 +50,7 @@ pub struct Options {
     pub refs: bool,
     pub payload: bool,
     pub history: bool,
+    pub id: bool,
 }
 
 impl Args for Options {
@@ -61,6 +63,7 @@ impl Args for Options {
         let mut refs = false;
         let mut payload = false;
         let mut history = false;
+        let mut id = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -75,6 +78,9 @@ impl Args for Options {
                 }
                 Long("history") => {
                     history = true;
+                }
+                Long("id") => {
+                    id = true;
                 }
                 Value(val) if path.is_none() && urn.is_none() => {
                     let val = val.to_string_lossy();
@@ -95,6 +101,7 @@ impl Args for Options {
 
         Ok((
             Options {
+                id,
                 path,
                 payload,
                 history,
@@ -197,6 +204,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
             _ => return Err(anyhow!("Couldn't find reference to {} in storage", urn)),
         }
+    } else if options.id {
+        term::info!("{}", term::format::highlight(urn.encode_id()));
     } else {
         term::info!("{}", term::format::highlight(urn));
     }

@@ -1,6 +1,7 @@
 //! Project-related functions and types.
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
+use std::fmt;
 use std::iter;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -102,7 +103,7 @@ impl TryFrom<Url> for Origin {
             if id.is_empty() {
                 anyhow::bail!("invalid radicle URL '{}': empty path", url.to_string());
             }
-            Urn::try_from_id(id)?
+            Urn::try_from_id(id).map_err(|_| anyhow!("invalid project id '{}'", id))?
         } else {
             anyhow::bail!("invalid radicle URL '{}': missing path", url.to_string());
         };
@@ -195,7 +196,6 @@ pub enum Delegate {
     Indirect { urn: Urn, ids: HashSet<PeerId> },
 }
 
-use std::fmt;
 impl fmt::Display for Delegate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
