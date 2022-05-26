@@ -39,6 +39,9 @@ use crate::{git, person, seed};
 /// URL scheme for radicle resources.
 pub const URL_SCHEME: &str = "rad";
 
+/// Prefix for remote tracking branches from peers.
+pub const PEER_BRANCH_PREFIX: &str = "peers";
+
 /// Project origin.
 ///
 /// Represents a location from which a project can be fetched.
@@ -557,7 +560,7 @@ impl<'a> SetupRemote<'a> {
 
         // TODO: Handle conflicts in remote name.
         if let Some(person) = self::person(storage, urn, peer)? {
-            let name = format!("peer/{}", person.subject().name);
+            let name = format!("{}/{}", PEER_BRANCH_PREFIX, person.subject().name);
             let mut remote = self::remote(urn, peer, &name)?;
 
             // Configure the remote in the repository.
