@@ -520,6 +520,7 @@ mod test {
     fn test_patch_create_and_get() {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
+        let timestamp = Timestamp::now();
         let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
         let target = git::OneLevel::try_from(git::RefLike::try_from("master").unwrap()).unwrap();
         let commit = git::Oid::from(git2::Oid::zero());
@@ -534,7 +535,6 @@ mod test {
             )
             .unwrap();
         let patch = patches.get(&project.urn(), &patch_id).unwrap().unwrap();
-        let timestamp = Timestamp::now();
 
         assert_eq!(&patch.title, "My first patch");
         assert_eq!(patch.author.urn(), &author);
