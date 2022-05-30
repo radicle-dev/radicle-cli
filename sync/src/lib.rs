@@ -371,6 +371,10 @@ pub fn push_project(
             if options.verbose {
                 spinner.finish();
                 term::blob(output);
+            } else {
+                spinner.message("Project synced.".to_owned());
+                spinner.finish();
+                term::blank();
             }
         }
         Err(err) => {
@@ -379,13 +383,6 @@ pub fn push_project(
             return Err(err);
         }
     }
-
-    if !options.verbose {
-        spinner.message("Project synced.".to_owned());
-    }
-    spinner.finish();
-
-    term::blank();
 
     if let Some(host) = seed.host() {
         let is_routable = match host {
