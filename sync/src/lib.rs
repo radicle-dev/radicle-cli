@@ -465,6 +465,7 @@ pub fn fetch(
     }
 
     let monorepo = profile.paths().git_dir();
+    let whoami = person::local(&storage)?;
 
     // Sync identity and delegates.
     if options.identity {
@@ -472,8 +473,9 @@ pub fn fetch(
 
         match seed::fetch_identity(monorepo, seed, &project_urn) {
             Ok(output) => {
+                spinner.finish();
+
                 if options.verbose {
-                    spinner.finish();
                     term::blob(output);
                 }
             }
@@ -496,7 +498,14 @@ pub fn fetch(
         let mut spinner = term::spinner("Fetching project delegates...");
         for delegate in &proj.delegates {
             if let project::Delegate::Indirect { urn, .. } = &delegate {
-                spinner.message(format!("Fetching project delegate {}...", urn.encode_id()));
+                // Don't fetch our own identity.
+                if urn == &whoami.urn() {
+                    continue;
+                }
+                spinner.message(format!(
+                    "Fetching project delegate {}...",
+                    term::format::tertiary(urn.encode_id())
+                ));
 
                 match seed::fetch_identity(monorepo, seed, urn).and_then(|out| {
                     identities::person::verify(&storage, urn)?;
