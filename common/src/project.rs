@@ -417,8 +417,8 @@ where
     Ok(objs)
 }
 
-/// List the heads of a remote repository.
-pub fn list_remote_heads(
+/// List the heads of the rad remote.
+pub fn list_rad_remote_heads(
     repo: &git2::Repository,
     settings: transport::Settings,
 ) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
@@ -512,6 +512,29 @@ pub fn rad_remote(repo: &Repository) -> anyhow::Result<Remote<LocalUrl>> {
         )),
         Err(err) => Err(err).context("could not read git remote configuration"),
     }
+}
+
+/// List project seed heads.
+pub fn list_seed_heads(
+    repo: &git::Repository,
+    url: &Url,
+    project: &Urn,
+) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
+    let url = url.join(&project.encode_id())?;
+    let mut remote = repo.remote_anonymous(url.as_str())?;
+    let mut remotes = HashMap::new();
+
+    remote.connect(git2::Direction::Fetch)?;
+
+    for head in remote.list()? {
+        if let Some((peer, r)) = git::parse_remote(head.name()) {
+            if let Some(branch) = r.strip_prefix("heads/") {
+                let value = (branch.to_owned(), head.oid());
+                remotes.entry(peer).or_insert_with(Vec::new).push(value);
+            }
+        }
+    }
+    Ok(remotes)
 }
 
 /// Create a git remote for the given project and peer. This does not save the

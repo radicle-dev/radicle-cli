@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::crypto::BoxedSigner;
-use librad::git::local::transport;
+use librad::git::identities;
 use librad::git::storage::{ReadOnly, Storage};
 use librad::git::tracking;
 use librad::profile::Profile;
@@ -59,6 +59,7 @@ Options
     --no-upstream          Don't setup a tracking branch for the remote
     --no-sync              Don't sync the peer's refs
     --no-fetch             Don't fetch the peer's refs into the working copy
+    --verbose, -v          Verbose output
     --help                 Print help
 "#,
 };
@@ -78,7 +79,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         track(peer, proj, repo, storage, profile, signer, options)?;
     } else {
         // Show tracking graph.
-        show(proj, repo, storage.read_only(), profile, signer, options)?;
+        show(proj, repo, storage.read_only(), options)?;
     }
 
     Ok(())
@@ -99,9 +100,10 @@ pub fn track(
     let urn = &project.urn;
 
     term::info!(
-        "🌱 Establishing tracking relationship for {}...",
-        term::format::dim(&urn)
+        "Establishing 🌱 tracking relationship for {}",
+        term::format::highlight(&project.name)
     );
+    term::blank();
 
     let result = tracking::track(
         &storage,
@@ -114,7 +116,7 @@ pub fn track(
     let existing = matches!(result.err(), Some(tracking::PreviousError::DidExist));
 
     term::success!(
-        "Tracking relationship {} {}",
+        "Tracking relationship with {} {}",
         term::format::tertiary(peer),
         if existing { "exists" } else { "established" },
     );
@@ -128,15 +130,42 @@ pub fn track(
     if let Some(seed) = seed {
         if options.sync {
             // Fetch refs from seed...
-            let mut spinner = term::spinner(&format!(
-                "Syncing peer refs from {}...",
-                term::format::highlight(seed.host_str().unwrap_or("seed"))
-            ));
+            let seed_pretty = term::format::highlight(seed.host_str().unwrap_or("seed"));
+            let mut spinner = term::spinner(&format!("Syncing peer refs from {}...", seed_pretty));
             if let Err(e) = term::sync::fetch_remotes(&storage, &seed, urn, [&peer], &mut spinner) {
                 spinner.failed();
                 term::blank();
 
                 return Err(e);
+            }
+
+            if let Ok(Some(person)) = project::person(&storage, urn, &peer) {
+                spinner.message(format!(
+                    "Syncing peer identity {} from {}...",
+                    term::format::tertiary(person.urn()),
+                    seed_pretty
+                ));
+
+                let monorepo = profile.paths().git_dir();
+                match seed::fetch_identity(monorepo, &seed, &person.urn()).and_then(|out| {
+                    spinner.finish();
+                    spinner.message("Verifying identity...");
+                    identities::person::verify(&storage, &person.urn())?;
+
+                    Ok(out)
+                }) {
+                    Ok(output) => {
+                        if options.verbose {
+                            spinner.finish();
+                            term::blob(output);
+                        }
+                    }
+                    Err(err) => {
+                        spinner.failed();
+                        term::blank();
+                        return Err(err);
+                    }
+                }
             }
 
             spinner.finish();
@@ -176,8 +205,6 @@ pub fn show(
     project: project::Metadata,
     repo: git::Repository,
     storage: &ReadOnly,
-    profile: Profile,
-    signer: BoxedSigner,
     options: Options,
 ) -> anyhow::Result<()> {
     let peers = if options.local {
@@ -203,7 +230,7 @@ pub fn show(
             &project.urn,
             term::format::dim(format!("({})", seed.host_str().unwrap_or("seed"))),
         ));
-        let peers = show_remote(&project, &repo, seed, profile, signer)?;
+        let peers = show_remote(&project, &repo, seed)?;
 
         spinner.done();
 
@@ -301,17 +328,9 @@ pub fn show_remote(
     project: &project::Metadata,
     repo: &git::Repository,
     seed: &Url,
-    profile: Profile,
-    signer: BoxedSigner,
 ) -> anyhow::Result<Vec<Peer>> {
     let urn = &project.urn;
-    let remotes = project::list_remote_heads(
-        repo,
-        transport::Settings {
-            paths: profile.paths().clone(),
-            signer,
-        },
-    )?;
+    let remotes = project::list_seed_heads(repo, seed, urn)?;
     let mut commits: HashMap<_, String> = HashMap::new();
 
     let remote_metadata = if let Ok(meta) = seed::get_remotes(seed.clone(), urn) {

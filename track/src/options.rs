@@ -18,6 +18,7 @@ pub struct Options {
     pub fetch: bool,
     pub local: bool,
     pub seed: Option<Address>,
+    pub verbose: bool,
 }
 
 impl Args for Options {
@@ -31,6 +32,7 @@ impl Args for Options {
         let mut upstream = true;
         let mut sync = true;
         let mut fetch = true;
+        let mut verbose = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -48,6 +50,7 @@ impl Args for Options {
                 Long("no-sync") => sync = false,
                 Long("no-fetch") => fetch = false,
 
+                Long("verbose") | Short('v') => verbose = true,
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -82,6 +85,7 @@ impl Args for Options {
                 upstream,
                 local,
                 seed,
+                verbose,
             },
             vec![],
         ))
