@@ -237,6 +237,25 @@ pub struct Metadata {
     pub remotes: HashSet<PeerId>,
 }
 
+impl Metadata {
+    /// Get the local head of a project's default branch.
+    pub fn local_head(&self, branch: impl Into<RefLike>) -> Reference<RefLike> {
+        let namespace = Namespace::from(self.urn.clone());
+        Reference::head(Some(namespace), None, branch.into())
+    }
+
+    /// Get the head of a project's default branch under a remote.
+    pub fn remote_head(&self, remote: &PeerId) -> Reference<RefLike> {
+        let namespace = Namespace::from(self.urn.clone());
+
+        Reference::head(
+            Some(namespace),
+            Some(*remote),
+            RefLike::from(self.default_branch.clone()),
+        )
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("project doesn't have a default branch")]

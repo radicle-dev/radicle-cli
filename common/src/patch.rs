@@ -129,6 +129,18 @@ pub fn merge_base(repo: &git2::Repository, patch: &Tag) -> Result<Option<git::Oi
     Ok(merge_base.map(|o| o.into()))
 }
 
+pub fn is_merged(
+    repo: &git2::Repository,
+    target: git2::Oid,
+    commit: git2::Oid,
+) -> Result<bool, Error> {
+    if let Ok(base) = repo.merge_base(target, commit) {
+        Ok(base == commit)
+    } else {
+        Ok(false)
+    }
+}
+
 /// Create a "patch" tag under:
 ///
 /// > /refs/namespaces/<project>/refs/tags/patches/<patch>/<remote>/<revision>
@@ -174,4 +186,35 @@ pub fn create_tag(
     )?;
 
     Ok(oid)
+}
+
+#[derive(Debug, Default)]
+pub struct MergeTargets {
+    pub merged: Vec<project::PeerInfo>,
+    pub not_merged: Vec<(project::PeerInfo, git::Oid)>,
+}
+
+pub fn find_merge_targets<S>(
+    head: &git2::Oid,
+    storage: &S,
+    project: &project::Metadata,
+) -> anyhow::Result<MergeTargets>
+where
+    S: AsRef<ReadOnly>,
+{
+    let mut targets = MergeTargets::default();
+    let storage = storage.as_ref();
+    let repo = git2::Repository::open_bare(storage.path())?;
+
+    for (peer_id, peer_info) in project::tracked(project, storage)? {
+        let target = project.remote_head(&peer_id);
+        let target_oid = storage.reference_oid(&target)?;
+
+        if is_merged(&repo, target_oid.into(), *head)? {
+            targets.merged.push(peer_info);
+        } else {
+            targets.not_merged.push((peer_info, target_oid));
+        }
+    }
+    Ok(targets)
 }
