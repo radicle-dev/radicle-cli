@@ -129,7 +129,7 @@ impl<'a> Deserialize<'a> for Color {
     }
 }
 
-/// Issue author.
+/// Author.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Author {
@@ -145,7 +145,14 @@ impl Author {
         }
     }
 
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+    pub fn name(&self) -> String {
+        match self {
+            Self::Urn { urn } => urn.encode_id(),
+            Self::Resolved(id) => id.name.clone(),
+        }
+    }
+
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
         match self {
             Self::Urn { urn } => {
                 let id = project::PeerIdentity::get(urn, storage)?
@@ -154,7 +161,7 @@ impl Author {
             }
             Self::Resolved(_) => {}
         }
-        Ok(())
+        Ok(self)
     }
 }
 
@@ -198,7 +205,7 @@ pub struct Comment<R = ()> {
 }
 
 impl Comment<()> {
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
         self.author.resolve(storage)
     }
 }

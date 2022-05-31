@@ -70,6 +70,20 @@ pub struct Patch {
     pub timestamp: Timestamp,
 }
 
+impl Patch {
+    pub fn is_open(&self) -> bool {
+        matches!(self.state, State::Open)
+    }
+
+    pub fn is_closed(&self) -> bool {
+        matches!(self.state, State::Closed)
+    }
+
+    pub fn description(&self) -> &str {
+        &self.revisions.head.comment.body
+    }
+}
+
 impl TryFrom<Automerge> for Patch {
     type Error = AutomergeError;
 
