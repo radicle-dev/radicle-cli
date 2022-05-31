@@ -118,6 +118,7 @@ impl TryFrom<Url> for Origin {
 /// Project indirect contributor identity.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct PeerIdentity {
+    #[serde(deserialize_with = "deserialize_urn")]
     pub urn: Urn,
     pub name: String,
     pub ens: Option<Ens>,
@@ -148,7 +149,7 @@ impl PeerIdentity {
 
 /// Project peer information.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase", tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub struct PeerInfo {
     /// Peer id.
     pub id: PeerId,
@@ -601,6 +602,14 @@ impl<'a> SetupRemote<'a> {
         }
         Ok(None)
     }
+}
+
+fn deserialize_urn<'de, D>(deserializer: D) -> Result<Urn, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+    s.parse().map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]
