@@ -22,15 +22,25 @@ pub use url::Url;
 
 /// String formatting of various types.
 pub mod fmt {
-    use librad::PeerId;
+    use librad::{collaborative_objects::ObjectId, PeerId};
 
     /// Format a peer id to be more compact.
     pub fn peer(peer: &PeerId) -> String {
-        let peer = peer.to_string();
+        let peer = peer.default_encoding();
         let start = peer.chars().take(7).collect::<String>();
         let end = peer.chars().skip(peer.len() - 7).collect::<String>();
 
         format!("{}…{}", start, end)
+    }
+
+    /// Format a git Oid.
+    pub fn oid(oid: &git2::Oid) -> String {
+        format!("{:.7}", oid)
+    }
+
+    /// Format a COB id.
+    pub fn cob(id: &ObjectId) -> String {
+        format!("{:.11}", id.to_string())
     }
 }
 
