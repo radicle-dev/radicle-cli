@@ -37,7 +37,7 @@ pub fn badge_secondary<D: std::fmt::Display>(input: D) -> String {
 }
 
 pub fn bold<D: std::fmt::Display>(input: D) -> String {
-    style(input).bold().to_string()
+    style(input).white().bright().bold().to_string()
 }
 
 pub fn dim<D: std::fmt::Display>(input: D) -> String {

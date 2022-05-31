@@ -297,7 +297,7 @@ pub fn push_project(
     let monorepo = profile.paths().git_dir();
     let peer_id = storage.peer_id();
     let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
-        .context("git signing key is not properly configured")?;
+        .context("git signing key is not properly configured; run `rad auth` to fix this")?;
     let proj = project::get(&storage, &project_urn)?.ok_or_else(|| {
         anyhow!(
             "project {} was not found in local storage under profile {}",

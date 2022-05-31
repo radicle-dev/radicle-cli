@@ -27,7 +27,7 @@ Usage
 
 Options
 
-        --help      Print help
+    --help      Print help
 "#,
 };
 

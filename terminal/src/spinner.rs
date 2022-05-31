@@ -50,8 +50,8 @@ impl Spinner {
     }
 }
 
-pub fn spinner(message: &str) -> Spinner {
-    let message = message.to_owned();
+pub fn spinner(message: impl ToString) -> Spinner {
+    let message = message.to_string();
     let style = ProgressStyle::default_spinner()
         .tick_strings(&[
             &style("\\ ").yellow().to_string(),

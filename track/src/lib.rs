@@ -19,12 +19,14 @@ use radicle_terminal as term;
 mod options;
 pub use options::Options;
 
+#[derive(Debug)]
 pub struct Peer {
     id: PeerId,
     meta: Option<PeerInfo>,
     branches: Vec<Branch>,
 }
 
+#[derive(Debug)]
 pub struct Branch {
     name: String,
     head: git::Oid,

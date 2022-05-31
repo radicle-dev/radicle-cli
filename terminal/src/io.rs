@@ -12,6 +12,7 @@ use radicle_common::cobs::shared::CommentId;
 use radicle_common::signer::ToSigner;
 
 use super::command;
+use super::format;
 use super::keys;
 use super::spinner::spinner;
 use super::Error;
@@ -160,11 +161,11 @@ pub fn ask<D: fmt::Display>(prompt: D, default: bool) -> bool {
 }
 
 pub fn confirm<D: fmt::Display>(prompt: D) -> bool {
-    ask(prompt, true)
+    ask(format::tertiary(prompt), true)
 }
 
 pub fn abort<D: fmt::Display>(prompt: D) -> bool {
-    ask(prompt, false)
+    ask(format::tertiary(prompt), false)
 }
 
 /// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.
