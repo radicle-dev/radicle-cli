@@ -33,6 +33,7 @@ use librad::PeerId;
 
 use lnk_identities;
 
+use crate as common;
 use crate::person::Ens;
 use crate::{git, person, seed};
 
@@ -163,7 +164,7 @@ impl PeerInfo {
     pub fn name(&self) -> String {
         match &self.person {
             Some(person) => person.name.clone(),
-            None => self.id.default_encoding(),
+            None => common::fmt::peer(&self.id),
         }
     }
 

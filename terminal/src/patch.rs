@@ -7,7 +7,6 @@ pub fn list_commits(
     repo: &git::Repository,
     left: &git::Oid,
     right: &git::Oid,
-    show_header: bool,
 ) -> anyhow::Result<()> {
     let mut table = term::Table::default();
 
@@ -16,15 +15,6 @@ pub fn list_commits(
 
     let mut revwalk = repo.revwalk()?;
     revwalk.push_range(&format!("{}..{}", left_short, right_short))?;
-
-    if show_header {
-        term::blank();
-        term::info!(
-            "Found {} commit(s).",
-            term::format::highlight(revwalk.count())
-        );
-        term::blank();
-    }
 
     let mut revwalk = repo.revwalk()?;
     revwalk.push_range(&format!("{}..{}", left_short, right_short))?;

@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if)]
+
 pub mod command;
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
@@ -15,6 +17,7 @@ use std::process;
 use dialoguer::console::style;
 use radicle_common::args::{Args, Error, Help};
 
+pub use console::measure_text_width as text_width;
 pub use dialoguer::Editor;
 pub use io::*;
 pub use spinner::{spinner, Spinner};

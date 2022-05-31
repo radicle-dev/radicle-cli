@@ -33,6 +33,9 @@ Git options
 "#,
 };
 
+// TODO: 'self' is not pushed when user pushes to seed node,
+// they have to manually `rad sync --self`.
+
 #[derive(Default, Debug)]
 pub struct Options {
     pub seed: Option<seed::Address>,

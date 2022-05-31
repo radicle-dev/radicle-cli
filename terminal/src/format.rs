@@ -32,6 +32,14 @@ pub fn badge_primary<D: std::fmt::Display>(input: D) -> String {
     style(input).magenta().reverse().to_string()
 }
 
+pub fn badge_positive<D: std::fmt::Display>(input: D) -> String {
+    style(input).green().reverse().to_string()
+}
+
+pub fn badge_negative<D: std::fmt::Display>(input: D) -> String {
+    style(input).red().reverse().to_string()
+}
+
 pub fn badge_secondary<D: std::fmt::Display>(input: D) -> String {
     style(input).blue().reverse().to_string()
 }

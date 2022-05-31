@@ -78,6 +78,10 @@ pub fn blank() {
     println!()
 }
 
+pub fn print(msg: &str) {
+    println!("{}", msg);
+}
+
 pub fn prefixed(prefix: &str, text: &str) -> String {
     text.split('\n')
         .map(|line| format!("{}{}\n", prefix, line))
@@ -368,11 +372,9 @@ pub fn comment_select(issue: &Issue) -> Option<CommentId> {
 
 pub fn markdown(content: &str) {
     if !content.is_empty() {
-        blank();
         if command::bat(["-p", "-l", "md"], content).is_err() {
             blob(content);
         }
-        blank();
     }
 }
 
