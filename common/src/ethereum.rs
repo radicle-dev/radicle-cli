@@ -1,4 +1,9 @@
 //! Ethereum-related functionality.
+pub mod erc_20;
+pub mod governance;
+pub mod resolver;
+pub mod superseeder;
+
 mod walletconnect;
 
 use std::convert::TryFrom;

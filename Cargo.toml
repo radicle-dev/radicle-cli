@@ -13,7 +13,7 @@ incremental = false
 
 [features]
 default = ["ethereum"]
-ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "ethers", "tokio", "futures"]
+ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "rad-reward", "ethers", "tokio", "futures"]
 
 [package.metadata.deb]
 assets = [
@@ -39,6 +39,7 @@ assets = [
     ["target/release/rad-remote", "usr/bin/rad-remote", "755"],
     ["target/release/rad-gov", "usr/bin/rad-gov", "755"],
     ["target/release/rad-edit", "usr/bin/rad-edit", "755"],
+    ["target/release/rad-reward", "usr/bin/rad-reward", "755"],
     ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
     ["rad.1.gz", "usr/share/man/man1/rad.1.gz", "644"],
     ["rad-checkout.1.gz", "usr/share/man/man1/rad-checkout.1.gz", "644"],
@@ -86,6 +87,7 @@ ethers = { version = "0.6.2", optional = true }
 rad-account = { path = "./account", optional = true }
 rad-ens = { path = "./ens", optional = true }
 rad-gov = { path = "./gov", optional = true }
+rad-reward = { path = "./reward", optional = true }
 tokio = { version = "1.10", features = ["rt"], optional = true }
 futures = { version = "0.3", optional = true }
 
@@ -103,6 +105,10 @@ required-features = ["ethereum"]
 
 [[bin]]
 name = "rad-gov"
+required-features = ["ethereum"]
+
+[[bin]]
+name = "rad-reward"
 required-features = ["ethereum"]
 
 [workspace]
@@ -132,6 +138,7 @@ members = [
   "untrack",
   "gov",
   "edit",
+  "reward"
 ]
 
 [patch.crates-io.link-crypto]

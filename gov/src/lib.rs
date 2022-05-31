@@ -12,13 +12,12 @@ use anyhow::Context;
 use regex::Regex;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::ethereum;
-use radicle_common::ethereum::{ProviderOptions, SignerOptions};
+use radicle_common::ethereum::{
+    self,
+    governance::{self, Governance},
+    ProviderOptions, SignerOptions,
+};
 use radicle_terminal as term;
-
-use crate::governance::Governance;
-
-mod governance;
 
 pub const HELP: Help = Help {
     name: "gov",

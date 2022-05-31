@@ -9,7 +9,7 @@ use ethers::{
     providers::{ens::ENS_ADDRESS, Provider},
 };
 
-use radicle_common::ethereum;
+use crate::ethereum;
 
 pub const RADICLE_ID_KEY: &str = "eth.radicle.id";
 pub const RADICLE_SEED_ID_KEY: &str = "eth.radicle.seed.id";

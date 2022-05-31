@@ -7,13 +7,13 @@ use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::ethereum::{ProviderOptions, SignerOptions};
-use radicle_common::{ethereum, keys, person, profile, seed};
+use radicle_common::ethereum::{
+    self,
+    resolver::{self, PublicResolver},
+    ProviderOptions, SignerOptions,
+};
+use radicle_common::{keys, person, profile, seed};
 use radicle_terminal as term;
-
-use crate::resolver::PublicResolver;
-
-pub mod resolver;
 
 pub const HELP: Help = Help {
     name: "ens",

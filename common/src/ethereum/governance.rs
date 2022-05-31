@@ -1,6 +1,7 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
-use ethers::prelude::{signer::SignerMiddlewareError, Http, Middleware, ProviderError};
+use ethers::prelude::{signer::SignerMiddlewareError, Http, Lazy, Middleware, ProviderError};
 use ethers::types::{Address, U256};
 use ethers::{
     abi::Abi,
@@ -9,13 +10,11 @@ use ethers::{
     providers::Provider,
 };
 
-use std::str::FromStr;
+use crate::ethereum;
 
-use radicle_common::ethereum;
-
-const RADICLE_GOVERNANCE_ADDRESS: &str = "0x690e775361AD66D1c4A25d89da9fCd639F5198eD";
-const PUBLIC_RESOLVER_ABI: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/abis/Governance.json"));
+static RADICLE_GOVERNANCE_ADDRESS: Lazy<Address> =
+    Lazy::new(|| Address::from_str("0x690e775361AD66D1c4A25d89da9fCd639F5198eD").unwrap());
+const ABI: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/abis/Governance.json"));
 
 pub struct Governance<M> {
     contract: Contract<M>,
@@ -64,9 +63,8 @@ where
     Error<M>: From<<M as Middleware>::Error>,
 {
     pub fn new(client: impl Into<Arc<M>>) -> Self {
-        let abi: Abi = serde_json::from_str(PUBLIC_RESOLVER_ABI).expect("The ABI is valid");
-        let addr = Address::from_str(RADICLE_GOVERNANCE_ADDRESS).unwrap();
-        let contract = Contract::new(addr, abi, client);
+        let abi: Abi = serde_json::from_str(ABI).expect("The ABI is valid");
+        let contract = Contract::new(*RADICLE_GOVERNANCE_ADDRESS, abi, client);
 
         Self { contract }
     }

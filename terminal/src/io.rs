@@ -316,6 +316,26 @@ where
     result.map(|i| &options[i])
 }
 
+pub fn select_with_prompt<'a, T>(prompt: &str, options: &'a [T], active: &'a T) -> Option<&'a T>
+where
+    T: fmt::Display + Eq + PartialEq,
+{
+    let theme = theme();
+    let active = options.iter().position(|o| o == active);
+    let mut selection = dialoguer::Select::with_theme(&theme);
+    selection.with_prompt(prompt);
+
+    if let Some(active) = active {
+        selection.default(active);
+    }
+    let result = selection
+        .items(&options.iter().map(|p| p.to_string()).collect::<Vec<_>>())
+        .interact_opt()
+        .unwrap();
+
+    result.map(|i| &options[i])
+}
+
 pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&'a Profile> {
     let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
     let selection = dialoguer::Select::with_theme(&theme())

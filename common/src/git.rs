@@ -364,6 +364,40 @@ fn write_gitsigner(mut w: impl io::Write, signer: &PeerId) -> io::Result<()> {
     writeln!(w, "{} {}", signer, keys::to_ssh_key(signer)?)
 }
 
+/// From a commit hash, return the signer's fingerprint, if any.
+pub fn commit_ssh_fingerprint(path: &Path, sha1: &str) -> Result<Option<String>, anyhow::Error> {
+    use std::io::BufRead;
+    use std::io::BufReader;
+
+    let output = Command::new("git")
+        .current_dir(path) // We need to place the command execution in the git dir
+        .args(["show", sha1, "--pretty=%GF", "--raw"])
+        .output()
+        .map_err(|e| anyhow!("'git' command failed {}", e))?;
+
+    if !output.status.success() {
+        return Err(anyhow!(
+            "'git' command failed {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let string = BufReader::new(output.stdout.as_slice())
+        .lines()
+        .next()
+        .transpose()
+        .map_err(|e| anyhow!("'git' command output couldn't be read {}", e))?;
+
+    // We only return a fingerprint if it's not an empty string
+    if let Some(s) = string {
+        if !s.is_empty() {
+            return Ok(Some(s));
+        }
+    }
+
+    Ok(None)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

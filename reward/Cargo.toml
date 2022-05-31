@@ -1,0 +1,16 @@
+[package]
+name = "rad-reward"
+version = "0.1.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+license = "GPL-3.0-or-later"
+description = "Reward contributors of a repository"
+
+[dependencies]
+anyhow = "1.0"
+librad = "0"
+lexopt = "0.2"
+ethers = { version = "0.6.2", features = ["abigen-offline"] }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common", features = ["ethereum"] }
+tokio = "1"
