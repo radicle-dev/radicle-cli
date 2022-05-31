@@ -1,8 +1,9 @@
+use librad::crypto::keystore::pinentry::SecUtf8;
+use librad::profile::{LnkHome, LNK_HOME};
 use link_identities::git::Urn;
 use radicle_git_helpers::remote_helper;
 
-use radicle_common::profile;
-use radicle_terminal as term;
+use radicle_common::{keys, profile, signer::ToSigner as _};
 
 use anyhow::anyhow;
 use futures_lite::future;
@@ -137,10 +138,23 @@ fn run(remote: Remote) -> anyhow::Result<()> {
         }
         Remote::Project { urn: _urn } => {
             let profile = profile::default()?;
-            let signer = term::signer(&profile)?;
+            let signer = if let Ok(sock) = keys::ssh_auth_sock() {
+                sock.to_signer(&profile)?
+            } else if let Ok(pass) = env::var(keys::RAD_PASSPHRASE) {
+                keys::load_secret_key(&profile, SecUtf8::from(pass))?.to_signer(&profile)?
+            } else {
+                fatal(anyhow!("no signers found: ssh-agent is not running"));
+            };
             let config = remote_helper::Config {
                 signer: Some(signer),
             };
+
+            // This is a workaround because the remote helper library
+            // doesn't take a profile as config parameter, so we have
+            // to configure it this way.
+            if let LnkHome::Root(root) = profile::home() {
+                env::set_var(LNK_HOME, root);
+            }
             remote_helper::run(config)
         }
     }

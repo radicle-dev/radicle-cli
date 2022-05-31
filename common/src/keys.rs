@@ -17,6 +17,10 @@ pub use lnk_clib::keys::LIBRAD_KEY_FILE as KEY_FILE;
 use crate::profile;
 use crate::signer::{ToSigner, ZeroizingSecretKey};
 
+/// Env var used to pass down the passphrase to the git-remote-helper when
+/// ssh-agent isn't present.
+pub const RAD_PASSPHRASE: &str = "RAD_PASSPHRASE";
+
 /// Get the radicle signer and storage.
 pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<Storage, Error> {
     let signer = match signer.to_signer(profile) {
