@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use librad::collaborative_objects::{
     CollaborativeObjects, EntryContents, History, NewObjectSpec, ObjectId, TypeName,
+    UpdateObjectSpec,
 };
 use librad::git::identities::local::LocalIdentity;
 use librad::git::Storage;
@@ -22,7 +23,6 @@ use radicle_git_ext as git;
 
 use crate::cobs::shared;
 use crate::cobs::shared::*;
-use crate::project;
 
 lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.patch").unwrap();
@@ -213,6 +213,65 @@ impl<'a> Patches<'a> {
         }
     }
 
+    pub fn get_raw(&self, project: &Urn, id: &PatchId) -> Result<Option<Automerge>, Error> {
+        let cob = self
+            .store
+            .retrieve(project, &TYPENAME, id)
+            .map_err(|e| Error::Retrieve(e.to_string()))?;
+
+        let cob = if let Some(cob) = cob {
+            cob
+        } else {
+            return Ok(None);
+        };
+
+        let doc = cob.history().traverse(Vec::new(), |mut doc, entry| {
+            match entry.contents() {
+                EntryContents::Automerge(bytes) => {
+                    doc.extend(bytes);
+                }
+            }
+            ControlFlow::Continue(doc)
+        });
+
+        let doc = Automerge::load(&doc)?;
+
+        Ok(Some(doc))
+    }
+
+    pub fn merge(
+        &self,
+        project: &Urn,
+        patch_id: &PatchId,
+        revision: RevisionId,
+        commit: git::Oid,
+    ) -> Result<Merge, Error> {
+        let mut patch = self.get_raw(project, patch_id)?.unwrap();
+        let timestamp = Timestamp::now();
+        let merge = Merge {
+            peer: self.peer_id,
+            commit,
+            timestamp,
+        };
+
+        let changes = events::merge(&mut patch, revision, &merge)?;
+        let _cob = self
+            .store
+            .update(
+                &self.whoami,
+                project,
+                UpdateObjectSpec {
+                    object_id: *patch_id,
+                    typename: TYPENAME.clone(),
+                    message: Some("Merge revision".to_owned()),
+                    changes,
+                },
+            )
+            .unwrap();
+
+        Ok(merge)
+    }
+
     pub fn find(
         &self,
         project: &Urn,
@@ -308,10 +367,8 @@ pub struct Revision {
 /// A merged patch revision.
 #[derive(Debug, Clone, Serialize)]
 pub struct Merge {
-    /// Peer information of repository that this patch was merged into.
-    pub peer: project::PeerInfo,
-    /// Revision that was merged.
-    pub revision: RevisionId,
+    /// Peer id of repository that this patch was merged into.
+    pub peer: PeerId,
     /// Base branch commit that contains the revision.
     pub commit: git::Oid,
     /// When this merged was performed.
@@ -395,7 +452,7 @@ mod lookup {
         let (_, comment_id) = doc.get(&revision_id, "comment")?.unwrap();
         let (_, discussion_id) = doc.get(&revision_id, "discussion")?.unwrap();
         let (_, _reviews_id) = doc.get(&revision_id, "reviews")?.unwrap();
-        let (_, _merges_id) = doc.get(&revision_id, "merges")?.unwrap();
+        let (_, merges_id) = doc.get(&revision_id, "merges")?.unwrap();
         let (author, _) = doc.get(&revision_id, "author")?.unwrap();
         let (peer, _) = doc.get(&revision_id, "peer")?.unwrap();
         let (tag, _) = doc.get(&revision_id, "tag")?.unwrap();
@@ -414,12 +471,20 @@ mod lookup {
             discussion.push(comment);
         }
 
+        // Patch merges.
+        let mut merges: Vec<Merge> = Vec::new();
+        for i in 0..doc.length(&merges_id) {
+            let (_, merge_id) = doc.get(&merges_id, i as usize)?.unwrap();
+            let merge = self::merge(doc, &merge_id)?;
+
+            merges.push(merge);
+        }
+
         let author = Author::from_value(author)?;
         let peer = PeerId::from_value(peer)?;
         let version = version.to_u64().unwrap() as usize;
         let tag = tag.to_str().unwrap().try_into().unwrap();
         let reviews = HashMap::new();
-        let merges = Vec::new();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
         assert_eq!(version, ix);
@@ -433,6 +498,22 @@ mod lookup {
             discussion,
             reviews,
             merges,
+            timestamp,
+        })
+    }
+
+    pub fn merge(doc: &Automerge, obj_id: &automerge::ObjId) -> Result<Merge, AutomergeError> {
+        let (peer, _) = doc.get(&obj_id, "peer")?.unwrap();
+        let (commit, _) = doc.get(&obj_id, "commit")?.unwrap();
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
+
+        let peer = PeerId::from_value(peer)?;
+        let commit = git::Oid::from_str(&commit.into_string().unwrap()).unwrap();
+        let timestamp = Timestamp::try_from(timestamp).unwrap();
+
+        Ok(Merge {
+            peer,
+            commit,
             timestamp,
         })
     }
@@ -538,6 +619,37 @@ mod events {
 
         Ok(EntryContents::Automerge(doc.save_incremental()))
     }
+
+    pub fn merge(
+        patch: &mut Automerge,
+        revision: RevisionId,
+        merge: &Merge,
+    ) -> Result<EntryContents, AutomergeError> {
+        patch
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Merge revision".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
+                    let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
+                    let (_, revision_id) = tx.get(&revisions_id, revision)?.unwrap();
+                    let (_, merges_id) = tx.get(&revision_id, "merges")?.unwrap();
+
+                    let length = tx.length(&merges_id);
+                    let merge_id = tx.insert_object(&merges_id, length, ObjType::Map)?;
+
+                    tx.put(&merge_id, "peer", merge.peer.to_string())?;
+                    tx.put(&merge_id, "commit", merge.commit.to_string())?;
+                    tx.put(&merge_id, "timestamp", merge.timestamp)?;
+
+                    Ok(())
+                },
+            )
+            .map_err(|failure| failure.error)?;
+
+        let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok(EntryContents::Automerge(change))
+    }
 }
 
 #[cfg(test)]
@@ -580,5 +692,32 @@ mod test {
         assert_eq!(revision.tag, tag);
         assert!(revision.reviews.is_empty());
         assert!(revision.merges.is_empty());
+    }
+
+    #[test]
+    fn test_patch_merge() {
+        let (storage, profile, whoami, project) = test::setup::profile();
+        let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
+        let target = git::OneLevel::try_from(git::RefLike::try_from("master").unwrap()).unwrap();
+        let tag = git::Oid::from(git2::Oid::zero());
+        let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
+        let patch_id = patches
+            .create(
+                &project.urn(),
+                "My first patch",
+                "Blah blah blah.",
+                &target,
+                tag,
+                &[],
+            )
+            .unwrap();
+
+        let _merge = patches.merge(&project.urn(), &patch_id, 0, base).unwrap();
+        let patch = patches.get(&project.urn(), &patch_id).unwrap().unwrap();
+        let merges = patch.revisions.head.merges;
+
+        assert_eq!(merges.len(), 1);
+        assert_eq!(merges[0].peer, *storage.peer_id());
+        assert_eq!(merges[0].commit, base);
     }
 }
