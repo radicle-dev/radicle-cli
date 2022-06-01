@@ -4805,6 +4805,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-merge"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "lnk-identities",
+ "lnk-profile",
+ "rad-sync",
+ "radicle-common",
+ "radicle-terminal",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rad-patch"
 version = "0.1.0"
 dependencies = [
@@ -4971,6 +4987,7 @@ dependencies = [
  "rad-inspect",
  "rad-issue",
  "rad-ls",
+ "rad-merge",
  "rad-patch",
  "rad-path",
  "rad-pull",

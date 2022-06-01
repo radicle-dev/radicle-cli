@@ -62,6 +62,7 @@ rad-init = { path = "./init" }
 rad-self = { path = "./self" }
 rad-inspect = { path = "./inspect" }
 rad-issue = { path = "./issue" }
+rad-merge = { path = "./merge" }
 rad-patch = { path = "./patch" }
 rad-push = { path = "./push" }
 rad-pull = { path = "./pull" }

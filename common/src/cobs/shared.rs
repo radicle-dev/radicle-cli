@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use automerge::{Automerge, AutomergeError, ScalarValue, Value};
 use serde::{Deserialize, Serialize};
 
+use librad::collaborative_objects::ObjectId;
 use librad::git::storage::ReadOnly;
 use librad::git::Urn;
 use librad::PeerId;
@@ -22,6 +23,28 @@ pub enum ResolveError {
     NotFound { urn: Urn },
     #[error(transparent)]
     Identities(#[from] librad::git::identities::Error),
+}
+
+/// A generic COB identifier.
+#[derive(Debug)]
+pub enum CobIdentifier {
+    /// Regular, full patch id.
+    Full(ObjectId),
+    /// A prefix of a full id.
+    Prefix(String),
+}
+
+impl FromStr for CobIdentifier {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(id) = ObjectId::from_str(s) {
+            Ok(CobIdentifier::Full(id))
+        } else {
+            // TODO: Do some validation here.
+            Ok(CobIdentifier::Prefix(s.to_owned()))
+        }
+    }
 }
 
 /// A discussion thread.

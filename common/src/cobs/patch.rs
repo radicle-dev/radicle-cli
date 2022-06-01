@@ -213,6 +213,23 @@ impl<'a> Patches<'a> {
         }
     }
 
+    pub fn find(
+        &self,
+        project: &Urn,
+        predicate: impl Fn(&PatchId) -> bool,
+    ) -> Result<Vec<PatchId>, Error> {
+        let cobs = self
+            .store
+            .list(project, &TYPENAME)
+            .map_err(|e| Error::List(e.to_string()))?;
+
+        Ok(cobs
+            .into_iter()
+            .map(|c| *c.id())
+            .filter(|id| predicate(id))
+            .collect())
+    }
+
     pub fn all(&self, project: &Urn) -> Result<Vec<(PatchId, Patch)>, Error> {
         let cobs = self
             .store

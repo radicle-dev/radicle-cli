@@ -122,7 +122,7 @@ impl Args for Options {
                 Value(val) if op.is_some() => {
                     let val = val
                         .to_str()
-                        .ok_or_else(|| anyhow!("invalid operation name"))?;
+                        .ok_or_else(|| anyhow!("issue id specified is not UTF-8"))?;
 
                     id = Some(
                         IssueId::from_str(val)
