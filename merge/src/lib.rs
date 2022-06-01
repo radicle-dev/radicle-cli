@@ -3,10 +3,13 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 
+use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::shared::CobIdentifier;
 use radicle_common::{cobs, keys, person, profile, project};
 use radicle_terminal as term;
+
+use cobs::patch::RevisionId;
 
 pub const HELP: Help = Help {
     name: "merge",
@@ -22,13 +25,15 @@ Usage
 
 Options
 
-    --help   Print help
+    -r, --revision <number>   Revision number to merge, defaults to the latest
+        --help                Print help
 "#,
 };
 
 #[derive(Debug)]
 pub struct Options {
     pub id: CobIdentifier,
+    pub revision: Option<RevisionId>,
 }
 
 impl Args for Options {
@@ -37,11 +42,20 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut id: Option<CobIdentifier> = None;
+        let mut revision: Option<RevisionId> = None;
 
         if let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
+                }
+                Long("revision") | Short('r') => {
+                    let value = parser.value()?;
+                    let id =
+                        RevisionId::from_str(value.to_str().unwrap_or_default()).map_err(|_| {
+                            anyhow!("invalid revision number `{}`", value.to_string_lossy())
+                        })?;
+                    revision = Some(id);
                 }
                 Value(val) => {
                     let val = val
@@ -60,6 +74,7 @@ impl Args for Options {
         Ok((
             Options {
                 id: id.ok_or_else(|| anyhow!("a patch id to merge must be provided"))?,
+                revision,
             },
             vec![],
         ))
@@ -67,7 +82,7 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let (urn, _) = project::cwd()
+    let (urn, repo) = project::cwd()
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
 
     let profile = profile::default()?;
@@ -97,11 +112,26 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             }
         }
     };
-    let _patch = patches
+    let patch = patches
         .get(&urn, &id)?
         .ok_or_else(|| anyhow!("couldn't find patch {} locally", id))?;
+    let head = repo
+        .head()?
+        .target()
+        .ok_or_else(|| anyhow!("cannot merge into detatched head; aborting"))?;
+    let revision = options
+        .revision
+        .unwrap_or_else(|| patch.revisions.len() - 1);
+    let spinner = term::spinner(format!(
+        "Merging revision {} of {} into {} ({})...",
+        term::format::dim(format!("#{}", revision)),
+        term::format::tertiary(common::fmt::cob(&id)),
+        term::format::dim("HEAD"),
+        term::format::secondary(common::fmt::oid(&head))
+    ));
 
-    term::info!("Merging {}...", id);
+    patches.merge(&urn, &id, revision, head.into())?;
+    spinner.finish();
 
     Ok(())
 }
