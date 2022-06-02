@@ -148,8 +148,8 @@ pub async fn run(opts: Options) -> anyhow::Result<()> {
     let block = provider
         .get_block(block_number)
         .await?
-        .ok_or(anyhow!(Error::NoBlock))?;
-    let block_hash = block.hash.ok_or(anyhow!(Error::NoBlockHash))?;
+        .ok_or_else(|| anyhow!(Error::NoBlock))?;
+    let block_hash = block.hash.ok_or_else(|| anyhow!(Error::NoBlockHash))?;
     if let Some(keypath) = &opts.keystore {
         use colored::*;
 
