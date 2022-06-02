@@ -78,7 +78,7 @@ pub fn blank() {
     println!()
 }
 
-pub fn print(msg: &str) {
+pub fn print(msg: impl fmt::Display) {
     println!("{}", msg);
 }
 

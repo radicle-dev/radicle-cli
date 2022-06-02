@@ -1,5 +1,7 @@
 use std::ffi::OsString;
 
+use anyhow::anyhow;
+
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{keys, person, profile};
 use radicle_terminal as term;
@@ -11,21 +13,53 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad self [--help]
+    rad self [<option>...]
+
+Options
+
+    --name       Show name
+    --urn        Show URN
+    --peer       Show Peer ID
+    --profile    Show Profile ID
+    --help       Show help
 "#,
 };
 
-#[derive(Default, Eq, PartialEq)]
-pub struct Options {}
+#[derive(Debug)]
+enum Show {
+    Name,
+    Urn,
+    Peer,
+    Profile,
+    All,
+}
+
+#[derive(Debug)]
+pub struct Options {
+    show: Show,
+}
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
+        let mut show: Option<Show> = None;
 
         if let Some(arg) = parser.next()? {
             match arg {
+                Long("name") if show.is_none() => {
+                    show = Some(Show::Name);
+                }
+                Long("urn") if show.is_none() => {
+                    show = Some(Show::Urn);
+                }
+                Long("peer") if show.is_none() => {
+                    show = Some(Show::Peer);
+                }
+                Long("profile") if show.is_none() => {
+                    show = Some(Show::Profile);
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -33,17 +67,52 @@ impl Args for Options {
             }
         }
 
-        Ok((Options {}, vec![]))
+        Ok((
+            Options {
+                show: show.unwrap_or(Show::All),
+            },
+            vec![],
+        ))
     }
 }
 
-pub fn run(_options: Options) -> anyhow::Result<()> {
-    let mut table = term::Table::default();
-
+pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
+    let storage = profile::read_only(&profile)?;
+
+    match options.show {
+        Show::Name => {
+            if let Some(urn) = storage.config()?.user()? {
+                if let Some(person) = person::get(&storage, &urn)? {
+                    term::print(&person.subject().name.to_string());
+                }
+            }
+        }
+        Show::Profile => {
+            term::print(profile.id());
+        }
+        Show::Peer => {
+            term::print(storage.peer_id());
+        }
+        Show::Urn => {
+            term::print(
+                storage
+                    .config()?
+                    .user()?
+                    .ok_or_else(|| anyhow!("no user found"))?,
+            );
+        }
+        Show::All => all(&profile)?,
+    }
+
+    Ok(())
+}
+
+fn all(profile: &profile::Profile) -> anyhow::Result<()> {
     term::info!("Profile {}", term::format::secondary(profile.id()));
 
-    let storage = profile::read_only(&profile)?;
+    let mut table = term::Table::default();
+    let storage = profile::read_only(profile)?;
 
     if let Some(urn) = storage.config()?.user()? {
         if let Some(person) = person::get(&storage, &urn)? {
