@@ -7,6 +7,7 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use automerge::{Automerge, AutomergeError, ScalarValue, Value};
+use chrono::TimeZone;
 use serde::{Deserialize, Serialize};
 
 use librad::collaborative_objects::ObjectId;
@@ -264,6 +265,13 @@ impl Timestamp {
 
     pub fn as_secs(&self) -> u64 {
         self.seconds
+    }
+}
+
+impl fmt::Display for Timestamp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let time = chrono::Utc.timestamp(self.as_secs() as i64, 0);
+        write!(f, "{}", time.to_rfc2822())
     }
 }
 
