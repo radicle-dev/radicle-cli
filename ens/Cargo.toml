@@ -15,5 +15,4 @@ thiserror = "1.0"
 radicle-terminal = { path = "../terminal", features = ["ethereum"] }
 radicle-common = { path = "../common", features = ["ethereum"] }
 serde_json = "1"
-tokio = "1"
 url = { version = "2" }

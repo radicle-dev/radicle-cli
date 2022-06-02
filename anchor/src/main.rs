@@ -10,6 +10,7 @@ use coins_bip32::path::DerivationPath;
 
 use rad_anchor as anchor;
 use radicle_cli::logger;
+use radicle_common::tokio;
 
 use anchor::{Address, Urn};
 

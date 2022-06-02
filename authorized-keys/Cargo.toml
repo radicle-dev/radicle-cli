@@ -9,7 +9,6 @@ name = "rad-auth-keys"
 path = "bin/rad_auth_keys.rs"
 
 [dependencies]
-tokio = { version = "1.2", features = ["macros", "rt", "rt-multi-thread", "sync"] }
 async-trait = "0.1.51"
 git2 = "0.13.20"
 hex = "0.4.3"

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+radicle-common = { path = "../common" }
 anyhow = { version = "*" }
 log = { version = "0.4" }
 lexopt = { version = "0.2" }
@@ -11,7 +12,6 @@ radicle-cli = { path = "../" }
 serde_json = { version = "1" }
 serde = { version = "1.0", features = ["derive"] }
 ethers = { version = "0", features = ["ledger"] }
-tokio = { version = "1.10", features = ["rt", "macros"] }
 rpassword = { version = "5.0" }
 thiserror = { version = "*" }
 colored = { version = "1.9" }

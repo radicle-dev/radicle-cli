@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::{error::Error, rad_keys::RadKeys, KeyType, RadKeyring};
 
-#[tokio::test]
+#[radicle_common::tokio::test]
 async fn test_keyring() -> Result<(), Error> {
     let rk = RadKeys::try_from(PathBuf::from("./test/keys"))?;
 

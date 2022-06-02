@@ -13,7 +13,7 @@ incremental = false
 
 [features]
 default = ["ethereum"]
-ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "rad-reward", "ethers", "tokio", "futures"]
+ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "rad-reward", "ethers", "futures"]
 
 [package.metadata.deb]
 assets = [
@@ -89,7 +89,6 @@ rad-account = { path = "./account", optional = true }
 rad-ens = { path = "./ens", optional = true }
 rad-gov = { path = "./gov", optional = true }
 rad-reward = { path = "./reward", optional = true }
-tokio = { version = "1.10", features = ["rt"], optional = true }
 futures = { version = "0.3", optional = true }
 
 [dev-dependencies]
@@ -139,7 +138,7 @@ members = [
   "untrack",
   "gov",
   "edit",
-  "reward"
+  "reward",
 ]
 
 [patch.crates-io.link-crypto]

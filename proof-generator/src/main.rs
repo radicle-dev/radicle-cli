@@ -1,11 +1,13 @@
 use anyhow::anyhow;
 use coins_bip32::path::DerivationPath;
 use proof_generator as proof;
-use radicle_cli::logger;
 use std::env;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process;
+
+use radicle_cli::logger;
+use radicle_common::tokio;
 
 const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", "USAGE"));
 const NAME: &str = env!("CARGO_CRATE_NAME");

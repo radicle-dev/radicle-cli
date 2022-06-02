@@ -22,6 +22,8 @@ pub use lnk_identities as identities;
 pub use serde_json as json;
 pub use url::Url;
 
+pub use tokio;
+
 /// String formatting of various types.
 pub mod fmt {
     use librad::{collaborative_objects::ObjectId, PeerId};

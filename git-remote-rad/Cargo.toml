@@ -17,5 +17,4 @@ radicle-git-helpers = { version = "0" }
 radicle-common = { path = "../common" }
 librad = { version = "0" }
 url = { version = "*" }
-tokio = { version = "1.10", features = ["rt", "macros"] }
 anyhow = { version = "1.0" }

@@ -4609,7 +4609,6 @@ dependencies = [
  "lexopt",
  "radicle-common",
  "radicle-terminal",
- "tokio",
 ]
 
 [[package]]
@@ -4625,11 +4624,11 @@ dependencies = [
  "log",
  "multihash 0.14.0",
  "radicle-cli",
+ "radicle-common",
  "rpassword 5.0.1",
  "safe-transaction-client",
  "serde_json",
  "thiserror",
- "tokio",
 ]
 
 [[package]]
@@ -4701,7 +4700,6 @@ dependencies = [
  "radicle-terminal",
  "serde_json",
  "thiserror",
- "tokio",
  "url",
 ]
 
@@ -4718,7 +4716,6 @@ dependencies = [
  "regex",
  "serde_json",
  "thiserror",
- "tokio",
 ]
 
 [[package]]
@@ -4892,7 +4889,6 @@ dependencies = [
  "librad",
  "radicle-common",
  "radicle-terminal",
- "tokio",
 ]
 
 [[package]]
@@ -5002,7 +4998,6 @@ dependencies = [
  "radicle-common",
  "radicle-git-helpers",
  "radicle-terminal",
- "tokio",
  "url",
 ]
 
@@ -5035,6 +5030,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.2",
  "thiserror",
+ "tokio",
  "ureq",
  "url",
  "walletconnect",

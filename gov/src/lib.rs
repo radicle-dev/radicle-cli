@@ -125,7 +125,7 @@ impl Args for Options {
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
+    let rt = radicle_common::tokio::runtime::Runtime::new()?;
     let provider = ethereum::provider(options.provider)?;
     let signer_opts = options.signer;
     let (wallet, provider) = rt.block_on(term::ethereum::get_wallet(signer_opts, provider))?;

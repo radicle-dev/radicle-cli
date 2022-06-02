@@ -3,7 +3,7 @@ use radicle_terminal as term;
 
 fn main() {
     term::run_command::<Options, _>(HELP, "Command", move |opts| {
-        let rt = tokio::runtime::Runtime::new()?;
+        let rt = radicle_common::tokio::runtime::Runtime::new()?;
         rt.block_on(run(opts))
     });
 }

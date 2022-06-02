@@ -15,5 +15,4 @@ radicle-common = { path = "../common", features = ["ethereum"] }
 ethers = "0.6"
 thiserror = "1.0"
 serde_json = "1"
-tokio = "1"
 regex = "1.5"
