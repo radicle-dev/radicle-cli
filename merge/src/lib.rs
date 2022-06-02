@@ -25,6 +25,7 @@ Usage
 
 Options
 
+    -i, --interactive         Ask for confirmations
     -r, --revision <number>   Revision number to merge, defaults to the latest
         --help                Print help
 "#,
@@ -33,6 +34,7 @@ Options
 #[derive(Debug)]
 pub struct Options {
     pub id: CobIdentifier,
+    pub interactive: bool,
     pub revision: Option<RevisionId>,
 }
 
@@ -43,11 +45,15 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut id: Option<CobIdentifier> = None;
         let mut revision: Option<RevisionId> = None;
+        let mut interactive = false;
 
-        if let Some(arg) = parser.next()? {
+        while let Some(arg) = parser.next()? {
             match arg {
                 Long("help") => {
                     return Err(Error::Help.into());
+                }
+                Long("interactive") | Short('i') => {
+                    interactive = true;
                 }
                 Long("revision") | Short('r') => {
                     let value = parser.value()?;
@@ -74,6 +80,7 @@ impl Args for Options {
         Ok((
             Options {
                 id: id.ok_or_else(|| anyhow!("a patch id to merge must be provided"))?,
+                interactive,
                 revision,
             },
             vec![],
@@ -115,23 +122,29 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let patch = patches
         .get(&urn, &id)?
         .ok_or_else(|| anyhow!("couldn't find patch {} locally", id))?;
-    let head = repo
-        .head()?
+    let head = repo.head()?;
+    let branch = head.shorthand().unwrap_or("HEAD");
+    let head_oid = head
         .target()
         .ok_or_else(|| anyhow!("cannot merge into detatched head; aborting"))?;
     let revision = options
         .revision
         .unwrap_or_else(|| patch.revisions.len() - 1);
-    let spinner = term::spinner(format!(
+    term::info!(
         "Merging revision {} of {} into {} ({})...",
-        term::format::dim(format!("#{}", revision)),
+        term::format::dim(format!("R{}", revision)),
         term::format::tertiary(common::fmt::cob(&id)),
-        term::format::dim("HEAD"),
-        term::format::secondary(common::fmt::oid(&head))
-    ));
+        term::format::highlight(branch),
+        term::format::secondary(common::fmt::oid(&head_oid))
+    );
 
-    patches.merge(&urn, &id, revision, head.into())?;
-    spinner.finish();
+    if options.interactive && !term::confirm("Confirm?") {
+        anyhow::bail!("merge aborted by user");
+    }
+
+    // TODO: Don't allow merging the same revision twice?
+
+    patches.merge(&urn, &id, revision, head_oid.into())?;
 
     Ok(())
 }
