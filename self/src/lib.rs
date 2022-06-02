@@ -46,7 +46,7 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut show: Option<Show> = None;
 
-        if let Some(arg) = parser.next()? {
+        while let Some(arg) = parser.next()? {
             match arg {
                 Long("name") if show.is_none() => {
                     show = Some(Show::Name);

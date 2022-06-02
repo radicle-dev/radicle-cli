@@ -44,6 +44,7 @@ impl Args for Options {
                             .context("invalid value specified for '--peer'")?,
                     );
                 }
+                Long("sync") => sync = true,
                 Long("local") => local = Some(true),
                 Long("remote") => local = Some(false),
                 Long("no-upstream") => upstream = false,

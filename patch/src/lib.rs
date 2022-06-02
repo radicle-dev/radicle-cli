@@ -63,7 +63,7 @@ impl Args for Options {
         let mut verbose = false;
         let mut sync = true;
 
-        if let Some(arg) = parser.next()? {
+        while let Some(arg) = parser.next()? {
             match arg {
                 Long("list") | Short('l') => {
                     list = true;

@@ -43,10 +43,11 @@ Wallet options
     --keystore <file>            Keystore file containing encrypted private key (default: none)
 
 Commands
-    execute (short: e)  execute a proposal
-    propose (short: p)  make a governance proposal
-    queue   (short: q)  queue a proposal
-    vote    (short: v)  vote on a proposal
+
+    execute (e)  execute a proposal
+    propose (p)  make a governance proposal
+    queue   (q)  queue a proposal
+    vote    (v)  vote on a proposal
 "#,
 };
 
