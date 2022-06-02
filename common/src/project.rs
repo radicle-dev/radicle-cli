@@ -170,12 +170,10 @@ impl PeerInfo {
 
     pub fn get<S: AsRef<ReadOnly>>(peer_id: &PeerId, project: &Metadata, storage: &S) -> PeerInfo {
         let delegate = project.delegates.iter().any(|d| d.contains(peer_id));
+        let reference = project.peer_self(peer_id, storage);
 
-        if let Ok(delegate_urn) = Urn::try_from(Reference::rad_self(
-            Namespace::from(project.urn.clone()),
-            Some(*peer_id),
-        )) {
-            if let Ok(Some(identity)) = PeerIdentity::get(&delegate_urn, &storage) {
+        if let Ok(urn) = Urn::try_from(reference) {
+            if let Ok(Some(identity)) = PeerIdentity::get(&urn, &storage) {
                 return PeerInfo {
                     id: *peer_id,
                     person: Some(identity),
@@ -255,6 +253,14 @@ impl Metadata {
             Some(*remote),
             RefLike::from(self.default_branch.clone()),
         )
+    }
+
+    /// Get the reference to a project peer's `rad/self`.
+    pub fn peer_self<S>(&self, peer: &PeerId, storage: &S) -> Reference<RefLike>
+    where
+        S: AsRef<ReadOnly>,
+    {
+        peer_self(storage, self.urn.clone(), peer)
     }
 }
 
@@ -491,17 +497,28 @@ where
 }
 
 /// Get the personal identity associated with a project's peer.
-pub fn person<S>(storage: &S, urn: &Urn, peer: &PeerId) -> anyhow::Result<Option<Person>>
+pub fn person<S>(storage: &S, project: Urn, peer: &PeerId) -> anyhow::Result<Option<Person>>
 where
     S: AsRef<ReadOnly>,
 {
-    let urn = Urn::try_from(Reference::rad_self(Namespace::from(urn.clone()), *peer))
-        .map_err(|e| anyhow!(e))?;
-
+    let reference = peer_self(storage, project, peer);
+    let urn = Urn::try_from(reference).map_err(|e| anyhow!(e))?;
     let person = identities::person::get(&storage, &urn)
         .map_err(|_| identities::Error::NotFound(urn.clone()))?;
 
     Ok(person)
+}
+
+/// Get a reference to `rad/self` for a project's peer.
+pub fn peer_self<S>(storage: &S, project: Urn, peer: &PeerId) -> Reference<RefLike>
+where
+    S: AsRef<ReadOnly>,
+{
+    if storage.as_ref().peer_id() == peer {
+        Reference::rad_self(Namespace::from(project), None)
+    } else {
+        Reference::rad_self(Namespace::from(project), *peer)
+    }
 }
 
 /// Get the repository's "rad" remote.
@@ -605,7 +622,7 @@ impl<'a> SetupRemote<'a> {
         let urn = &self.project.urn;
 
         // TODO: Handle conflicts in remote name.
-        if let Some(person) = self::person(storage, urn, peer)? {
+        if let Some(person) = self::person(storage, urn.clone(), peer)? {
             let name = format!("{}/{}", PEER_BRANCH_PREFIX, person.subject().name);
             let mut remote = self::remote(urn, peer, &name)?;
 

@@ -174,7 +174,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             } else {
                 // Delete by peer name.
                 for (name, peer) in git::remotes(&repo)? {
-                    if let Some(person) = project::person(&storage, &urn, &peer)? {
+                    if let Some(person) = project::person(&storage, urn.clone(), &peer)? {
                         if person.subject().name.to_string() == remote {
                             repo.remote_delete(&name)?;
                             term::success!(
@@ -205,7 +205,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                     String::new()
                 };
 
-                if let Some(person) = project::person(&storage, &urn, &peer)? {
+                if let Some(person) = project::person(&storage, urn.clone(), &peer)? {
                     table.push([
                         term::format::bold(person.subject().name.to_string()),
                         term::format::tertiary(peer),

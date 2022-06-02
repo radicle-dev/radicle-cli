@@ -139,7 +139,7 @@ pub fn track(
                 return Err(e);
             }
 
-            if let Ok(Some(person)) = project::person(&storage, urn, &peer) {
+            if let Ok(Some(person)) = project::person(&storage, urn.clone(), &peer) {
                 spinner.message(format!(
                     "Syncing peer identity {} from {}...",
                     term::format::tertiary(person.urn()),
