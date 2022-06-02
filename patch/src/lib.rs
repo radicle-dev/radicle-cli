@@ -117,37 +117,45 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 fn list(storage: &Storage, profile: &Profile, project: &project::Metadata) -> anyhow::Result<()> {
     let whoami = person::local(storage)?;
     let patches = cobs::patch::Patches::new(whoami.clone(), profile.paths(), storage)?;
-    let mut all = patches.all(&project.urn)?;
+    let proposed = patches.proposed(&project.urn)?;
 
-    term::print(&term::format::badge_positive(" OPEN "));
+    // Patches the user authored.
+    let mut own = Vec::new();
+    // Patches other users authored.
+    let mut other = Vec::new();
+
+    for (id, patch) in proposed {
+        if *patch.author.urn() == whoami.urn() {
+            own.push((id, patch));
+        } else {
+            other.push((id, patch));
+        }
+    }
+
+    term::print(&term::format::badge_positive("YOU PROPOSED"));
     term::blank();
 
-    let mut open: Vec<_> = all.iter_mut().filter(|(_, p)| p.is_proposed()).collect();
-    if open.is_empty() {
+    if own.is_empty() {
         term::print(&term::format::italic("Nothing to show."));
     } else {
-        let mut table = term::Table::default();
-        for (id, patch) in &mut open {
+        for (id, patch) in &mut own {
             patch.author.resolve(storage).ok();
-            print(&whoami, id, patch, &mut table)?;
+            print(&whoami, id, patch, project, storage)?;
         }
-        table.render();
     }
     term::blank();
-    term::print(&term::format::badge_negative(" CLOSED "));
+    term::print(&term::format::badge_secondary("OTHERS PROPOSED"));
     term::blank();
 
-    let mut closed: Vec<_> = all.iter_mut().filter(|(_, p)| p.is_archived()).collect();
-    if closed.is_empty() {
+    if other.is_empty() {
         term::print(&term::format::italic("Nothing to show."));
     } else {
-        let mut table = term::Table::default();
-        for (id, patch) in &mut closed {
+        for (id, patch) in &mut other {
             patch.author.resolve(storage).ok();
-            print(&whoami, id, patch, &mut table)?;
+            print(&whoami, id, patch, project, storage)?;
         }
-        table.render();
     }
+
     term::blank();
 
     Ok(())
@@ -259,7 +267,13 @@ fn create(
     term::blank();
     term::print(title_pretty);
     term::blank();
-    term::markdown(&description);
+
+    if description.is_empty() {
+        term::print(term::format::italic("No description provided."));
+    } else {
+        term::markdown(&description);
+    }
+
     term::blank();
     term::print(&term::format::dim(format!(
         "╰{}",
@@ -305,7 +319,7 @@ fn edit_message(message: &str) -> anyhow::Result<(String, String)> {
         .split_once("\n\n")
         .ok_or(anyhow!("invalid title or description"))?;
     let (title, description) = (title.trim(), description.trim());
-    let description = description.replace(PATCH_MSG, ""); // Delete help message.
+    let description = description.replace(PATCH_MSG.trim(), ""); // Delete help message.
 
     Ok((title.to_owned(), description))
 }
@@ -315,21 +329,48 @@ pub fn print(
     whoami: &LocalIdentity,
     patch_id: &cobs::patch::PatchId,
     patch: &cobs::patch::Patch,
-    table: &mut term::Table<2>,
+    project: &project::Metadata,
+    storage: &Storage,
 ) -> anyhow::Result<()> {
+    let revision = patch.revisions.last();
+    let revision_pretty = term::format::dim(format!("R{}", revision.version));
     let you = patch.author.urn() == &whoami.urn();
-    let mut author_info = vec![term::format::italic(format!(
-        "└── {} opened by {}",
+    let prefix = "└── ";
+    let mut author_info = vec![format!(
+        "{}{} opened by {} {}",
+        prefix,
         term::format::secondary(common::fmt::cob(patch_id)),
-        term::format::tertiary(patch.author.name())
-    ))];
+        term::format::tertiary(patch.author.name()),
+        term::format::dim(patch.timestamp)
+    )];
 
     if you {
         author_info.push(term::format::badge_secondary("you"));
     }
 
-    table.push([term::format::bold(&patch.title), "".to_owned()]);
-    table.push([author_info.join(" "), String::new()]);
+    term::info!("{} {}", term::format::bold(&patch.title), revision_pretty);
+    term::info!("{}", author_info.join(" "));
+
+    for merge in &revision.merges {
+        let peer = project::PeerInfo::get(&merge.peer, project, storage);
+        let mut badges = Vec::new();
+
+        if peer.delegate {
+            badges.push(term::format::badge_secondary("delegate"));
+        }
+        if peer.id == *storage.peer_id() {
+            badges.push(term::format::badge_primary("you"));
+        }
+
+        term::info!(
+            "{}{} by {} {} {}",
+            " ".repeat(term::text_width(prefix)),
+            term::format::secondary(term::format::dim("✓ merged")),
+            term::format::tertiary(peer.name()),
+            badges.join(" "),
+            term::format::dim(merge.timestamp)
+        );
+    }
 
     Ok(())
 }
