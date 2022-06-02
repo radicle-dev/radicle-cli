@@ -1,11 +1,13 @@
 #![allow(clippy::or_fun_call)]
 use std::ffi::OsString;
+use std::str::FromStr;
 
 use anyhow::Context as _;
 use radicle_common::signer::ToSigner;
 use zeroize::Zeroizing;
 
 use librad::crypto::keystore::pinentry::SecUtf8;
+use librad::profile::ProfileId;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{git, keys, person, profile};
@@ -18,7 +20,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad auth [--init | --active] [<options>...]
+    rad auth [--init | --active] [<options>...] [<profile>]
 
     If `--init` is used, name and passphrase may be given via the `--name`
     and `--passphrase` option. Using these disables the respective input prompt.
@@ -39,6 +41,7 @@ pub struct Options {
     pub active: bool,
     pub name: Option<String>,
     pub passphrase: Option<String>,
+    pub profile: Option<ProfileId>,
 }
 
 impl Args for Options {
@@ -49,6 +52,7 @@ impl Args for Options {
         let mut active = false;
         let mut name = None;
         let mut passphrase = None;
+        let mut profile = None;
         let mut parser = lexopt::Parser::from_args(args);
 
         while let Some(arg) = parser.next()? {
@@ -87,6 +91,14 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
+                Value(val) => {
+                    let string = val.to_str().ok_or_else(|| {
+                        anyhow::anyhow!("invalid UTF-8 string specified for profile")
+                    })?;
+                    let id = ProfileId::from_str(string).context("invalid profile id specified")?;
+
+                    profile = Some(id);
+                }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
@@ -97,6 +109,7 @@ impl Args for Options {
                 active,
                 name,
                 passphrase,
+                profile,
             },
             vec![],
         ))
@@ -110,6 +123,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
 
     if options.init || profiles.is_empty() {
+        if options.profile.is_some() {
+            anyhow::bail!("you may not specify a profile id when initializing a new identity");
+        }
         init(options)
     } else {
         authenticate(&profiles, options)
@@ -203,14 +219,19 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
         }
     };
 
-    if !options.active {
+    if !options.active && options.profile.is_none() {
         term::info!(
             "Your active profile is {}",
             term::format::highlight(&profile.id().to_string()),
         );
     }
 
-    let selection = if profiles.len() > 1 && !options.active {
+    let selection = if let Some(id) = options.profile {
+        profiles
+            .iter()
+            .find(|p| p.id() == &id)
+            .ok_or_else(|| anyhow::anyhow!("profile '{}' not found", id))?
+    } else if profiles.len() > 1 && !options.active {
         if let Some(p) = term::profile_select(profiles, &profile) {
             p
         } else {
@@ -291,6 +312,7 @@ mod tests {
             init: true,
             name: Some(name.to_owned()),
             passphrase: Some(test::USER_PASS.to_owned()),
+            profile: None,
         }
     }
 
