@@ -122,7 +122,7 @@ fn list(storage: &Storage, profile: &Profile, project: &project::Metadata) -> an
     term::print(&term::format::badge_positive(" OPEN "));
     term::blank();
 
-    let mut open: Vec<_> = all.iter_mut().filter(|(_, p)| p.is_open()).collect();
+    let mut open: Vec<_> = all.iter_mut().filter(|(_, p)| p.is_proposed()).collect();
     if open.is_empty() {
         term::print(&term::format::italic("Nothing to show."));
     } else {
@@ -137,7 +137,7 @@ fn list(storage: &Storage, profile: &Profile, project: &project::Metadata) -> an
     term::print(&term::format::badge_negative(" CLOSED "));
     term::blank();
 
-    let mut closed: Vec<_> = all.iter_mut().filter(|(_, p)| p.is_closed()).collect();
+    let mut closed: Vec<_> = all.iter_mut().filter(|(_, p)| p.is_archived()).collect();
     if closed.is_empty() {
         term::print(&term::format::italic("Nothing to show."));
     } else {

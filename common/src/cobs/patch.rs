@@ -71,12 +71,12 @@ pub struct Patch {
 }
 
 impl Patch {
-    pub fn is_open(&self) -> bool {
-        matches!(self.state, State::Open)
+    pub fn is_proposed(&self) -> bool {
+        matches!(self.state, State::Proposed)
     }
 
-    pub fn is_closed(&self) -> bool {
-        matches!(self.state, State::Closed)
+    pub fn is_archived(&self) -> bool {
+        matches!(self.state, State::Archived)
     }
 
     pub fn description(&self) -> &str {
@@ -304,23 +304,28 @@ impl<'a> Patches<'a> {
 
         Ok(patches)
     }
+
+    pub fn proposed(&self, project: &Urn) -> Result<impl Iterator<Item = (PatchId, Patch)>, Error> {
+        let all = self.all(project)?;
+
+        Ok(all.into_iter().filter(|(_, p)| p.is_proposed()))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum State {
-    Open,
     Draft,
-    Closed,
-    // TODO: Do we need a "rejected", or is it enough to have "closed" with a rejected review?
+    Proposed,
+    Archived,
 }
 
 impl From<State> for ScalarValue {
     fn from(state: State) -> Self {
         match state {
-            State::Open => ScalarValue::from("open"),
+            State::Proposed => ScalarValue::from("proposed"),
             State::Draft => ScalarValue::from("draft"),
-            State::Closed => ScalarValue::from("closed"),
+            State::Archived => ScalarValue::from("archived"),
         }
     }
 }
@@ -332,9 +337,9 @@ impl<'a> TryFrom<Value<'a>> for State {
         let state = value.to_str().ok_or("value isn't a string")?;
 
         match state {
-            "open" => Ok(Self::Open),
+            "proposed" => Ok(Self::Proposed),
             "draft" => Ok(Self::Draft),
-            "closed" => Ok(Self::Closed),
+            "archived" => Ok(Self::Archived),
             _ => Err("invalid state name"),
         }
     }
@@ -577,7 +582,7 @@ mod events {
 
                     tx.put(&patch_id, "title", title)?;
                     tx.put(&patch_id, "author", author.to_string())?;
-                    tx.put(&patch_id, "state", State::Open)?;
+                    tx.put(&patch_id, "state", State::Proposed)?;
                     tx.put(&patch_id, "target", target.to_string())?;
                     tx.put(&patch_id, "timestamp", timestamp)?;
 
@@ -679,7 +684,7 @@ mod test {
 
         assert_eq!(&patch.title, "My first patch");
         assert_eq!(patch.author.urn(), &author);
-        assert_eq!(patch.state, State::Open);
+        assert_eq!(patch.state, State::Proposed);
         assert!(patch.timestamp >= timestamp);
 
         let revision = patch.revisions.head;
