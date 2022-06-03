@@ -17,6 +17,7 @@ use librad::profile::Profile;
 use librad::{crypto::BoxedSigner, PeerId};
 
 pub use git2::Oid;
+pub use git2::Reference;
 pub use git2::Repository;
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;

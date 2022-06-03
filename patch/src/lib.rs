@@ -106,7 +106,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
     if options.list {
-        list(&storage, &profile, &project)?;
+        list(&storage, &repo, &profile, &project)?;
     } else {
         create(&storage, &profile, &project, &repo, &options)?;
     }
@@ -114,11 +114,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn list(storage: &Storage, profile: &Profile, project: &project::Metadata) -> anyhow::Result<()> {
+fn list(
+    storage: &Storage,
+    repo: &git::Repository,
+    profile: &Profile,
+    project: &project::Metadata,
+) -> anyhow::Result<()> {
     let whoami = person::local(storage)?;
     let patches = cobs::patch::Patches::new(whoami.clone(), profile.paths(), storage)?;
     let proposed = patches.proposed(&project.urn)?;
 
+    // Our `HEAD`.
+    let head = repo.head()?;
     // Patches the user authored.
     let mut own = Vec::new();
     // Patches other users authored.
@@ -140,7 +147,7 @@ fn list(storage: &Storage, profile: &Profile, project: &project::Metadata) -> an
     } else {
         for (id, patch) in &mut own {
             patch.author.resolve(storage).ok();
-            print(&whoami, id, patch, project, storage)?;
+            print(&whoami, id, patch, project, &head, repo, storage)?;
         }
     }
     term::blank();
@@ -152,7 +159,7 @@ fn list(storage: &Storage, profile: &Profile, project: &project::Metadata) -> an
     } else {
         for (id, patch) in &mut other {
             patch.author.resolve(storage).ok();
-            print(&whoami, id, patch, project, storage)?;
+            print(&whoami, id, patch, project, &head, repo, storage)?;
         }
     }
 
@@ -330,9 +337,12 @@ pub fn print(
     patch_id: &cobs::patch::PatchId,
     patch: &cobs::patch::Patch,
     project: &project::Metadata,
+    head: &git::Reference,
+    repo: &git::Repository,
     storage: &Storage,
 ) -> anyhow::Result<()> {
     let revision = patch.revisions.last();
+    let revision_oid = revision.tag;
     let revision_pretty = term::format::dim(format!("R{}", revision.version));
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";
@@ -348,7 +358,23 @@ pub fn print(
         author_info.push(term::format::badge_secondary("you"));
     }
 
-    term::info!("{} {}", term::format::bold(&patch.title), revision_pretty);
+    let diff = if let Some(head_oid) = head.target() {
+        let (a, b) = repo.graph_ahead_behind(revision_oid.into(), head_oid)?;
+        let ahead = term::format::positive(a);
+        let behind = term::format::negative(b);
+
+        format!("ahead {}, behind {}", ahead, behind)
+    } else {
+        String::default()
+    };
+
+    term::info!(
+        "{} {} {} {}",
+        term::format::bold(&patch.title),
+        revision_pretty,
+        term::format::secondary(common::fmt::oid(&revision_oid)),
+        diff
+    );
     term::info!("{}", author_info.join(" "));
 
     for merge in &revision.merges {
