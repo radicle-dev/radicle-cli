@@ -16,6 +16,8 @@ pub mod test;
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
 
+pub use args::Error;
+pub use librad::git::Urn;
 pub use lnk_identities as identities;
 pub use serde_json as json;
 pub use url::Url;

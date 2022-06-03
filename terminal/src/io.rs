@@ -109,7 +109,7 @@ pub fn indented(msg: &str) {
     println!("{}{}", TAB, msg);
 }
 
-pub fn subcommand(msg: &str) {
+pub fn subcommand(msg: impl fmt::Display) {
     println!("{} {}", style("$").dim(), style(msg).dim());
 }
 
@@ -117,7 +117,7 @@ pub fn warning(warning: &str) {
     eprintln!("{} {}", style("**").yellow(), style(warning).yellow());
 }
 
-pub fn error(error: &str) {
+pub fn error(error: impl fmt::Display) {
     eprintln!("{} {}", style("==").red(), style(error).red());
 }
 

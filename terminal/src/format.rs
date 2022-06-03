@@ -1,4 +1,4 @@
-use dialoguer::console::style;
+pub use dialoguer::console::style;
 
 pub fn negative<D: std::fmt::Display>(msg: D) -> String {
     style(msg).red().bright().to_string()

@@ -1,5 +1,6 @@
 //! Patch-related functions and types.
 use std::convert::TryInto;
+use std::fmt;
 
 use librad::git::refs::Refs;
 use librad::git::storage::{ReadOnly, ReadOnlyStorage};
@@ -21,6 +22,28 @@ pub enum Error {
     Git(#[from] git2::Error),
     #[error("storage: {0}")]
     Storage(#[from] librad::git::storage::Error),
+}
+
+/// A patch merge style.
+#[derive(Debug, PartialEq, Eq)]
+pub enum MergeStyle {
+    /// A merge commit is created.
+    Commit,
+    /// The branch is fast-forwarded to the patch's commit.
+    FastForward,
+}
+
+impl fmt::Display for MergeStyle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Commit => {
+                write!(f, "merge-commit")
+            }
+            Self::FastForward => {
+                write!(f, "fast-forward")
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Eq)]

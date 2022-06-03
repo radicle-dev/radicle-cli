@@ -16,9 +16,10 @@ use librad::git::types::remote::Remote;
 use librad::profile::Profile;
 use librad::{crypto::BoxedSigner, PeerId};
 
-pub use git2::Oid;
-pub use git2::Reference;
-pub use git2::Repository;
+pub use git2::{
+    build::CheckoutBuilder, AnnotatedCommit, Commit, ErrorCode, MergeAnalysis, MergeOptions, Oid,
+    Reference, Repository, Signature,
+};
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;
 
