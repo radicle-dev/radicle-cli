@@ -12,13 +12,26 @@ set -e
 #
 # Switching between the maintainer and contributor can be done with `rad auth`
 # and then changing into the `contributor/acme` or `maintainer/acme` directories.
+#
+# Example, let's say we run our seed using `/tmp/seed` as the radicle home
+# (`RAD_HOME`). First we would create an identity for the seed:
+#
+#   RAD_HOME=/tmp/seed rad auth --init --name seed --passphrase seed
+#
+# Then we would run the services:
+#
+#   radicle-git-server --root /tmp/seed --passphrase seed --git-receive-pack --allow-unauthorized-keys
+#   radicle-http-api   --root /tmp/seed --passphrase seed
+#
+# Then we would run this script with a different `RAD_HOME`.
+#
 export RAD_HOME="$(pwd)/tmp/root"
 
 rad() {
   cmd=$1; shift
 
   echo                   >&2
-  echo "─── rad $cmd $@" >&2
+  echo "▒ rad $cmd $@" >&2
   cargo run -q --bin rad-$cmd -- "$@"
 }
 
