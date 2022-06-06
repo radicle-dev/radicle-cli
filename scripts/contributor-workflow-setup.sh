@@ -1,0 +1,120 @@
+#!/bin/sh
+set -e
+
+# NOTE: When using this script for testing, it's sometimes useful to
+# drop into the shell and run some additional commands. For this to work,
+# make sure `RAD_HOME` is set to the same value as bellow, otherwise things
+# won't work. Also make sure that you are using the *debug* builds, since
+# the crypto used for generating keys is different in the release build.
+#
+# You'll also want to run a local seed node (HTTP + Git) that uses a *different*
+# radicle home than this one.
+#
+# Switching between the maintainer and contributor can be done with `rad auth`
+# and then changing into the `contributor/acme` or `maintainer/acme` directories.
+export RAD_HOME="$(pwd)/tmp/root"
+
+rad() {
+  cmd=$1; shift
+
+  echo                   >&2
+  echo "─── rad $cmd $@" >&2
+  cargo run -q --bin rad-$cmd -- "$@"
+}
+
+banner() {
+  echo
+  echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ $1 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
+  echo
+}
+
+BASE=$(pwd)
+
+rm -rf tmp/
+mkdir -p tmp/root
+
+###################
+banner "MAINTAINER"
+###################
+
+rad auth --init --name cloudhead --passphrase cloudhead
+MAINTAINER=$(cargo run -q --bin rad-self -- --profile)
+
+# Create git repo
+mkdir -p $BASE/tmp/maintainer/acme
+cd $BASE/tmp/maintainer/acme
+echo "ACME" > README
+git init
+git add .
+git commit -m "Initial commit" --no-gpg-sign
+
+# Initialize
+rad init --name acme --description 'Acme Monorepo' --no-confirm
+rad sync --seed '127.0.0.1:8778' -v
+
+PROJECT=$(rad inspect)
+
+####################
+banner "CONTRIBUTOR"
+####################
+
+mkdir -p $BASE/tmp/contributor
+cd $BASE/tmp/contributor
+
+rad auth --init --name scooby --passphrase scooby
+rad clone $PROJECT --seed '127.0.0.1:8778' --no-confirm
+CONTRIBUTOR=$(rad self --profile)
+CONTRIBUTOR_PEER=$(rad self --peer)
+
+# Add commit
+cd acme
+echo >> README
+echo "Acme is such a great company!" >> README
+git add .
+git commit -m "Update README" --no-gpg-sign
+
+# Push commit to monorepo
+rad push
+# Create patch
+rad patch --sync
+# Sync identity
+rad sync --self
+
+###################
+banner "MAINTAINER"
+###################
+
+cd $BASE/tmp/maintainer/acme
+
+rad auth $MAINTAINER
+rad track $CONTRIBUTOR_PEER --sync
+rad patch --list
+
+rm .gitignore
+rad merge hnrk # Will match the only patch
+rad push
+
+###################
+banner "CONTRIBUTOR"
+###################
+
+cd $BASE/tmp/contributor/acme
+
+rad auth $CONTRIBUTOR
+
+# Checkout the branch of the maintainer
+git log
+git checkout peers/cloudhead/master
+# Pull the changes (the patch merge)
+rad pull
+
+# Compare and test that the branches are the same
+MINE=$(git rev-parse master)
+THEIRS=$(git rev-parse peers/cloudhead/master)
+
+[[ $MINE = $THEIRS ]] || {
+  echo "fatal: commit hashes do not match: $MINE vs. $THEIRS" >&2
+  exit 1
+}
+
+echo "█ ok"
