@@ -135,6 +135,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
     };
 
+    if repo.head_detached()? {
+        anyhow::bail!("HEAD is in a detached state; can't merge");
+    }
+
     //
     // Get patch information
     //
@@ -144,7 +148,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     patch.author.resolve(&storage).ok();
 
     let head = repo.head()?;
-    let branch = head.shorthand().unwrap_or("HEAD");
+    let branch = head
+        .shorthand()
+        .ok_or_else(|| anyhow!("invalid head branch"))?;
     let head_oid = head
         .target()
         .ok_or_else(|| anyhow!("cannot merge into detatched head; aborting"))?;
