@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 use std::str::FromStr;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{git, profile, project};
+use radicle_common::{git, profile};
 use radicle_terminal as term;
 
 use librad::git::identities::any;
@@ -123,7 +123,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         let repo =
             git::Repository::open(options.path.unwrap_or_else(|| Path::new(".").to_path_buf()))?;
 
-        project::rad_remote(&repo)?.url.urn
+        git::rad_remote(&repo)?.url.urn
     };
 
     if options.refs {

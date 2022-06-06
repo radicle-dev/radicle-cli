@@ -1,4 +1,5 @@
 #![allow(clippy::or_fun_call)]
+use std::convert::TryFrom;
 use std::env;
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -27,6 +28,7 @@ Options
     --name               Name of the project
     --description        Description of the project
     --default-branch     The default branch of the project
+    --set-upstream, -u   Setup the upstream of the default branch
     --no-confirm         Don't ask for confirmation during setup
     --help               Print help
 "#,
@@ -39,6 +41,7 @@ pub struct Options {
     pub description: Option<String>,
     pub branch: Option<String>,
     pub interactive: Interactive,
+    pub set_upstream: bool,
 }
 
 impl Args for Options {
@@ -52,6 +55,7 @@ impl Args for Options {
         let mut description = None;
         let mut branch = None;
         let mut interactive = Interactive::Yes;
+        let mut set_upstream = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -87,6 +91,9 @@ impl Args for Options {
 
                     branch = Some(value);
                 }
+                Long("set-upstream") | Short('u') => {
+                    set_upstream = true;
+                }
                 Long("no-confirm") => {
                     interactive = Interactive::No;
                 }
@@ -107,6 +114,7 @@ impl Args for Options {
                 description,
                 branch,
                 interactive,
+                set_upstream,
             },
             vec![],
         ))
@@ -140,7 +148,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     ));
 
     let repo = git::Repository::open(path)?;
-    if let Ok(remote) = project::rad_remote(&repo) {
+    if let Ok(remote) = git::rad_remote(&repo) {
         bail!(
             "repository is already initialized with remote {}",
             remote.url
@@ -191,6 +199,14 @@ pub fn init(options: Options) -> anyhow::Result<()> {
             if interactive.no() {
                 term::blob(json::to_string_pretty(&proj.payload())?);
                 term::blank();
+            }
+
+            if options.set_upstream || git::branch_remote(&repo, &branch).is_err() {
+                let branch = git::RefLike::try_from(branch)?;
+                let branch = git::OneLevel::from(branch);
+
+                // Setup eg. `master` -> `rad/master`
+                git::set_upstream(&repo, &git::rad_remote(&repo)?, branch)?;
             }
 
             // Setup radicle signing key.

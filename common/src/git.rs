@@ -11,9 +11,8 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::git::local::url::LocalUrl;
-use librad::git::types::remote::Remote;
-
 use librad::profile::Profile;
+use librad::reflike;
 use librad::{crypto::BoxedSigner, PeerId};
 
 pub use git2::{
@@ -22,6 +21,9 @@ pub use git2::{
 };
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;
+pub use librad::git::types::remote::Remote;
+pub use librad::git_ext::{OneLevel, RefLike};
+pub use lnk_identities::git::set_upstream;
 
 use crate::keys;
 
@@ -250,9 +252,20 @@ pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>>
     Ok(remotes)
 }
 
-/// Set the upstream for the given remote and branch.
+/// Get the repository's "rad" remote.
+pub fn rad_remote(repo: &Repository) -> anyhow::Result<Remote<LocalUrl>> {
+    match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
+        Ok(Some(remote)) => Ok(remote),
+        Ok(None) => Err(anyhow!(
+            "could not find radicle remote in git config. Did you forget to run `rad init`?"
+        )),
+        Err(err) => Err(err).context("could not read git remote configuration"),
+    }
+}
+
+/// Setup an upstream tracking branch for the given remote and branch.
 /// Creates the tracking branch if it does not exist.
-pub fn set_upstream(repo: &Path, remote: &str, branch: &str) -> anyhow::Result<String> {
+pub fn set_tracking(repo: &Path, remote: &str, branch: &str) -> anyhow::Result<String> {
     let branch_name = format!("{}/{}", remote, branch);
 
     git(
@@ -265,6 +278,14 @@ pub fn set_upstream(repo: &Path, remote: &str, branch: &str) -> anyhow::Result<S
     )?;
 
     Ok(branch_name)
+}
+
+/// Get the name of the remote of the given branch, if any.
+pub fn branch_remote(repo: &Repository, branch: &str) -> anyhow::Result<String> {
+    let cfg = repo.config()?;
+    let remote = cfg.get_string(&format!("branch.{}.remote", branch))?;
+
+    Ok(remote)
 }
 
 /// Call `git pull`, optionally with `--force`.

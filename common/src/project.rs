@@ -6,7 +6,7 @@ use std::iter;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Result};
 use either::Either;
 use git2::Repository;
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,6 @@ use librad::identities::Person;
 use librad::identities::SomeIdentity;
 use librad::paths::Paths;
 use librad::profile::Profile;
-use librad::reflike;
 use librad::PeerId;
 
 use lnk_identities;
@@ -429,7 +428,7 @@ pub fn list_rad_remote_heads(
     repo: &git2::Repository,
     settings: transport::Settings,
 ) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
-    let mut remote = self::rad_remote(repo)?;
+    let mut remote = git::rad_remote(repo)?;
     let mut remotes = HashMap::new();
     let heads = remote.remote_heads(settings, repo)?;
 
@@ -521,17 +520,6 @@ where
     }
 }
 
-/// Get the repository's "rad" remote.
-pub fn rad_remote(repo: &Repository) -> anyhow::Result<Remote<LocalUrl>> {
-    match Remote::<LocalUrl>::find(repo, reflike!("rad")) {
-        Ok(Some(remote)) => Ok(remote),
-        Ok(None) => Err(anyhow!(
-            "could not find radicle remote in git config. Did you forget to run `rad init`?"
-        )),
-        Err(err) => Err(err).context("could not read git remote configuration"),
-    }
-}
-
 /// List project seed heads.
 pub fn list_seed_heads(
     repo: &git::Repository,
@@ -574,7 +562,7 @@ pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, 
 /// Get the project URN and repository of the current working directory.
 pub fn cwd() -> anyhow::Result<(Urn, Repository)> {
     let repo = git::repository()?;
-    let urn = self::rad_remote(&repo)?.url.urn;
+    let urn = git::rad_remote(&repo)?.url.urn;
 
     Ok((urn, repo))
 }
@@ -636,7 +624,7 @@ impl<'a> SetupRemote<'a> {
             if self.upstream {
                 // TODO: If this fails because the branch already exists, suggest how to specify a
                 // different branch name or prefix.
-                let branch = git::set_upstream(repo.path(), &name, &self.project.default_branch)?;
+                let branch = git::set_tracking(repo.path(), &name, &self.project.default_branch)?;
 
                 return Ok(Some(branch));
             }
