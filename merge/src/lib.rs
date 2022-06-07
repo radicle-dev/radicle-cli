@@ -303,7 +303,8 @@ fn merge_commit(
         merge_msg.push_str("\n\n");
     }
     merge_msg.push_str(&format!("Rad-Patch: {}\n", patch_id));
-    merge_msg.push_str(&format!("Rad-Author: {}\n", patch.author.urn()));
+    merge_msg.push_str(&format!("Rad-Author: {}\n", patch.author.urn().encode_id()));
+    merge_msg.push_str(&format!("Rad-Peer: {}\n", patch.peer.default_encoding()));
     merge_msg.push_str(&format!("Rad-Committer: {}\n\n", whoami));
     merge_msg.push_str(MERGE_HELP_MSG.join("\n").as_str());
 

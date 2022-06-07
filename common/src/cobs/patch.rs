@@ -55,6 +55,8 @@ pub enum Error {
 pub struct Patch {
     /// Author of the patch.
     pub author: Author, // TODO: Should this be plural?
+    /// Peer who authored the patch.
+    pub peer: PeerId,
     /// Title of the patch.
     pub title: String,
     /// Current state of the patch.
@@ -91,6 +93,7 @@ impl TryFrom<Automerge> for Patch {
         let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "patch")?.unwrap();
         let (title, _) = doc.get(&obj_id, "title")?.unwrap();
         let (author, _) = doc.get(&obj_id, "author")?.unwrap();
+        let (peer, _) = doc.get(&obj_id, "peer")?.unwrap();
         let (state, _) = doc.get(&obj_id, "state")?.unwrap();
         let (target, _) = doc.get(&obj_id, "target")?.unwrap();
         let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
@@ -114,6 +117,7 @@ impl TryFrom<Automerge> for Patch {
         }
 
         let author = Author::from_value(author)?;
+        let peer = PeerId::from_value(peer)?;
         let state = State::try_from(state).unwrap();
         let revisions = NonEmpty::from_vec(revisions).unwrap();
         let target = git::OneLevel::from_value(target)?;
@@ -121,6 +125,7 @@ impl TryFrom<Automerge> for Patch {
 
         Ok(Self {
             author,
+            peer,
             title: title.into_string().unwrap(),
             state,
             target,
@@ -582,6 +587,7 @@ mod events {
 
                     tx.put(&patch_id, "title", title)?;
                     tx.put(&patch_id, "author", author.to_string())?;
+                    tx.put(&patch_id, "peer", peer.to_string())?;
                     tx.put(&patch_id, "state", State::Proposed)?;
                     tx.put(&patch_id, "target", target.to_string())?;
                     tx.put(&patch_id, "timestamp", timestamp)?;
@@ -684,6 +690,7 @@ mod test {
 
         assert_eq!(&patch.title, "My first patch");
         assert_eq!(patch.author.urn(), &author);
+        assert_eq!(&patch.peer, storage.peer_id());
         assert_eq!(patch.state, State::Proposed);
         assert!(patch.timestamp >= timestamp);
 
