@@ -1,6 +1,7 @@
 //! Ethereum-related functionality.
 pub mod erc_20;
 pub mod governance;
+pub mod primitives;
 pub mod resolver;
 pub mod superseeder;
 

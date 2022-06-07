@@ -16,6 +16,11 @@ pub mod test;
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
 
+#[cfg(test)]
+#[cfg(feature = "ethereum")]
+#[macro_use]
+extern crate quickcheck;
+
 pub use args::Error;
 pub use librad::git::Urn;
 pub use lnk_identities as identities;
