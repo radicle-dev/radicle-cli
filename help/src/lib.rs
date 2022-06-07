@@ -28,6 +28,8 @@ const COMMANDS: &[Help] = &[
     rad_ens::HELP,
     #[cfg(feature = "ethereum")]
     rad_account::HELP,
+    rad_rm::HELP,
+    rad_edit::HELP,
     crate::HELP,
 ];
 

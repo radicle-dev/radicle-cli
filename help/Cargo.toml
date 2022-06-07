@@ -31,6 +31,8 @@ rad-remote = { path = "../remote" }
 rad-push = { path = "../push" }
 rad-pull = { path = "../pull" }
 rad-sync = { path = "../sync" }
+rad-rm = { path = "../rm" }
+rad-edit = { path = "../edit" }
 
 # Ethereum
 
