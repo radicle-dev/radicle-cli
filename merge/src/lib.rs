@@ -305,7 +305,7 @@ fn merge_commit(
     merge_msg.push_str(&format!("Rad-Patch: {}\n", patch_id));
     merge_msg.push_str(&format!("Rad-Author: {}\n", patch.author.urn().encode_id()));
     merge_msg.push_str(&format!("Rad-Peer: {}\n", patch.peer.default_encoding()));
-    merge_msg.push_str(&format!("Rad-Committer: {}\n\n", whoami));
+    merge_msg.push_str(&format!("Rad-Committer: {}\n\n", whoami.encode_id()));
     merge_msg.push_str(MERGE_HELP_MSG.join("\n").as_str());
 
     // Offer user the chance to edit the message before committing.
