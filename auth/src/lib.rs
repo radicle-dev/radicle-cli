@@ -145,9 +145,11 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         term::blank();
     }
 
-    let name = options
-        .name
-        .unwrap_or_else(|| term::text_input("Name", None).unwrap());
+    let name = sanitize_name(
+        options
+            .name
+            .unwrap_or_else(|| term::text_input("Name", None).unwrap()),
+    )?;
     let passphrase = options
         .passphrase
         .map_or_else(term::secret_input_with_confirmation, |passphrase| {
@@ -297,6 +299,13 @@ pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::
     Ok(())
 }
 
+fn sanitize_name(name: String) -> anyhow::Result<String> {
+    if name.contains(char::is_whitespace) {
+        anyhow::bail!("Name cannot contain whitespaces");
+    }
+    Ok(name)
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
@@ -327,5 +336,14 @@ mod tests {
 
         assert_eq!(profile::count().unwrap(), 1);
         assert_eq!(profile::name(None).unwrap(), "user");
+    }
+
+    #[assay(
+        setup = test::setup::lnk_home()?,
+    )]
+    fn name_cannot_contain_whitespace() {
+        let options = create_auth_options("user A");
+
+        assert!(init(options).is_err());
     }
 }
