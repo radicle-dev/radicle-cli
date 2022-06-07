@@ -6,7 +6,7 @@ license = "GPL-3.0-or-later"
 
 [features]
 default = []
-ethereum = ["ethers", "coins-bip32", "hex", "walletconnect", "quickcheck"]
+ethereum = ["ethers", "coins-bip32", "hex", "walletconnect"]
 
 [dependencies]
 async-trait = "0.1.53"
@@ -36,6 +36,9 @@ thiserror = "1"
 zeroize = "1.1"
 tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread"] }
 
+[dev-dependencies]
+quickcheck = "1"
+
 # Ethereum feature dependencies
 
 [dependencies.ethers]
@@ -56,8 +59,4 @@ optional = true
 git = "https://github.com/xphoniex/walletconnect-rs"
 branch = "v0.1.0"
 features = ["qr"]
-optional = true
-
-[dependencies.quickcheck]
-version = "1"
 optional = true
