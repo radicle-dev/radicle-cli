@@ -12,6 +12,7 @@ use librad::profile::Profile;
 
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
+use radicle_common::cobs::patch::MergeTarget;
 use radicle_common::{cobs, git, keys, patch, person, profile, project};
 use radicle_terminal as term;
 
@@ -294,8 +295,14 @@ fn create(
 
     let whoami = person::local(storage)?;
     let patches = cobs::patch::Patches::new(whoami, profile.paths(), storage)?;
-    let target = &project.default_branch;
-    let id = patches.create(&project.urn, &title, &description, target, head_oid, &[])?;
+    let id = patches.create(
+        &project.urn,
+        &title,
+        &description,
+        MergeTarget::default(),
+        head_oid,
+        &[],
+    )?;
 
     term::blank();
     term::success!("Patch {} created 🌱", term::format::highlight(id));

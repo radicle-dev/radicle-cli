@@ -36,6 +36,43 @@ pub type PatchId = ObjectId;
 /// Identifier for a revision.
 pub type RevisionId = usize;
 
+/// Where a patch is intended to be merged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MergeTarget {
+    /// Intended for the default branch of the project delegates.
+    /// Note that if the delegations change while the patch is open,
+    /// this will always mean whatever the "current" delegation set is.
+    Upstream,
+}
+
+impl Default for MergeTarget {
+    fn default() -> Self {
+        Self::Upstream
+    }
+}
+
+impl From<MergeTarget> for ScalarValue {
+    fn from(target: MergeTarget) -> Self {
+        match target {
+            MergeTarget::Upstream => ScalarValue::from("upstream"),
+        }
+    }
+}
+
+impl<'a> TryFrom<Value<'a>> for MergeTarget {
+    type Error = &'static str;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let state = value.to_str().ok_or("value isn't a string")?;
+
+        match state {
+            "upstream" => Ok(Self::Upstream),
+            _ => Err("invalid merge target type"),
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Create error: {0}")]
@@ -61,8 +98,8 @@ pub struct Patch {
     pub title: String,
     /// Current state of the patch.
     pub state: State,
-    /// Target branch this patch is meant to be merged in.
-    pub target: git::OneLevel,
+    /// Target this patch is meant to be merged in.
+    pub target: MergeTarget,
     /// Labels associated with the patch.
     pub labels: HashSet<Label>,
     /// List of patch revisions. The initial changeset is part of the
@@ -120,7 +157,7 @@ impl TryFrom<Automerge> for Patch {
         let peer = PeerId::from_value(peer)?;
         let state = State::try_from(state).unwrap();
         let revisions = NonEmpty::from_vec(revisions).unwrap();
-        let target = git::OneLevel::from_value(target)?;
+        let target = MergeTarget::try_from(target).unwrap();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
         Ok(Self {
@@ -184,7 +221,7 @@ impl<'a> Patches<'a> {
         project: &Urn,
         title: &str,
         description: &str,
-        target: &git::OneLevel,
+        target: MergeTarget,
         tag: impl Into<git::Oid>,
         labels: &[Label],
     ) -> Result<PatchId, Error> {
@@ -545,7 +582,7 @@ mod cobs {
                 NewObjectSpec {
                     schema_json: SCHEMA.clone(),
                     typename: TYPENAME.clone(),
-                    message: Some("Create issue".to_owned()),
+                    message: Some("Create patch".to_owned()),
                     history,
                 },
             )
@@ -567,7 +604,7 @@ mod events {
         peer: &PeerId,
         title: &str,
         description: &str,
-        target: &git::OneLevel,
+        target: MergeTarget,
         tag: &git::Oid,
         timestamp: Timestamp,
         labels: &[Label],
@@ -579,7 +616,7 @@ mod events {
         }
 
         let mut doc = Automerge::new();
-        let _issue = doc
+        let _patch = doc
             .transact_with::<_, _, AutomergeError, _, ()>(
                 |_| CommitOptions::default().with_message("Create patch".to_owned()),
                 |tx| {
@@ -589,7 +626,7 @@ mod events {
                     tx.put(&patch_id, "author", author.to_string())?;
                     tx.put(&patch_id, "peer", peer.to_string())?;
                     tx.put(&patch_id, "state", State::Proposed)?;
-                    tx.put(&patch_id, "target", target.to_string())?;
+                    tx.put(&patch_id, "target", target)?;
                     tx.put(&patch_id, "timestamp", timestamp)?;
 
                     let labels_id = tx.put_object(&patch_id, "labels", ObjType::Map)?;
@@ -674,14 +711,14 @@ mod test {
         let author = whoami.urn();
         let timestamp = Timestamp::now();
         let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
-        let target = git::OneLevel::try_from(git::RefLike::try_from("master").unwrap()).unwrap();
+        let target = MergeTarget::Upstream;
         let tag = git::Oid::from(git2::Oid::zero());
         let patch_id = patches
             .create(
                 &project.urn(),
                 "My first patch",
                 "Blah blah blah.",
-                &target,
+                target,
                 tag,
                 &[],
             )
@@ -710,7 +747,7 @@ mod test {
     fn test_patch_merge() {
         let (storage, profile, whoami, project) = test::setup::profile();
         let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
-        let target = git::OneLevel::try_from(git::RefLike::try_from("master").unwrap()).unwrap();
+        let target = MergeTarget::Upstream;
         let tag = git::Oid::from(git2::Oid::zero());
         let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
         let patch_id = patches
@@ -718,7 +755,7 @@ mod test {
                 &project.urn(),
                 "My first patch",
                 "Blah blah blah.",
-                &target,
+                target,
                 tag,
                 &[],
             )
