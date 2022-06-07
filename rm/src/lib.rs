@@ -7,7 +7,7 @@ use anyhow::Context as _;
 use librad::git::Urn;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{keys, profile, project};
+use radicle_common::{profile, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -21,12 +21,14 @@ Usage
 
 Options
 
+    -i        Prompt before removal
     --help    Print help
 "#,
 };
 
 pub struct Options {
     urn: Urn,
+    prompt: bool,
 }
 
 impl Args for Options {
@@ -35,9 +37,13 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut urn: Option<Urn> = None;
+        let mut prompt = false;
 
-        if let Some(arg) = parser.next()? {
+        while let Some(arg) = parser.next()? {
             match arg {
+                Short('i') => {
+                    prompt = true;
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -56,6 +62,7 @@ impl Args for Options {
                 urn: urn.ok_or_else(|| {
                     anyhow!("a URN to remove must be provided; see `rad rm --help`")
                 })?,
+                prompt,
             },
             vec![],
         ))
@@ -64,15 +71,12 @@ impl Args for Options {
 
 pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
-    let signer = term::signer(&profile)?;
-    let storage = keys::storage(&profile, signer)?;
+    let storage = profile::read_only(&profile)?;
 
     if project::get(&storage, &options.urn)?.is_none() {
         anyhow::bail!("project {} does not exist", options.urn);
     }
     term::warning("Warning: experimental tool; use at your own risk!");
-
-    rad_untrack::execute(&options.urn, rad_untrack::Options { peer: None })?;
 
     let monorepo = profile.paths().git_dir();
     let namespace = monorepo
@@ -80,10 +84,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .join("namespaces")
         .join(options.urn.encode_id());
 
-    if term::confirm(format!(
-        "Are you sure you would like to delete {}?",
-        term::format::dim(namespace.display())
-    )) {
+    if !options.prompt
+        || term::confirm(format!(
+            "Are you sure you would like to delete {}?",
+            term::format::dim(namespace.display())
+        ))
+    {
+        rad_untrack::execute(&options.urn, rad_untrack::Options { peer: None })?;
         fs::remove_dir_all(namespace)?;
         term::success!("Successfully removed project {}", options.urn);
     }
