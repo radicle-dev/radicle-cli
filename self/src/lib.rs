@@ -136,6 +136,18 @@ fn all(profile: &profile::Profile) -> anyhow::Result<()> {
     let ssh_long = keys::to_ssh_key(peer_id)?;
     table.push([String::from("Key (full)"), term::format::tertiary(ssh_long)]);
 
+    let git_path = profile.paths().git_dir();
+    table.push([
+        String::from("Storage (git)"),
+        term::format::tertiary(git_path.display()),
+    ]);
+
+    let keys_path = profile.paths().keys_dir();
+    table.push([
+        String::from("Storage (keys)"),
+        term::format::tertiary(keys_path.display()),
+    ]);
+
     table.render_tree();
 
     Ok(())
