@@ -23,6 +23,11 @@ set -e
 #   radicle-git-server --root /tmp/seed --passphrase seed --git-receive-pack --allow-unauthorized-keys
 #   radicle-http-api   --root /tmp/seed --passphrase seed
 #
+# Nb. Make sure the git hooks are copied into the seed's `git/hooks` folder in the monorepo,
+#     otherwise identities won't be created properly.
+#
+#     Eg. cp target/release/{post,pre}-receive /tmp/seed/.../git/hooks
+#
 # Then we would run this script with a different `RAD_HOME`.
 #
 export RAD_HOME="$(pwd)/tmp/root"
@@ -57,7 +62,7 @@ MAINTAINER=$(cargo run -q --bin rad-self -- --profile)
 mkdir -p $BASE/tmp/maintainer/acme
 cd $BASE/tmp/maintainer/acme
 echo "ACME" > README
-git init
+git init -b master
 git add .
 git commit -m "Initial commit" --no-gpg-sign
 
