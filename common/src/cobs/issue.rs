@@ -54,7 +54,7 @@ pub enum CloseReason {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase", tag = "status")]
 pub enum State {
     Open,
     Closed { reason: CloseReason },
@@ -846,6 +846,22 @@ mod test {
         assert!(matches!(issue.author(), Author::Resolved(id) if id.name == "cloudhead"));
         assert!(matches!(&issue.comment.author, Author::Resolved(id) if id.name == "cloudhead"));
         assert!(matches!(&c1.author, Author::Resolved(id) if id.name == "cloudhead"));
+    }
+
+    #[test]
+    fn test_issue_state_serde() {
+        assert_eq!(
+            serde_json::to_value(State::Open).unwrap(),
+            serde_json::json!({ "status": "open" })
+        );
+
+        assert_eq!(
+            serde_json::to_value(State::Closed {
+                reason: CloseReason::Solved
+            })
+            .unwrap(),
+            serde_json::json!({ "status": "closed", "reason": "solved" })
+        );
     }
 
     #[test]
