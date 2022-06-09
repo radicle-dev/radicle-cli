@@ -78,6 +78,9 @@ pub enum Error {
     #[error("Create error: {0}")]
     Create(String),
 
+    #[error("Update error: {0}")]
+    Update(String),
+
     #[error("List error: {0}")]
     List(String),
 
@@ -288,7 +291,6 @@ impl<'a> Patches<'a> {
         revision: RevisionId,
         commit: git::Oid,
     ) -> Result<Merge, Error> {
-        let mut patch = self.get_raw(project, patch_id)?.unwrap();
         let timestamp = Timestamp::now();
         let merge = Merge {
             peer: self.peer_id,
@@ -296,20 +298,17 @@ impl<'a> Patches<'a> {
             timestamp,
         };
 
+        let mut patch = self.get_raw(project, patch_id)?.unwrap();
         let changes = events::merge(&mut patch, revision, &merge)?;
-        let _cob = self
-            .store
-            .update(
-                &self.whoami,
-                project,
-                UpdateObjectSpec {
-                    object_id: *patch_id,
-                    typename: TYPENAME.clone(),
-                    message: Some("Merge revision".to_owned()),
-                    changes,
-                },
-            )
-            .unwrap();
+
+        cobs::update(
+            *patch_id,
+            project,
+            "Merge revision",
+            changes,
+            &self.whoami,
+            &self.store,
+        )?;
 
         Ok(merge)
     }
@@ -587,6 +586,30 @@ mod cobs {
                 },
             )
             .map_err(|e| Error::Create(e.to_string()))?;
+
+        Ok(*cob.id())
+    }
+
+    pub(super) fn update(
+        object_id: PatchId,
+        project: &Urn,
+        message: &'static str,
+        changes: EntryContents,
+        whoami: &LocalIdentity,
+        store: &CollaborativeObjects,
+    ) -> Result<PatchId, Error> {
+        let cob = store
+            .update(
+                whoami,
+                project,
+                UpdateObjectSpec {
+                    object_id,
+                    typename: TYPENAME.clone(),
+                    message: Some(message.to_owned()),
+                    changes,
+                },
+            )
+            .map_err(|e| Error::Update(e.to_string()))?;
 
         Ok(*cob.id())
     }
