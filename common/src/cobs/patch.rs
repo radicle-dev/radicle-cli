@@ -138,7 +138,7 @@ impl Patch {
     }
 
     pub fn description(&self) -> &str {
-        &self.revisions.head.comment.body
+        self.latest().1.description()
     }
 }
 
@@ -463,7 +463,7 @@ pub struct Revision {
 }
 
 impl Revision {
-    fn new(
+    pub fn new(
         author: Urn,
         peer: PeerId,
         tag: git::Oid,
@@ -480,6 +480,10 @@ impl Revision {
             merges: Vec::default(),
             timestamp,
         }
+    }
+
+    pub fn description(&self) -> &str {
+        &self.comment.body
     }
 
     /// Put this object into an automerge document.
@@ -891,5 +895,47 @@ mod test {
         assert_eq!(merges.len(), 1);
         assert_eq!(merges[0].peer, *storage.peer_id());
         assert_eq!(merges[0].commit, base);
+    }
+
+    #[test]
+    fn test_patch_update() {
+        let (storage, profile, whoami, project) = test::setup::profile();
+        let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
+        let target = MergeTarget::Upstream;
+        let rev0_oid = git::Oid::from_str("518d5069f94c03427f694bb494ac1cd7d1339380").unwrap();
+        let rev1_oid = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
+        let project = &project.urn();
+        let patch_id = patches
+            .create(
+                project,
+                "My first patch",
+                "Blah blah blah.",
+                target,
+                rev0_oid,
+                &[],
+            )
+            .unwrap();
+
+        let patch = patches.get(project, &patch_id).unwrap().unwrap();
+        assert_eq!(patch.description(), "Blah blah blah.");
+        assert_eq!(patch.version(), 0);
+
+        let revision_id = patches
+            .update(project, &patch_id, "I've made changes.", rev1_oid)
+            .unwrap();
+
+        assert_eq!(revision_id, 1);
+
+        let patch = patches.get(project, &patch_id).unwrap().unwrap();
+        assert_eq!(patch.description(), "I've made changes.");
+
+        assert_eq!(patch.revisions.len(), 2);
+        assert_eq!(patch.version(), 1);
+
+        let (id, revision) = patch.latest();
+
+        assert_eq!(id, 1);
+        assert_eq!(revision.tag, rev1_oid);
+        assert_eq!(revision.description(), "I've made changes.");
     }
 }
