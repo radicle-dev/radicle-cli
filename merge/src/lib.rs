@@ -154,13 +154,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let head_oid = head
         .target()
         .ok_or_else(|| anyhow!("cannot merge into detatched head; aborting"))?;
-    let revision_num = options
-        .revision
-        .unwrap_or_else(|| patch.revisions.len() - 1);
+    let revision_id = options.revision.unwrap_or_else(|| patch.version());
     let revision = patch
         .revisions
-        .get(revision_num)
-        .ok_or_else(|| anyhow!("revision R{} does not exist", revision_num))?;
+        .get(revision_id)
+        .ok_or_else(|| anyhow!("revision R{} does not exist", revision_id))?;
     let revision_oid = revision.tag;
 
     //
@@ -228,7 +226,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         "{} {} {} ({}) by {} into {} ({}) via {}...",
         term::format::bold("Merging"),
         term::format::tertiary(common::fmt::cob(&patch_id)),
-        term::format::dim(format!("R{}", revision_num)),
+        term::format::dim(format!("R{}", revision_id)),
         term::format::secondary(common::fmt::oid(&revision_oid)),
         term::format::tertiary(patch.author.name()),
         term::format::highlight(branch),
@@ -264,7 +262,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     // Update patch COB
     //
     // TODO: Don't allow merging the same revision twice?
-    patches.merge(&urn, &patch_id, revision_num, head_oid.into())?;
+    patches.merge(&urn, &patch_id, revision_id, head_oid.into())?;
 
     term::success!(
         "Patch state updated, use {} to publish",

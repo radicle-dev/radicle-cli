@@ -189,6 +189,12 @@ impl Author {
     }
 }
 
+impl From<Urn> for Author {
+    fn from(urn: Urn) -> Self {
+        Self::Urn { urn }
+    }
+}
+
 /// Local id of a comment in an issue.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub struct CommentId {
@@ -229,6 +235,16 @@ pub struct Comment<R = ()> {
 }
 
 impl Comment<()> {
+    pub fn new(author: Urn, body: String, timestamp: Timestamp) -> Self {
+        Self {
+            author: Author::from(author),
+            body,
+            reactions: HashMap::default(),
+            replies: (),
+            timestamp,
+        }
+    }
+
     pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
         self.author.resolve(storage)
     }

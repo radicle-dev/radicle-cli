@@ -350,7 +350,7 @@ pub fn print(
 ) -> anyhow::Result<()> {
     let revision = patch.revisions.last();
     let revision_oid = revision.tag;
-    let revision_pretty = term::format::dim(format!("R{}", revision.version));
+    let revision_pretty = term::format::dim(format!("R{}", patch.version()));
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";
     let mut author_info = vec![format!(

@@ -4,6 +4,7 @@ use std::convert::{TryFrom, TryInto};
 use std::ops::{ControlFlow, RangeInclusive};
 use std::str::FromStr;
 
+use automerge::transaction::Transactable;
 use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use lazy_static::lazy_static;
 use nonempty::NonEmpty;
@@ -113,6 +114,21 @@ pub struct Patch {
 }
 
 impl Patch {
+    pub fn head(&self) -> &git::Oid {
+        &self.revisions.last().tag
+    }
+
+    pub fn version(&self) -> RevisionId {
+        self.revisions.len() - 1
+    }
+
+    pub fn latest(&self) -> (RevisionId, &Revision) {
+        let version = self.version();
+        let revision = &self.revisions[version];
+
+        (version, revision)
+    }
+
     pub fn is_proposed(&self) -> bool {
         matches!(self.state, State::Proposed)
     }
@@ -230,18 +246,56 @@ impl<'a> Patches<'a> {
     ) -> Result<PatchId, Error> {
         let author = self.whoami.urn();
         let timestamp = Timestamp::now();
+        let revision = Revision::new(
+            author.clone(),
+            self.peer_id,
+            tag.into(),
+            description.to_owned(),
+            timestamp,
+        );
         let history = events::create(
             &author,
             &self.peer_id,
             title,
-            description,
+            &revision,
             target,
-            &tag.into(),
             timestamp,
             labels,
         )?;
 
         cobs::create(history, project, &self.whoami, &self.store)
+    }
+
+    pub fn update(
+        &self,
+        project: &Urn,
+        patch_id: &PatchId,
+        comment: &str,
+        tag: impl Into<git::Oid>,
+    ) -> Result<RevisionId, Error> {
+        let author = self.whoami.urn();
+        let timestamp = Timestamp::now();
+        let revision = Revision::new(
+            author,
+            self.peer_id,
+            tag.into(),
+            comment.to_owned(),
+            timestamp,
+        );
+
+        let mut patch = self.get_raw(project, patch_id)?.unwrap();
+        let (revision_id, changes) = events::update(&mut patch, revision)?;
+
+        cobs::update(
+            *patch_id,
+            project,
+            "Update patch",
+            changes,
+            &self.whoami,
+            &self.store,
+        )?;
+
+        Ok(revision_id)
     }
 
     pub fn get(&self, project: &Urn, id: &PatchId) -> Result<Option<Patch>, Error> {
@@ -394,8 +448,6 @@ pub struct Revision {
     pub author: Author,
     /// Peer who published this revision.
     pub peer: PeerId,
-    /// Patch revision number.
-    pub version: usize,
     /// Reference to the Git object containing the code.
     pub tag: git::Oid,
     /// "Cover letter" for this changeset.
@@ -408,6 +460,54 @@ pub struct Revision {
     pub merges: Vec<Merge>,
     /// When this revision was created.
     pub timestamp: Timestamp,
+}
+
+impl Revision {
+    fn new(
+        author: Urn,
+        peer: PeerId,
+        tag: git::Oid,
+        comment: String,
+        timestamp: Timestamp,
+    ) -> Self {
+        Self {
+            author: Author::from(author.clone()),
+            peer,
+            tag,
+            comment: Comment::new(author, comment, timestamp),
+            discussion: Discussion::default(),
+            reviews: HashMap::default(),
+            merges: Vec::default(),
+            timestamp,
+        }
+    }
+
+    /// Put this object into an automerge document.
+    fn put(
+        &self,
+        tx: &mut automerge::transaction::Transaction,
+        id: &automerge::ObjId,
+    ) -> Result<(), AutomergeError> {
+        tx.put(&id, "author", self.author.urn().to_string())?;
+        tx.put(&id, "peer", self.peer.to_string())?;
+        tx.put(&id, "tag", self.tag.to_string())?;
+        {
+            // Top-level comment for first patch revision.
+            // Nb. top-level comment doesn't have a `replies` field.
+            let comment_id = tx.put_object(&id, "comment", ObjType::Map)?;
+
+            tx.put(&comment_id, "body", self.comment.body.trim())?;
+            tx.put(&comment_id, "author", self.comment.author.urn().to_string())?;
+            tx.put(&comment_id, "timestamp", self.comment.timestamp)?;
+            tx.put_object(&comment_id, "reactions", ObjType::Map)?;
+        }
+        tx.put_object(&id, "discussion", ObjType::List)?;
+        tx.put_object(&id, "reviews", ObjType::Map)?;
+        tx.put_object(&id, "merges", ObjType::List)?;
+        tx.put(&id, "timestamp", self.timestamp)?;
+
+        Ok(())
+    }
 }
 
 /// A merged patch revision.
@@ -492,9 +592,9 @@ mod lookup {
     pub fn revision(
         doc: &Automerge,
         revisions_id: &automerge::ObjId,
-        ix: usize,
+        id: RevisionId,
     ) -> Result<Revision, AutomergeError> {
-        let (_, revision_id) = doc.get(&revisions_id, ix)?.unwrap();
+        let (_, revision_id) = doc.get(&revisions_id, id)?.unwrap();
         let (_, comment_id) = doc.get(&revision_id, "comment")?.unwrap();
         let (_, discussion_id) = doc.get(&revision_id, "discussion")?.unwrap();
         let (_, _reviews_id) = doc.get(&revision_id, "reviews")?.unwrap();
@@ -502,7 +602,6 @@ mod lookup {
         let (author, _) = doc.get(&revision_id, "author")?.unwrap();
         let (peer, _) = doc.get(&revision_id, "peer")?.unwrap();
         let (tag, _) = doc.get(&revision_id, "tag")?.unwrap();
-        let (version, _) = doc.get(&revision_id, "version")?.unwrap();
         let (timestamp, _) = doc.get(&revision_id, "timestamp")?.unwrap();
 
         // Top-level comment.
@@ -528,17 +627,13 @@ mod lookup {
 
         let author = Author::from_value(author)?;
         let peer = PeerId::from_value(peer)?;
-        let version = version.to_u64().unwrap() as usize;
         let tag = tag.to_str().unwrap().try_into().unwrap();
         let reviews = HashMap::new();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
-        assert_eq!(version, ix);
-
         Ok(Revision {
             author,
             peer,
-            version,
             tag,
             comment,
             discussion,
@@ -626,9 +721,8 @@ mod events {
         author: &Urn,
         peer: &PeerId,
         title: &str,
-        description: &str,
+        revision: &Revision,
         target: MergeTarget,
-        tag: &git::Oid,
         timestamp: Timestamp,
         labels: &[Label],
     ) -> Result<EntryContents, AutomergeError> {
@@ -658,29 +752,9 @@ mod events {
                     }
 
                     let revisions_id = tx.put_object(&patch_id, "revisions", ObjType::List)?;
-                    {
-                        let revision_id = tx.insert_object(&revisions_id, 0, ObjType::Map)?;
+                    let revision_id = tx.insert_object(&revisions_id, 0, ObjType::Map)?;
 
-                        tx.put(&revision_id, "author", author.to_string())?;
-                        tx.put(&revision_id, "peer", peer.to_string())?;
-                        tx.put(&revision_id, "version", 0)?;
-                        tx.put(&revision_id, "tag", tag.to_string())?;
-                        {
-                            // Top-level comment for first patch revision.
-                            // Nb. top-level comment doesn't have a `replies` field.
-                            let comment_id =
-                                tx.put_object(&revision_id, "comment", ObjType::Map)?;
-
-                            tx.put(&comment_id, "body", description.trim())?;
-                            tx.put(&comment_id, "author", author.to_string())?;
-                            tx.put(&comment_id, "timestamp", timestamp)?;
-                            tx.put_object(&comment_id, "reactions", ObjType::Map)?;
-                        }
-                        tx.put_object(&revision_id, "discussion", ObjType::List)?;
-                        tx.put_object(&revision_id, "reviews", ObjType::Map)?;
-                        tx.put_object(&revision_id, "merges", ObjType::List)?;
-                        tx.put(&revision_id, "timestamp", timestamp)?;
-                    }
+                    revision.put(tx, &revision_id)?;
 
                     Ok(patch_id)
                 },
@@ -689,6 +763,33 @@ mod events {
             .result;
 
         Ok(EntryContents::Automerge(doc.save_incremental()))
+    }
+
+    pub fn update(
+        patch: &mut Automerge,
+        revision: Revision,
+    ) -> Result<(RevisionId, EntryContents), AutomergeError> {
+        let success = patch
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Merge revision".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
+                    let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
+
+                    let length = tx.length(&revisions_id);
+                    let revision_id = tx.insert_object(&revisions_id, length, ObjType::Map)?;
+
+                    revision.put(tx, &revision_id)?;
+
+                    Ok(length)
+                },
+            )
+            .map_err(|failure| failure.error)?;
+
+        let revision_id = success.result;
+        let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok((revision_id, EntryContents::Automerge(change)))
     }
 
     pub fn merge(
@@ -760,7 +861,6 @@ mod test {
         assert_eq!(revision.peer, *storage.peer_id());
         assert_eq!(revision.comment.body, "Blah blah blah.");
         assert_eq!(revision.discussion.len(), 0);
-        assert_eq!(revision.version, 0);
         assert_eq!(revision.tag, tag);
         assert!(revision.reviews.is_empty());
         assert!(revision.merges.is_empty());
