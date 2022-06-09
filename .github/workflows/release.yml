@@ -6,7 +6,26 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
+  cargo-package-version-matches-git-tag-version:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y jq
+      - shell: bash
+        id: git-tag
+        run: echo ::set-output name=GIT_TAG::${GITHUB_REF/refs\/tags\//}
+      - shell: bash
+        id: cargo-package-version
+        run: echo ::set-output name=CARGO_PACKAGE_VERSION::$(cargo metadata --format-version=1 | jq -r '.packages | .[] | select(.name=="radicle-cli") | .version')
+      - shell: bash
+        run: test "${{ steps.git-tag.outputs.GIT_TAG }}" = v"${{ steps.cargo-package-version.outputs.CARGO_PACKAGE_VERSION }}"
+
   release-linux-binaries:
+    needs: cargo-package-version-matches-git-tag-version
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout source code
@@ -81,6 +100,7 @@ jobs:
 
 
   release-macos-binaries:
+    needs: cargo-package-version-matches-git-tag-version
     runs-on: macos-11
     steps:
       - run: brew install asciidoctor
