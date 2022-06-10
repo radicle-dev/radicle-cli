@@ -11,7 +11,7 @@ use url::Url;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::seed::{self, SeedOptions};
 use radicle_common::Interactive;
-use radicle_common::{git, keys, profile, project};
+use radicle_common::{git, identity, keys, profile, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -34,7 +34,7 @@ Options
 
 #[derive(Debug)]
 enum Origin {
-    Radicle(project::Origin),
+    Radicle(identity::Origin),
     Git(Url),
 }
 
@@ -65,7 +65,7 @@ impl Args for Options {
                     let val = val.to_string_lossy();
                     match Urn::from_str(&val) {
                         Ok(urn) => {
-                            origin = Some(Origin::Radicle(project::Origin {
+                            origin = Some(Origin::Radicle(identity::Origin {
                                 urn,
                                 seed: seed.clone(),
                             }));
@@ -76,7 +76,7 @@ impl Args for Options {
                                     anyhow::bail!("`--seed` cannot be specified when a URL is given as origin");
                                 }
                                 Ok(url) if url.scheme() == project::URL_SCHEME => {
-                                    let o = project::Origin::try_from(url)?;
+                                    let o = identity::Origin::try_from(url)?;
                                     origin = Some(Origin::Radicle(o));
                                 }
                                 Ok(url) => {
@@ -126,7 +126,7 @@ pub fn clone_project(
     rad_sync::run(rad_sync::Options {
         fetch: true,
         refs: rad_sync::Refs::All,
-        origin: Some(project::Origin {
+        origin: Some(identity::Origin {
             urn: urn.clone(),
             seed: seed.clone(),
         }),

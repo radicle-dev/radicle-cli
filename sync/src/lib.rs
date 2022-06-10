@@ -1,13 +1,16 @@
 #![allow(clippy::or_fun_call)]
 use librad::git::Storage;
-use librad::git::{identities, tracking, Urn};
+use librad::git::{
+    identities::{self, any, SomeIdentity},
+    tracking, Urn,
+};
 use librad::profile::Profile;
 use librad::PeerId;
 
 use radicle_common::args;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::seed::SeedOptions;
-use radicle_common::{git, keys, person, profile, project, seed, seed::Scope};
+use radicle_common::{git, identity, keys, person, profile, project, seed, seed::Scope};
 use radicle_terminal as term;
 
 use anyhow::anyhow;
@@ -70,7 +73,7 @@ impl Default for Refs {
 
 #[derive(Default, Debug)]
 pub struct Options {
-    pub origin: Option<project::Origin>,
+    pub origin: Option<identity::Origin>,
     pub seed: Option<seed::Address>,
     pub refs: Refs,
     pub verbose: bool,
@@ -130,7 +133,7 @@ impl Args for Options {
                 }
                 Value(val) if origin.is_none() => {
                     let val = val.to_string_lossy();
-                    let val = project::Origin::from_str(&val)?;
+                    let val = identity::Origin::from_str(&val)?;
 
                     origin = Some(val);
                 }
@@ -161,7 +164,7 @@ impl Args for Options {
 
         if let (
             Some(_),
-            Some(project::Origin {
+            Some(identity::Origin {
                 seed: Some(addr), ..
             }),
         ) = (&seed, &origin)
@@ -206,7 +209,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
 
-    let project_urn = if let Some(origin) = &options.origin {
+    let urn = if let Some(origin) = &options.origin {
         origin.urn.clone()
     } else {
         project::cwd().map(|(urn, _)| urn)?
@@ -237,11 +240,18 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
 
     if options.fetch {
-        fetch(project_urn, &profile, seed, storage, options)?;
+        fetch(urn, &profile, seed, storage, options)?;
     } else if options.push_self {
         push_self(&profile, seed, storage, options)?;
     } else {
-        push_project(project_urn, &profile, seed, storage, options)?;
+        let identity = any::get(&storage, &urn)?
+            .ok_or_else(|| anyhow!("No project or person found for this URN"))?;
+
+        match identity {
+            SomeIdentity::Project(_) => push_project(urn, &profile, seed, storage, options)?,
+            SomeIdentity::Person(_) => push_person(urn, &profile, seed, storage, options)?,
+            _ => anyhow::bail!("Operation not supported for identity type of {}", urn),
+        }
     }
 
     // If we're in a project repo and no seed is configured, save the seed.
@@ -424,6 +434,53 @@ pub fn push_project(
         ));
         term::blank();
     }
+    Ok(())
+}
+
+pub fn push_person(
+    person_urn: Urn,
+    profile: &Profile,
+    seed: &Url,
+    storage: Storage,
+    options: Options,
+) -> anyhow::Result<()> {
+    let monorepo = profile.paths().git_dir();
+    let peer_id = storage.peer_id();
+    let signing_key = git::git(monorepo, ["config", "--local", git::CONFIG_SIGNING_KEY])
+        .context("git signing key is not properly configured; run `rad auth` to fix this")?;
+
+    term::info!(
+        "Radicle signing key {}",
+        term::format::dim(signing_key.trim())
+    );
+    term::blank();
+    term::info!(
+        "Syncing 🌱 person {} to {}",
+        term::format::highlight(&person_urn),
+        term::format::highlight(seed)
+    );
+    term::blank();
+
+    let mut spinner = term::spinner("Syncing...");
+    spinner.message(format!(
+        "Syncing personal identity {}...",
+        person_urn.encode_id()
+    ));
+
+    match seed::push_delegate(monorepo, seed, &person_urn, peer_id) {
+        Ok(output) => {
+            if options.verbose {
+                spinner.finish();
+                term::blob(output);
+            }
+        }
+        Err(err) => {
+            spinner.failed();
+            term::blank();
+            return Err(err);
+        }
+    }
+
     Ok(())
 }
 

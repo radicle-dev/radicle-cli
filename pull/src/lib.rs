@@ -3,11 +3,11 @@ use std::ffi::OsString;
 
 use anyhow::anyhow;
 
-use radicle_common::args::{Args, Error, Help};
-use radicle_common::git;
-use radicle_common::project;
-use radicle_common::seed;
-use radicle_common::seed::SeedOptions;
+use radicle_common::{
+    args::{Args, Error, Help},
+    git, identity, project,
+    seed::{self, SeedOptions},
+};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -66,7 +66,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 
     rad_sync::run(rad_sync::Options {
         fetch: true,
-        origin: Some(project::Origin {
+        origin: Some(identity::Origin {
             urn,
             seed: options.seed,
         }),

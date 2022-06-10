@@ -3,6 +3,7 @@
 pub mod args;
 pub mod cobs;
 pub mod git;
+pub mod identity;
 pub mod keys;
 pub mod logger;
 pub mod patch;
