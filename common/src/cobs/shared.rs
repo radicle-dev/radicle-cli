@@ -27,7 +27,7 @@ pub enum ResolveError {
 }
 
 /// A generic COB identifier.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CobIdentifier {
     /// Regular, full patch id.
     Full(ObjectId),

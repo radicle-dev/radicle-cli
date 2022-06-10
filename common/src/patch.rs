@@ -241,3 +241,21 @@ where
     }
     Ok(targets)
 }
+
+/// Return commits between the merge base and a head.
+pub fn patch_commits<'a>(
+    repo: &'a git2::Repository,
+    base: &git2::Oid,
+    head: &git2::Oid,
+) -> anyhow::Result<Vec<git2::Commit<'a>>> {
+    let mut commits = Vec::new();
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_range(&format!("{}..{}", base, head))?;
+
+    for rev in revwalk {
+        let commit = repo.find_commit(rev?)?;
+        commits.push(commit);
+    }
+
+    Ok(commits)
+}

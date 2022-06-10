@@ -218,9 +218,10 @@ impl TryFrom<&History> for Patch {
 }
 
 pub struct Patches<'a> {
+    pub whoami: LocalIdentity,
+    pub peer_id: PeerId,
+
     store: CollaborativeObjects<'a>,
-    whoami: LocalIdentity,
-    peer_id: PeerId,
 }
 
 impl<'a> Patches<'a> {
@@ -270,7 +271,7 @@ impl<'a> Patches<'a> {
         &self,
         project: &Urn,
         patch_id: &PatchId,
-        comment: &str,
+        comment: impl ToString,
         tag: impl Into<git::Oid>,
     ) -> Result<RevisionId, Error> {
         let author = self.whoami.urn();
@@ -279,7 +280,7 @@ impl<'a> Patches<'a> {
             author,
             self.peer_id,
             tag.into(),
-            comment.to_owned(),
+            comment.to_string(),
             timestamp,
         );
 
@@ -404,6 +405,16 @@ impl<'a> Patches<'a> {
         let all = self.all(project)?;
 
         Ok(all.into_iter().filter(|(_, p)| p.is_proposed()))
+    }
+
+    pub fn proposed_by(
+        &self,
+        who: Urn,
+        project: &Urn,
+    ) -> Result<impl Iterator<Item = (PatchId, Patch)>, Error> {
+        Ok(self
+            .proposed(project)?
+            .filter(move |(_, p)| p.author.urn() == &who))
     }
 }
 

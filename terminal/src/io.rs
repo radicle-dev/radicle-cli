@@ -149,7 +149,7 @@ pub fn fail(header: &str, error: &anyhow::Error) {
     }
 
     if let Some(Error::WithHint { hint, .. }) = error.downcast_ref::<Error>() {
-        eprintln!("{}", &style(hint).yellow().to_string());
+        eprintln!("{} {}", style("==").yellow(), style(hint).yellow(),);
         blank();
     }
 }

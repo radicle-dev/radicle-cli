@@ -1,6 +1,8 @@
 #![allow(clippy::or_fun_call)]
+#![allow(clippy::too_many_arguments)]
 use std::convert::TryFrom;
 use std::ffi::OsString;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 
@@ -12,7 +14,8 @@ use librad::profile::Profile;
 
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::cobs::patch::MergeTarget;
+use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, Patches};
+use radicle_common::cobs::CobIdentifier;
 use radicle_common::{cobs, git, keys, patch, person, profile, project};
 use radicle_terminal as term;
 
@@ -27,12 +30,15 @@ Usage
 
 Create options
 
-    --[no-]sync       Sync patch to seed (default: sync)
+    -u, --update [<id>]      Update an existing patch (default: no)
+        --[no-]sync          Sync patch to seed (default: sync)
+        --comment <string>   Provide a comment to the patch or revision (default: prompt)
+        --no-comment         Leave the patch or revision comment blank
 
 Options
 
-    --list            List all patches (default: false)
-    --help            Print help
+    -l, --list               List all patches (default: false)
+        --help               Print help
 "#,
 };
 
@@ -48,11 +54,46 @@ and description.
 -->
 "#;
 
+pub const REVISION_MSG: &str = r#"
+<!--
+Please enter a comment for your patch update. Leaving this
+blank is also okay.
+-->
+"#;
+
+#[derive(Debug)]
+pub enum Comment {
+    Prompt,
+    Blank,
+    Given(String),
+}
+
+impl Default for Comment {
+    fn default() -> Self {
+        Self::Prompt
+    }
+}
+
+#[derive(Debug)]
+pub enum Update {
+    No,
+    Any,
+    Patch(CobIdentifier),
+}
+
+impl Default for Update {
+    fn default() -> Self {
+        Self::No
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct Options {
     pub list: bool,
     pub verbose: bool,
     pub sync: bool,
+    pub update: Update,
+    pub comment: Comment,
 }
 
 impl Args for Options {
@@ -63,6 +104,8 @@ impl Args for Options {
         let mut list = false;
         let mut verbose = false;
         let mut sync = true;
+        let mut comment = Comment::default();
+        let mut update = Update::default();
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -71,6 +114,25 @@ impl Args for Options {
                 }
                 Long("verbose") | Short('v') => {
                     verbose = true;
+                }
+                Long("comment") => {
+                    comment = Comment::Given(parser.value()?.to_string_lossy().into());
+                }
+                Long("no-comment") => {
+                    comment = Comment::Blank;
+                }
+                Long("update") | Short('u') => {
+                    if let Ok(val) = parser.value() {
+                        let val = val
+                            .to_str()
+                            .ok_or_else(|| anyhow!("patch id specified is not UTF-8"))?;
+                        let id = CobIdentifier::from_str(val)
+                            .map_err(|_| anyhow!("invalid patch id '{}'", val))?;
+
+                        update = Update::Patch(id);
+                    } else {
+                        update = Update::Any;
+                    }
                 }
                 Long("sync") => {
                     sync = true;
@@ -89,6 +151,8 @@ impl Args for Options {
             Options {
                 list,
                 sync,
+                comment,
+                update,
                 verbose,
             },
             vec![],
@@ -109,7 +173,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if options.list {
         list(&storage, &repo, &profile, &project)?;
     } else {
-        create(&storage, &profile, &project, &repo, &options)?;
+        create(&storage, &profile, &project, &repo, options)?;
     }
 
     Ok(())
@@ -139,14 +203,15 @@ fn list(
             other.push((id, patch));
         }
     }
-
     term::print(&term::format::badge_positive("YOU PROPOSED"));
-    term::blank();
 
     if own.is_empty() {
+        term::blank();
         term::print(&term::format::italic("Nothing to show."));
     } else {
         for (id, patch) in &mut own {
+            term::blank();
+
             patch.author.resolve(storage).ok();
             print(&whoami, id, patch, project, &head, repo, storage)?;
         }
@@ -163,8 +228,72 @@ fn list(
             print(&whoami, id, patch, project, &head, repo, storage)?;
         }
     }
+    term::blank();
+
+    Ok(())
+}
+
+fn update(
+    patch: Patch,
+    patch_id: PatchId,
+    head: &git::Oid,
+    branch: &RefLike,
+    patches: &Patches,
+    project: &project::Metadata,
+    repo: &git::Repository,
+    options: Options,
+) -> anyhow::Result<()> {
+    let (current, current_revision) = patch.latest();
+
+    if &*current_revision.tag == head {
+        term::info!("Nothing to do, patch is already up to date.");
+        return Ok(());
+    }
+
+    term::info!(
+        "{} {} ({}) -> {} ({})",
+        term::format::tertiary(common::fmt::cob(&patch_id)),
+        term::format::dim(format!("R{}", current)),
+        term::format::secondary(common::fmt::oid(&current_revision.tag)),
+        term::format::dim(format!("R{}", current + 1)),
+        term::format::secondary(common::fmt::oid(head)),
+    );
+
+    let comment = match options.comment {
+        Comment::Prompt => term::Editor::new()
+            .require_save(true)
+            .trim_newlines(true)
+            .extension(".markdown")
+            .edit(REVISION_MSG)
+            .unwrap(),
+        Comment::Blank => None,
+        Comment::Given(c) => Some(c),
+    };
+    let comment = comment.unwrap_or_default().replace(&REVISION_MSG, "");
+    let comment = comment.trim();
+
+    // Difference between the two revisions.
+    term::patch::print_commits_ahead_behind(repo, *head, *current_revision.tag)?;
+    term::blank();
+
+    if !term::confirm("Continue?") {
+        anyhow::bail!("patch update aborted by user");
+    }
+
+    let new = patches.update(&project.urn, &patch_id, comment, *head)?;
+    assert_eq!(new, current + 1);
 
     term::blank();
+    term::success!("Patch {} updated 🌱", term::format::highlight(patch_id));
+    term::blank();
+
+    if options.sync {
+        rad_sync::run(rad_sync::Options {
+            refs: rad_sync::Refs::Branch(branch.to_string()),
+            verbose: options.verbose,
+            ..rad_sync::Options::default()
+        })?;
+    }
 
     Ok(())
 }
@@ -174,12 +303,14 @@ fn create(
     profile: &Profile,
     project: &project::Metadata,
     repo: &git::Repository,
-    options: &Options,
+    options: Options,
 ) -> anyhow::Result<()> {
     term::headline(&format!(
         "🌱 Creating patch for {}",
         term::format::highlight(&project.name)
     ));
+    let whoami = person::local(storage)?;
+    let patches = cobs::patch::Patches::new(whoami, profile.paths(), storage)?;
 
     // `HEAD`; This is what we are proposing as a patch.
     let head = repo.head()?;
@@ -201,13 +332,12 @@ fn create(
         term::blank();
 
         return Err(Error::WithHint {
-            err: anyhow!("Current branch head not found in storage"),
-            hint: "hint: run `rad push` and try again",
+            err: anyhow!("Current branch head was not found in storage"),
+            hint: "hint: run `git push rad` and try again",
         }
         .into());
     }
     spinner.finish();
-    term::blank();
 
     // Determine the merge target for this patch. This can ben any tracked remote's "default"
     // branch, as well as your own (eg. `rad/master`).
@@ -231,9 +361,78 @@ fn create(
         }
     };
 
+    // The merge base is basically the commit at which the histories diverge.
+    let merge_base_oid = repo.merge_base((*target_oid).into(), head_oid)?;
+    let commits = patch::patch_commits(repo, &merge_base_oid, &head_oid)?;
+
+    let patch = match &options.update {
+        Update::No => None,
+        Update::Any => {
+            let mut spinner = term::spinner("Finding patches to update...");
+            let mut result = find_unmerged_with_base(
+                head_oid,
+                **target_oid,
+                merge_base_oid,
+                &patches,
+                &project.urn,
+                repo,
+            )?;
+
+            if let Some((id, patch)) = result.pop() {
+                if result.is_empty() {
+                    spinner.message(format!(
+                        "Found existing patch {} {}",
+                        term::format::tertiary(common::fmt::cob(&id)),
+                        term::format::italic(&patch.title)
+                    ));
+                    term::blank();
+
+                    Some((id, patch))
+                } else {
+                    spinner.failed();
+                    term::blank();
+                    anyhow::bail!("More than one patch available to update, please specify an id with `rad patch --update <id>`");
+                }
+            } else {
+                spinner.failed();
+                term::blank();
+                anyhow::bail!("No patches found that share a base, please create a new patch or specify the patch id manually");
+            }
+        }
+        Update::Patch(identifier) => {
+            let id = find_id(identifier.clone(), &project.urn, &patches)?;
+
+            if let Some(patch) = patches.get(&project.urn, &id)? {
+                Some((id, patch))
+            } else {
+                anyhow::bail!("Patch '{}' not found", id);
+            }
+        }
+    };
+
+    if let Some((id, patch)) = patch {
+        if term::confirm("Update?") {
+            term::blank();
+
+            return update(
+                patch,
+                id,
+                &head_oid,
+                &head_branch,
+                &patches,
+                project,
+                repo,
+                options,
+            );
+        } else {
+            anyhow::bail!("Patch update aborted by user");
+        }
+    }
+
     // TODO: List matching working copy refs for all targets.
 
     let user_name = storage.config_readonly()?.user_name()?;
+    term::blank();
     term::info!(
         "{}/{} ({}) <- {}/{} ({})",
         target_peer.name(),
@@ -244,22 +443,14 @@ fn create(
         term::format::secondary(&common::fmt::oid(&head_oid)),
     );
 
-    let (ahead, behind) = repo.graph_ahead_behind(head_oid, (*target_oid).into())?;
-    term::info!(
-        "{} commit(s) ahead, {} commit(s) behind",
-        term::format::positive(ahead),
-        if behind > 0 {
-            term::format::negative(behind)
-        } else {
-            term::format::dim(behind)
-        }
-    );
+    // TODO: Test case where the target branch has been re-written passed the merge-base, since the fork was created
+    // This can also happen *after* the patch is created.
+
+    term::patch::print_commits_ahead_behind(repo, head_oid, (*target_oid).into())?;
 
     // List commits in patch that aren't in the target branch.
-    let merge_base_ref = repo.merge_base((*target_oid).into(), head_oid);
-
     term::blank();
-    term::patch::list_commits(repo, &merge_base_ref.unwrap(), &head_oid)?;
+    term::patch::list_commits(&commits)?;
     term::blank();
 
     if !term::confirm("Continue?") {
@@ -293,8 +484,6 @@ fn create(
         anyhow::bail!("patch proposal aborted by user");
     }
 
-    let whoami = person::local(storage)?;
-    let patches = cobs::patch::Patches::new(whoami, profile.paths(), storage)?;
     let id = patches.create(
         &project.urn,
         &title,
@@ -307,6 +496,7 @@ fn create(
     term::blank();
     term::success!("Patch {} created 🌱", term::format::highlight(id));
 
+    // TODO: Don't show "Project synced, you can find your project at ... etc."
     if options.sync {
         rad_sync::run(rad_sync::Options {
             refs: rad_sync::Refs::Branch(head_branch.to_string()),
@@ -341,8 +531,8 @@ fn edit_message(message: &str) -> anyhow::Result<(String, String)> {
 /// Adds patch details as a new row to `table` and render later.
 pub fn print(
     whoami: &LocalIdentity,
-    patch_id: &cobs::patch::PatchId,
-    patch: &cobs::patch::Patch,
+    patch_id: &PatchId,
+    patch: &Patch,
     project: &project::Metadata,
     head: &git::Reference,
     repo: &git::Repository,
@@ -354,23 +544,27 @@ pub fn print(
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";
     let mut author_info = vec![format!(
-        "{}{} opened by {} {}",
+        "{}{} opened by {}",
         prefix,
         term::format::secondary(common::fmt::cob(patch_id)),
         term::format::tertiary(patch.author.name()),
-        term::format::dim(patch.timestamp)
     )];
 
     if you {
-        author_info.push(term::format::badge_secondary("you"));
+        author_info.push(term::format::secondary("(you)"));
     }
+    author_info.push(term::format::dim(patch.timestamp));
 
     let diff = if let Some(head_oid) = head.target() {
         let (a, b) = repo.graph_ahead_behind(revision_oid.into(), head_oid)?;
-        let ahead = term::format::positive(a);
-        let behind = term::format::negative(b);
+        if a > 0 || b > 0 {
+            let ahead = term::format::positive(a);
+            let behind = term::format::negative(b);
 
-        format!("ahead {}, behind {}", ahead, behind)
+            format!("ahead {}, behind {}", ahead, behind)
+        } else {
+            term::format::dim("up to date")
+        }
     } else {
         String::default()
     };
@@ -406,4 +600,63 @@ pub fn print(
     }
 
     Ok(())
+}
+
+/// Find patches with a merge base equal to the one provided.
+fn find_unmerged_with_base(
+    patch_head: git::Oid,
+    target_head: git::Oid,
+    merge_base: git::Oid,
+    patches: &Patches,
+    project: &common::Urn,
+    repo: &git::Repository,
+) -> anyhow::Result<Vec<(PatchId, Patch)>> {
+    // My patches.
+    let proposed: Vec<_> = patches
+        .proposed_by(patches.whoami.urn(), project)?
+        .collect();
+
+    let mut matches = Vec::new();
+
+    for (id, patch) in proposed {
+        let (_, rev) = patch.latest();
+
+        if !rev.merges.is_empty() {
+            continue;
+        }
+        if **patch.head() == patch_head {
+            continue;
+        }
+        // Merge-base between the two patches.
+        if repo.merge_base(**patch.head(), target_head)? == merge_base {
+            matches.push((id, patch));
+        }
+    }
+    Ok(matches)
+}
+
+fn find_id(
+    identifier: CobIdentifier,
+    project: &common::Urn,
+    patches: &Patches,
+) -> anyhow::Result<PatchId> {
+    match identifier {
+        CobIdentifier::Full(id) => Ok(id),
+        CobIdentifier::Prefix(prefix) => {
+            let matches = patches.find(project, |p| p.to_string().starts_with(&prefix))?;
+
+            match matches.as_slice() {
+                [id] => Ok(*id),
+                [_id, ..] => {
+                    anyhow::bail!(
+                        "patch id `{}` is ambiguous; please use the fully qualified id",
+                        prefix
+                    );
+                }
+                [] => {
+                    anyhow::bail!("patch `{}` not found in local storage", prefix);
+                }
+            }
+        }
+    }
 }

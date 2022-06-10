@@ -1,35 +1,42 @@
+use radicle_common as common;
 use radicle_common::git;
 
 use crate as term;
 
-/// List all commits between `left` and `right` in the given repository.
-pub fn list_commits(
-    repo: &git::Repository,
-    left: &git::Oid,
-    right: &git::Oid,
-) -> anyhow::Result<()> {
+/// List the given commits in a table.
+pub fn list_commits(commits: &[git::Commit]) -> anyhow::Result<()> {
     let mut table = term::Table::default();
 
-    let left_short = format!("{:.7}", left.to_string());
-    let right_short = format!("{:.7}", right.to_string());
-
-    let mut revwalk = repo.revwalk()?;
-    revwalk.push_range(&format!("{}..{}", left_short, right_short))?;
-
-    let mut revwalk = repo.revwalk()?;
-    revwalk.push_range(&format!("{}..{}", left_short, right_short))?;
-
-    for rev in revwalk {
-        let commit = repo.find_commit(rev?)?;
+    for commit in commits {
         let message = commit
             .summary_bytes()
             .unwrap_or_else(|| commit.message_bytes());
         table.push([
-            term::format::secondary(format!("{:.7}", commit.id().to_string())),
+            term::format::secondary(common::fmt::oid(&commit.id())),
             term::format::italic(String::from_utf8_lossy(message)),
         ]);
     }
     table.render();
 
+    Ok(())
+}
+
+/// Print commits ahead and behind.
+pub fn print_commits_ahead_behind(
+    repo: &git::Repository,
+    left: git::Oid,
+    right: git::Oid,
+) -> anyhow::Result<()> {
+    let (ahead, behind) = repo.graph_ahead_behind(left, right)?;
+
+    term::info!(
+        "{} commit(s) ahead, {} commit(s) behind",
+        term::format::positive(ahead),
+        if behind > 0 {
+            term::format::negative(behind)
+        } else {
+            term::format::dim(behind)
+        }
+    );
     Ok(())
 }
