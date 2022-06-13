@@ -450,6 +450,44 @@ impl<'a> Document<'a> {
 
         V::from_value(val).map_err(DocumentError::from)
     }
+
+    pub fn lookup<V, O: AsRef<automerge::ObjId>, P: Into<automerge::Prop>>(
+        &self,
+        id: O,
+        prop: P,
+        lookup: fn(Document, &automerge::ObjId) -> Result<V, DocumentError>,
+    ) -> Result<V, DocumentError> {
+        let (_, obj_id) = self.get(&id, prop)?;
+        lookup(*self, &obj_id)
+    }
+
+    pub fn list<V, O: AsRef<automerge::ObjId>, P: Into<automerge::Prop>>(
+        &self,
+        id: O,
+        prop: P,
+        item: fn(Document, &automerge::ObjId) -> Result<V, DocumentError>,
+    ) -> Result<Vec<V>, DocumentError> {
+        let prop = prop.into();
+        let id = id.as_ref();
+        let (list, list_id) = self
+            .doc
+            .get(id, prop.clone())?
+            .ok_or_else(|| DocumentError::PropertyNotFound(prop.to_string()))?;
+
+        assert_eq!(list.to_objtype(), Some(ObjType::List));
+
+        let mut objs: Vec<V> = Vec::new();
+        for i in 0..self.length(&list_id) {
+            let (_, item_id) = self
+                .doc
+                .get(&list_id, i as usize)?
+                .ok_or_else(|| DocumentError::PropertyNotFound(prop.to_string()))?;
+            let item = item(*self, &item_id)?;
+
+            objs.push(item);
+        }
+        Ok(objs)
+    }
 }
 
 impl<'a> Deref for Document<'a> {

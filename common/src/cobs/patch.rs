@@ -161,12 +161,7 @@ impl TryFrom<Document<'_>> for Patch {
         assert_eq!(labels.to_objtype(), Some(ObjType::Map));
 
         // Revisions.
-        let mut revisions = Vec::new();
-        let (_, revisions_id) = doc.get(&obj_id, "revisions")?;
-        for i in 0..doc.length(&revisions_id) {
-            let revision = lookup::revision(doc, &revisions_id, i)?;
-            revisions.push(revision);
-        }
+        let revisions = doc.list(&obj_id, "revisions", lookup::revision)?;
 
         // Labels.
         let mut labels = HashSet::new();
@@ -662,14 +657,10 @@ mod lookup {
 
     pub fn revision(
         doc: Document,
-        revisions_id: &automerge::ObjId,
-        ix: RevisionIx,
+        revision_id: &automerge::ObjId,
     ) -> Result<Revision, DocumentError> {
-        let (_, revision_id) = doc.get(&revisions_id, ix)?;
         let (_, comment_id) = doc.get(&revision_id, "comment")?;
-        let (_, discussion_id) = doc.get(&revision_id, "discussion")?;
         let (_, reviews_id) = doc.get(&revision_id, "reviews")?;
-        let (_, merges_id) = doc.get(&revision_id, "merges")?;
         let id = doc.val(&revision_id, "id")?;
         let peer = doc.val(&revision_id, "peer")?;
         let oid = doc.val(&revision_id, "oid")?;
@@ -679,22 +670,11 @@ mod lookup {
         let comment = shared::lookup::comment(doc, &comment_id)?;
 
         // Discussion thread.
-        let mut discussion: Discussion = Vec::new();
-        for i in 0..doc.length(&discussion_id) {
-            let (_, comment_id) = doc.get(&discussion_id, i as usize)?;
-            let comment = shared::lookup::thread(doc, &comment_id)?;
-
-            discussion.push(comment);
-        }
+        let discussion: Discussion =
+            doc.list(&revision_id, "discussion", shared::lookup::thread)?;
 
         // Patch merges.
-        let mut merges: Vec<Merge> = Vec::new();
-        for i in 0..doc.length(&merges_id) {
-            let (_, merge_id) = doc.get(&merges_id, i as usize)?;
-            let merge = self::merge(doc, &merge_id)?;
-
-            merges.push(merge);
-        }
+        let merges: Vec<Merge> = doc.list(&revision_id, "merges", self::merge)?;
 
         // Reviews.
         let mut reviews: HashMap<Urn, Review> = HashMap::new();
@@ -733,9 +713,7 @@ mod lookup {
         let author = doc.val(&obj_id, "author")?;
         let verdict = doc.val(&obj_id, "verdict")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
-        let (_, comment_id) = doc.get(&obj_id, "comment")?;
-
-        let comment = shared::lookup::comment(doc, &comment_id)?;
+        let comment = doc.lookup(&obj_id, "comment", shared::lookup::comment)?;
         let inline = vec![];
 
         Ok(Review {
