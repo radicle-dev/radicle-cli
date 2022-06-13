@@ -66,10 +66,8 @@ impl From<MergeTarget> for ScalarValue {
     }
 }
 
-impl<'a> TryFrom<Value<'a>> for MergeTarget {
-    type Error = ValueError;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
+impl<'a> FromValue<'a> for MergeTarget {
+    fn from_value(value: Value<'a>) -> Result<Self, ValueError> {
         let state = value.to_str().ok_or(ValueError::InvalidType)?;
 
         match state {
@@ -152,12 +150,12 @@ impl TryFrom<Document<'_>> for Patch {
 
     fn try_from(doc: Document) -> Result<Self, Self::Error> {
         let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "patch")?;
-        let (title, _) = doc.get(&obj_id, "title")?;
-        let (author, _) = doc.get(&obj_id, "author")?;
-        let (peer, _) = doc.get(&obj_id, "peer")?;
-        let (state, _) = doc.get(&obj_id, "state")?;
-        let (target, _) = doc.get(&obj_id, "target")?;
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let title = doc.val(&obj_id, "title")?;
+        let author = doc.val(&obj_id, "author")?;
+        let peer = doc.val(&obj_id, "peer")?;
+        let state = doc.val(&obj_id, "state")?;
+        let target = doc.val(&obj_id, "target")?;
+        let timestamp = doc.val(&obj_id, "timestamp")?;
         let (labels, labels_id) = doc.get(&obj_id, "labels")?;
 
         assert_eq!(labels.to_objtype(), Some(ObjType::Map));
@@ -176,16 +174,7 @@ impl TryFrom<Document<'_>> for Patch {
             let label = Label::new(key).map_err(|_| DocumentError::Property)?;
             labels.insert(label);
         }
-
-        let title = title
-            .into_string()
-            .map_err(|_| DocumentError::Value(ValueError::InvalidType))?;
-        let author = Author::from_value(author)?;
-        let peer = PeerId::from_value(peer)?;
-        let state = State::try_from(state)?;
         let revisions = NonEmpty::from_vec(revisions).ok_or(DocumentError::EmptyList)?;
-        let target = MergeTarget::try_from(target)?;
-        let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Self {
             author,
@@ -471,10 +460,8 @@ impl From<State> for ScalarValue {
     }
 }
 
-impl<'a> TryFrom<Value<'a>> for State {
-    type Error = ValueError;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
+impl<'a> FromValue<'a> for State {
+    fn from_value(value: Value<'a>) -> Result<Self, ValueError> {
         let state = value.to_str().ok_or(ValueError::InvalidType)?;
 
         match state {
@@ -593,10 +580,8 @@ impl From<Verdict> for ScalarValue {
     }
 }
 
-impl<'a> TryFrom<Value<'a>> for Verdict {
-    type Error = ValueError;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
+impl<'a> FromValue<'a> for Verdict {
+    fn from_value(value: Value) -> Result<Self, ValueError> {
         let verdict = value.to_str().ok_or(ValueError::InvalidType)?;
         serde_json::from_str(verdict).map_err(|e| ValueError::Other(Arc::new(e)))
     }
@@ -685,10 +670,10 @@ mod lookup {
         let (_, discussion_id) = doc.get(&revision_id, "discussion")?;
         let (_, reviews_id) = doc.get(&revision_id, "reviews")?;
         let (_, merges_id) = doc.get(&revision_id, "merges")?;
-        let (id, _) = doc.get(&revision_id, "id")?;
-        let (peer, _) = doc.get(&revision_id, "peer")?;
-        let (oid, _) = doc.get(&revision_id, "oid")?;
-        let (timestamp, _) = doc.get(&revision_id, "timestamp")?;
+        let id = doc.val(&revision_id, "id")?;
+        let peer = doc.val(&revision_id, "peer")?;
+        let oid = doc.val(&revision_id, "oid")?;
+        let timestamp = doc.val(&revision_id, "timestamp")?;
 
         // Top-level comment.
         let comment = shared::lookup::comment(doc, &comment_id)?;
@@ -720,11 +705,6 @@ mod lookup {
             reviews.insert(review.author.urn().clone(), review);
         }
 
-        let id = RevisionId::from_value(id)?;
-        let peer = PeerId::from_value(peer)?;
-        let oid = git::Oid::from_value(oid)?;
-        let timestamp = Timestamp::try_from(timestamp)?;
-
         Ok(Revision {
             id,
             peer,
@@ -738,13 +718,9 @@ mod lookup {
     }
 
     pub fn merge(doc: Document, obj_id: &automerge::ObjId) -> Result<Merge, DocumentError> {
-        let (peer, _) = doc.get(&obj_id, "peer")?;
-        let (commit, _) = doc.get(&obj_id, "commit")?;
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
-
-        let peer = PeerId::from_value(peer)?;
-        let commit = git::Oid::from_value(commit)?;
-        let timestamp = Timestamp::try_from(timestamp)?;
+        let peer = doc.val(&obj_id, "peer")?;
+        let commit = doc.val(&obj_id, "commit")?;
+        let timestamp = doc.val(&obj_id, "timestamp")?;
 
         Ok(Merge {
             peer,
@@ -754,15 +730,12 @@ mod lookup {
     }
 
     pub fn review(doc: Document, obj_id: &automerge::ObjId) -> Result<Review, DocumentError> {
-        let (author, _) = doc.get(&obj_id, "author")?;
-        let (verdict, _) = doc.get(&obj_id, "verdict")?;
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let author = doc.val(&obj_id, "author")?;
+        let verdict = doc.val(&obj_id, "verdict")?;
+        let timestamp = doc.val(&obj_id, "timestamp")?;
         let (_, comment_id) = doc.get(&obj_id, "comment")?;
 
         let comment = shared::lookup::comment(doc, &comment_id)?;
-        let author = Author::from_value(author)?;
-        let verdict = Verdict::try_from(verdict)?;
-        let timestamp = Timestamp::try_from(timestamp)?;
         let inline = vec![];
 
         Ok(Review {

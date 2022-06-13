@@ -345,10 +345,8 @@ impl From<Timestamp> for ScalarValue {
     }
 }
 
-impl<'a> TryFrom<Value<'a>> for Timestamp {
-    type Error = ValueError;
-
-    fn try_from(val: Value) -> Result<Self, Self::Error> {
+impl<'a> FromValue<'a> for Timestamp {
+    fn from_value(val: Value<'a>) -> Result<Self, ValueError> {
         if let Value::Scalar(scalar) = &val {
             if let ScalarValue::Timestamp(ts) = scalar.borrow() {
                 return Ok(Self {
@@ -441,6 +439,17 @@ impl<'a> Document<'a> {
             .get(id.as_ref(), prop.clone())?
             .ok_or(DocumentError::PropertyNotFound(prop.to_string()))
     }
+
+    pub fn val<O: AsRef<automerge::ObjId>, P: Into<automerge::Prop>, V: FromValue<'a>>(
+        &self,
+        id: O,
+        prop: P,
+    ) -> Result<V, DocumentError> {
+        let prop = prop.into();
+        let (val, _) = Document::get(self, id, prop)?;
+
+        V::from_value(val).map_err(DocumentError::from)
+    }
 }
 
 impl<'a> Deref for Document<'a> {
@@ -467,21 +476,16 @@ pub enum DocumentError {
 }
 
 pub mod lookup {
-    use std::convert::TryFrom;
     use std::str::FromStr;
 
-    use super::{Author, Comment, FromValue, HashMap, Reaction, Replies, Timestamp};
+    use super::{Comment, HashMap, Reaction, Replies};
     use super::{Document, DocumentError};
 
     pub fn comment(doc: Document, obj_id: &automerge::ObjId) -> Result<Comment<()>, DocumentError> {
-        let (author, _) = doc.get(&obj_id, "author")?;
-        let (body, _) = doc.get(&obj_id, "body")?;
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let author = doc.val(&obj_id, "author")?;
+        let body = doc.val(&obj_id, "body")?;
+        let timestamp = doc.val(&obj_id, "timestamp")?;
         let (_, reactions_id) = doc.get(&obj_id, "reactions")?;
-
-        let author = Author::from_value(author)?;
-        let body = String::from_value(body)?;
-        let timestamp = Timestamp::try_from(timestamp)?;
 
         let mut reactions: HashMap<_, usize> = HashMap::new();
         for reaction in doc.keys(&reactions_id) {

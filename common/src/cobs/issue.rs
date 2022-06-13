@@ -179,12 +179,12 @@ impl TryFrom<Automerge> for Issue {
     fn try_from(doc: Automerge) -> Result<Self, Self::Error> {
         let doc = Document::new(&doc);
         let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "issue")?;
-        let (title, _) = doc.get(&obj_id, "title")?;
+        let title = doc.val(&obj_id, "title")?;
         let (_, comment_id) = doc.get(&obj_id, "comment")?;
         let (discussion, discussion_id) = doc.get(&obj_id, "discussion")?;
-        let (author, _) = doc.get(&obj_id, "author")?;
-        let (state, _) = doc.get(&obj_id, "state")?;
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let author = doc.val(&obj_id, "author")?;
+        let state = doc.val(&obj_id, "state")?;
+        let timestamp = doc.val(&obj_id, "timestamp")?;
         let (labels, labels_id) = doc.get(&obj_id, "labels")?;
 
         assert_eq!(discussion.to_objtype(), Some(ObjType::List));
@@ -209,11 +209,6 @@ impl TryFrom<Automerge> for Issue {
 
             labels.insert(label);
         }
-
-        let title = String::from_value(title)?;
-        let author = Author::from_value(author)?;
-        let state = State::from_value(state)?;
-        let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Self {
             title,
