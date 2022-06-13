@@ -34,8 +34,11 @@ lazy_static! {
 /// Identifier for a patch.
 pub type PatchId = ObjectId;
 
-/// Identifier for a revision.
-pub type RevisionId = usize;
+/// Unique identifier for a revision.
+pub type RevisionId = uuid::Uuid;
+
+/// Index of a revision in the revisions list.
+pub type RevisionIx = usize;
 
 /// Where a patch is intended to be merged.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -118,11 +121,11 @@ impl Patch {
         &self.revisions.last().oid
     }
 
-    pub fn version(&self) -> RevisionId {
+    pub fn version(&self) -> RevisionIx {
         self.revisions.len() - 1
     }
 
-    pub fn latest(&self) -> (RevisionId, &Revision) {
+    pub fn latest(&self) -> (RevisionIx, &Revision) {
         let version = self.version();
         let revision = &self.revisions[version];
 
@@ -275,7 +278,7 @@ impl<'a> Patches<'a> {
         patch_id: &PatchId,
         comment: impl ToString,
         oid: impl Into<git::Oid>,
-    ) -> Result<RevisionId, Error> {
+    ) -> Result<RevisionIx, Error> {
         let author = self.whoami.urn();
         let timestamp = Timestamp::now();
         let revision = Revision::new(
@@ -287,7 +290,7 @@ impl<'a> Patches<'a> {
         );
 
         let mut patch = self.get_raw(project, patch_id)?.unwrap();
-        let (revision_id, changes) = events::update(&mut patch, revision)?;
+        let (revision_ix, changes) = events::update(&mut patch, revision)?;
 
         cobs::update(
             *patch_id,
@@ -298,7 +301,7 @@ impl<'a> Patches<'a> {
             &self.store,
         )?;
 
-        Ok(revision_id)
+        Ok(revision_ix)
     }
 
     pub fn get(&self, project: &Urn, id: &PatchId) -> Result<Option<Patch>, Error> {
@@ -345,7 +348,7 @@ impl<'a> Patches<'a> {
         &self,
         project: &Urn,
         patch_id: &PatchId,
-        revision: RevisionId,
+        revision_ix: RevisionIx,
         commit: git::Oid,
     ) -> Result<Merge, Error> {
         let timestamp = Timestamp::now();
@@ -356,7 +359,7 @@ impl<'a> Patches<'a> {
         };
 
         let mut patch = self.get_raw(project, patch_id)?.unwrap();
-        let changes = events::merge(&mut patch, revision, &merge)?;
+        let changes = events::merge(&mut patch, revision_ix, &merge)?;
 
         cobs::update(
             *patch_id,
@@ -456,9 +459,9 @@ impl<'a> TryFrom<Value<'a>> for State {
 /// A patch revision.
 #[derive(Debug, Clone, Serialize)]
 pub struct Revision {
-    /// Author of this revision.
-    /// Note that this doesn't have to match the author of the patch.
-    pub author: Author,
+    /// Unique revision ID. This is useful in case of conflicts, eg.
+    /// a user published a revision from two devices by mistake.
+    pub id: RevisionId,
     /// Peer who published this revision.
     pub peer: PeerId,
     /// Reference to the Git object containing the code.
@@ -484,7 +487,7 @@ impl Revision {
         timestamp: Timestamp,
     ) -> Self {
         Self {
-            author: Author::from(author.clone()),
+            id: uuid::Uuid::new_v4(),
             peer,
             oid,
             comment: Comment::new(author, comment, timestamp),
@@ -505,7 +508,7 @@ impl Revision {
         tx: &mut automerge::transaction::Transaction,
         id: &automerge::ObjId,
     ) -> Result<(), AutomergeError> {
-        tx.put(&id, "author", self.author.urn().to_string())?;
+        tx.put(&id, "id", self.id.to_string())?;
         tx.put(&id, "peer", self.peer.to_string())?;
         tx.put(&id, "oid", self.oid.to_string())?;
         {
@@ -609,14 +612,14 @@ mod lookup {
     pub fn revision(
         doc: Document,
         revisions_id: &automerge::ObjId,
-        id: RevisionId,
+        ix: RevisionIx,
     ) -> Result<Revision, DocumentError> {
-        let (_, revision_id) = doc.get(&revisions_id, id)?;
+        let (_, revision_id) = doc.get(&revisions_id, ix)?;
         let (_, comment_id) = doc.get(&revision_id, "comment")?;
         let (_, discussion_id) = doc.get(&revision_id, "discussion")?;
         let (_, _reviews_id) = doc.get(&revision_id, "reviews")?;
         let (_, merges_id) = doc.get(&revision_id, "merges")?;
-        let (author, _) = doc.get(&revision_id, "author")?;
+        let (id, _) = doc.get(&revision_id, "id")?;
         let (peer, _) = doc.get(&revision_id, "peer")?;
         let (oid, _) = doc.get(&revision_id, "oid")?;
         let (timestamp, _) = doc.get(&revision_id, "timestamp")?;
@@ -642,14 +645,14 @@ mod lookup {
             merges.push(merge);
         }
 
-        let author = Author::from_value(author)?;
+        let id = RevisionId::from_value(id)?;
         let peer = PeerId::from_value(peer)?;
         let oid = git::Oid::from_value(oid)?;
         let reviews = HashMap::new();
         let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Revision {
-            author,
+            id,
             peer,
             oid,
             comment,
@@ -785,7 +788,7 @@ mod events {
     pub fn update(
         patch: &mut Automerge,
         revision: Revision,
-    ) -> Result<(RevisionId, EntryContents), AutomergeError> {
+    ) -> Result<(RevisionIx, EntryContents), AutomergeError> {
         let success = patch
             .transact_with::<_, _, AutomergeError, _, ()>(
                 |_| CommitOptions::default().with_message("Merge revision".to_owned()),
@@ -793,25 +796,25 @@ mod events {
                     let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
                     let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
 
-                    let length = tx.length(&revisions_id);
-                    let revision_id = tx.insert_object(&revisions_id, length, ObjType::Map)?;
+                    let ix = tx.length(&revisions_id);
+                    let revision_id = tx.insert_object(&revisions_id, ix, ObjType::Map)?;
 
                     revision.put(tx, &revision_id)?;
 
-                    Ok(length)
+                    Ok(ix)
                 },
             )
             .map_err(|failure| failure.error)?;
 
-        let revision_id = success.result;
+        let revision_ix = success.result;
         let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
 
-        Ok((revision_id, EntryContents::Automerge(change)))
+        Ok((revision_ix, EntryContents::Automerge(change)))
     }
 
     pub fn merge(
         patch: &mut Automerge,
-        revision: RevisionId,
+        revision_ix: RevisionIx,
         merge: &Merge,
     ) -> Result<EntryContents, AutomergeError> {
         patch
@@ -820,7 +823,7 @@ mod events {
                 |tx| {
                     let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
                     let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
-                    let (_, revision_id) = tx.get(&revisions_id, revision)?.unwrap();
+                    let (_, revision_id) = tx.get(&revisions_id, revision_ix)?.unwrap();
                     let (_, merges_id) = tx.get(&revision_id, "merges")?.unwrap();
 
                     let length = tx.length(&merges_id);
@@ -874,7 +877,6 @@ mod test {
 
         let revision = patch.revisions.head;
 
-        assert_eq!(revision.author, Author::Urn { urn: author });
         assert_eq!(revision.peer, *storage.peer_id());
         assert_eq!(revision.comment.body, "Blah blah blah.");
         assert_eq!(revision.discussion.len(), 0);

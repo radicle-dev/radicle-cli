@@ -358,6 +358,15 @@ impl<'a> FromValue<'a> for PeerId {
     }
 }
 
+impl<'a> FromValue<'a> for uuid::Uuid {
+    fn from_value(val: Value<'a>) -> Result<uuid::Uuid, ValueError> {
+        let uuid = String::from_value(val)?;
+        let uuid = uuid::Uuid::from_str(&uuid).map_err(|e| ValueError::Other(Arc::new(e)))?;
+
+        Ok(uuid)
+    }
+}
+
 impl<'a> FromValue<'a> for Author {
     fn from_value(val: Value<'a>) -> Result<Author, ValueError> {
         let urn = String::from_value(val)?;

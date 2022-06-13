@@ -11,7 +11,7 @@ use radicle_common::patch::MergeStyle;
 use radicle_common::{cobs, git, keys, person, profile, project};
 use radicle_terminal as term;
 
-use cobs::patch::RevisionId;
+use cobs::patch::RevisionIx;
 
 pub const HELP: Help = Help {
     name: "merge",
@@ -47,7 +47,7 @@ const MERGE_HELP_MSG: &[&str] = &[
 pub struct Options {
     pub id: CobIdentifier,
     pub interactive: bool,
-    pub revision: Option<RevisionId>,
+    pub revision: Option<RevisionIx>,
 }
 
 impl Args for Options {
@@ -56,7 +56,7 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut id: Option<CobIdentifier> = None;
-        let mut revision: Option<RevisionId> = None;
+        let mut revision: Option<RevisionIx> = None;
         let mut interactive = false;
 
         while let Some(arg) = parser.next()? {
@@ -70,7 +70,7 @@ impl Args for Options {
                 Long("revision") | Short('r') => {
                     let value = parser.value()?;
                     let id =
-                        RevisionId::from_str(value.to_str().unwrap_or_default()).map_err(|_| {
+                        RevisionIx::from_str(value.to_str().unwrap_or_default()).map_err(|_| {
                             anyhow!("invalid revision number `{}`", value.to_string_lossy())
                         })?;
                     revision = Some(id);
