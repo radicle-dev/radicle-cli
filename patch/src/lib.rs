@@ -245,7 +245,7 @@ fn update(
 ) -> anyhow::Result<()> {
     let (current, current_revision) = patch.latest();
 
-    if &*current_revision.tag == head {
+    if &*current_revision.oid == head {
         term::info!("Nothing to do, patch is already up to date.");
         return Ok(());
     }
@@ -254,7 +254,7 @@ fn update(
         "{} {} ({}) -> {} ({})",
         term::format::tertiary(common::fmt::cob(&patch_id)),
         term::format::dim(format!("R{}", current)),
-        term::format::secondary(common::fmt::oid(&current_revision.tag)),
+        term::format::secondary(common::fmt::oid(&current_revision.oid)),
         term::format::dim(format!("R{}", current + 1)),
         term::format::secondary(common::fmt::oid(head)),
     );
@@ -273,7 +273,7 @@ fn update(
     let comment = comment.trim();
 
     // Difference between the two revisions.
-    term::patch::print_commits_ahead_behind(repo, *head, *current_revision.tag)?;
+    term::patch::print_commits_ahead_behind(repo, *head, *current_revision.oid)?;
     term::blank();
 
     if !term::confirm("Continue?") {
@@ -539,7 +539,7 @@ pub fn print(
     storage: &Storage,
 ) -> anyhow::Result<()> {
     let revision = patch.revisions.last();
-    let revision_oid = revision.tag;
+    let revision_oid = revision.oid;
     let revision_pretty = term::format::dim(format!("R{}", patch.version()));
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";

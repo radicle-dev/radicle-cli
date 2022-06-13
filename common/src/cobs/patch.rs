@@ -95,7 +95,7 @@ pub enum Error {
 #[derive(Debug, Clone, Serialize)]
 pub struct Patch {
     /// Author of the patch.
-    pub author: Author, // TODO: Should this be plural?
+    pub author: Author,
     /// Peer who authored the patch.
     pub peer: PeerId,
     /// Title of the patch.
@@ -115,7 +115,7 @@ pub struct Patch {
 
 impl Patch {
     pub fn head(&self) -> &git::Oid {
-        &self.revisions.last().tag
+        &self.revisions.last().oid
     }
 
     pub fn version(&self) -> RevisionId {
@@ -242,7 +242,7 @@ impl<'a> Patches<'a> {
         title: &str,
         description: &str,
         target: MergeTarget,
-        tag: impl Into<git::Oid>,
+        oid: impl Into<git::Oid>,
         labels: &[Label],
     ) -> Result<PatchId, Error> {
         let author = self.whoami.urn();
@@ -250,7 +250,7 @@ impl<'a> Patches<'a> {
         let revision = Revision::new(
             author.clone(),
             self.peer_id,
-            tag.into(),
+            oid.into(),
             description.to_owned(),
             timestamp,
         );
@@ -272,14 +272,14 @@ impl<'a> Patches<'a> {
         project: &Urn,
         patch_id: &PatchId,
         comment: impl ToString,
-        tag: impl Into<git::Oid>,
+        oid: impl Into<git::Oid>,
     ) -> Result<RevisionId, Error> {
         let author = self.whoami.urn();
         let timestamp = Timestamp::now();
         let revision = Revision::new(
             author,
             self.peer_id,
-            tag.into(),
+            oid.into(),
             comment.to_string(),
             timestamp,
         );
@@ -460,7 +460,7 @@ pub struct Revision {
     /// Peer who published this revision.
     pub peer: PeerId,
     /// Reference to the Git object containing the code.
-    pub tag: git::Oid,
+    pub oid: git::Oid,
     /// "Cover letter" for this changeset.
     pub comment: Comment,
     /// Discussion around this revision.
@@ -477,14 +477,14 @@ impl Revision {
     pub fn new(
         author: Urn,
         peer: PeerId,
-        tag: git::Oid,
+        oid: git::Oid,
         comment: String,
         timestamp: Timestamp,
     ) -> Self {
         Self {
             author: Author::from(author.clone()),
             peer,
-            tag,
+            oid,
             comment: Comment::new(author, comment, timestamp),
             discussion: Discussion::default(),
             reviews: HashMap::default(),
@@ -505,7 +505,7 @@ impl Revision {
     ) -> Result<(), AutomergeError> {
         tx.put(&id, "author", self.author.urn().to_string())?;
         tx.put(&id, "peer", self.peer.to_string())?;
-        tx.put(&id, "tag", self.tag.to_string())?;
+        tx.put(&id, "oid", self.oid.to_string())?;
         {
             // Top-level comment for first patch revision.
             // Nb. top-level comment doesn't have a `replies` field.
@@ -616,7 +616,7 @@ mod lookup {
         let (_, merges_id) = doc.get(&revision_id, "merges")?.unwrap();
         let (author, _) = doc.get(&revision_id, "author")?.unwrap();
         let (peer, _) = doc.get(&revision_id, "peer")?.unwrap();
-        let (tag, _) = doc.get(&revision_id, "tag")?.unwrap();
+        let (oid, _) = doc.get(&revision_id, "oid")?.unwrap();
         let (timestamp, _) = doc.get(&revision_id, "timestamp")?.unwrap();
 
         // Top-level comment.
@@ -642,14 +642,14 @@ mod lookup {
 
         let author = Author::from_value(author)?;
         let peer = PeerId::from_value(peer)?;
-        let tag = tag.to_str().unwrap().try_into().unwrap();
+        let oid = oid.to_str().unwrap().try_into().unwrap();
         let reviews = HashMap::new();
         let timestamp = Timestamp::try_from(timestamp).unwrap();
 
         Ok(Revision {
             author,
             peer,
-            tag,
+            oid,
             comment,
             discussion,
             reviews,
@@ -851,14 +851,14 @@ mod test {
         let timestamp = Timestamp::now();
         let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
         let target = MergeTarget::Upstream;
-        let tag = git::Oid::from(git2::Oid::zero());
+        let oid = git::Oid::from(git2::Oid::zero());
         let patch_id = patches
             .create(
                 &project.urn(),
                 "My first patch",
                 "Blah blah blah.",
                 target,
-                tag,
+                oid,
                 &[],
             )
             .unwrap();
@@ -876,7 +876,7 @@ mod test {
         assert_eq!(revision.peer, *storage.peer_id());
         assert_eq!(revision.comment.body, "Blah blah blah.");
         assert_eq!(revision.discussion.len(), 0);
-        assert_eq!(revision.tag, tag);
+        assert_eq!(revision.oid, oid);
         assert!(revision.reviews.is_empty());
         assert!(revision.merges.is_empty());
     }
@@ -886,7 +886,7 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
         let target = MergeTarget::Upstream;
-        let tag = git::Oid::from(git2::Oid::zero());
+        let oid = git::Oid::from(git2::Oid::zero());
         let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
         let patch_id = patches
             .create(
@@ -894,7 +894,7 @@ mod test {
                 "My first patch",
                 "Blah blah blah.",
                 target,
-                tag,
+                oid,
                 &[],
             )
             .unwrap();
@@ -946,7 +946,7 @@ mod test {
         let (id, revision) = patch.latest();
 
         assert_eq!(id, 1);
-        assert_eq!(revision.tag, rev1_oid);
+        assert_eq!(revision.oid, rev1_oid);
         assert_eq!(revision.description(), "I've made changes.");
     }
 }
