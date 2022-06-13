@@ -5,6 +5,7 @@ use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::ops::Deref;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use automerge::{Automerge, AutomergeError, ScalarValue, Value};
@@ -25,6 +26,8 @@ pub enum ValueError {
     InvalidType,
     #[error("invalid value: `{0}`")]
     InvalidValue(String),
+    #[error("value error: {0}")]
+    Other(Arc<dyn std::error::Error + Send + Sync>),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -92,7 +95,7 @@ impl FromStr for Reaction {
         if chars.next().is_some() {
             return Err(ReactionError::InvalidReaction);
         }
-        Ok(Reaction::new(first).unwrap())
+        Reaction::new(first)
     }
 }
 
@@ -342,48 +345,57 @@ impl<'a> TryFrom<Value<'a>> for Timestamp {
 }
 
 /// Implemented by types that can be converted from a [`Value`].
-pub trait FromValue: Sized {
-    fn from_value(val: Value) -> Result<Self, AutomergeError>;
+pub trait FromValue<'a>: Sized {
+    fn from_value(val: Value<'a>) -> Result<Self, ValueError>;
 }
 
-impl FromValue for PeerId {
-    fn from_value(val: Value) -> Result<PeerId, AutomergeError> {
-        let peer = PeerId::from_str(val.to_str().unwrap()).unwrap();
+impl<'a> FromValue<'a> for PeerId {
+    fn from_value(val: Value<'a>) -> Result<PeerId, ValueError> {
+        let peer = String::from_value(val)?;
+        let peer = PeerId::from_str(&peer).map_err(|e| ValueError::Other(Arc::new(e)))?;
 
         Ok(peer)
     }
 }
 
-impl FromValue for Author {
-    fn from_value(val: Value) -> Result<Author, AutomergeError> {
-        let urn = val.into_string().unwrap();
-        let urn = Urn::from_str(&urn).unwrap();
+impl<'a> FromValue<'a> for Author {
+    fn from_value(val: Value<'a>) -> Result<Author, ValueError> {
+        let urn = String::from_value(val)?;
+        let urn = Urn::from_str(&urn).map_err(|e| ValueError::Other(Arc::new(e)))?;
 
         Ok(Author::Urn { urn })
     }
 }
 
-impl FromValue for git::Oid {
-    fn from_value(val: Value) -> Result<git::Oid, AutomergeError> {
-        let oid = val.into_string().unwrap();
-        let oid = git::Oid::from_str(&oid).unwrap();
+impl<'a> FromValue<'a> for git::Oid {
+    fn from_value(val: Value<'a>) -> Result<git::Oid, ValueError> {
+        let oid = String::from_value(val)?;
+        let oid = git::Oid::from_str(&oid).map_err(|e| ValueError::Other(Arc::new(e)))?;
 
         Ok(oid)
     }
 }
 
-impl FromValue for git::OneLevel {
-    fn from_value(val: Value) -> Result<git::OneLevel, AutomergeError> {
-        let one = git::OneLevel::try_from(git::RefLike::try_from(val.to_str().unwrap()).unwrap())
-            .unwrap();
+impl<'a> FromValue<'a> for git::OneLevel {
+    fn from_value(val: Value<'a>) -> Result<git::OneLevel, ValueError> {
+        let one = String::from_value(val)?;
+        let reflike = git::RefLike::try_from(one).map_err(|e| ValueError::Other(Arc::new(e)))?;
+        let one = git::OneLevel::try_from(reflike).map_err(|e| ValueError::Other(Arc::new(e)))?;
 
         Ok(one)
+    }
+}
+
+impl<'a> FromValue<'a> for String {
+    fn from_value(val: Value) -> Result<String, ValueError> {
+        val.into_string().map_err(|_| ValueError::InvalidType)
     }
 }
 
 /// Automerge document decoder.
 ///
 /// Wraps a document, providing convenience functions. Derefs to the underlying doc.
+#[derive(Copy, Clone)]
 pub struct Document<'a> {
     doc: &'a Automerge,
 }
@@ -393,14 +405,16 @@ impl<'a> Document<'a> {
         Self { doc }
     }
 
-    pub fn get<O: AsRef<automerge::ObjId>>(
+    pub fn get<O: AsRef<automerge::ObjId>, P: Into<automerge::Prop>>(
         &self,
         id: O,
-        field: &'static str,
+        prop: P,
     ) -> Result<(automerge::Value<'a>, automerge::ObjId), DocumentError> {
+        let prop = prop.into();
+
         self.doc
-            .get(id.as_ref(), field)?
-            .ok_or(DocumentError::KeyNotFound(field))
+            .get(id.as_ref(), prop.clone())?
+            .ok_or(DocumentError::PropertyNotFound(prop.to_string()))
     }
 }
 
@@ -417,10 +431,10 @@ impl<'a> Deref for Document<'a> {
 pub enum DocumentError {
     #[error(transparent)]
     Automerge(#[from] AutomergeError),
-    #[error("key '{0}' not found in object")]
-    KeyNotFound(&'static str),
-    #[error("error decoding key")]
-    Key,
+    #[error("property '{0}' not found in object")]
+    PropertyNotFound(String),
+    #[error("error decoding property")]
+    Property,
     #[error("error decoding value: {0}")]
     Value(#[from] ValueError),
     #[error("list cannot be empty")]
@@ -431,27 +445,22 @@ pub mod lookup {
     use std::convert::TryFrom;
     use std::str::FromStr;
 
-    use super::{
-        Author, Automerge, AutomergeError, Comment, FromValue, HashMap, Reaction, Replies,
-        Timestamp,
-    };
+    use super::{Author, Comment, FromValue, HashMap, Reaction, Replies, Timestamp};
+    use super::{Document, DocumentError};
 
-    pub fn comment(
-        doc: &Automerge,
-        obj_id: &automerge::ObjId,
-    ) -> Result<Comment<()>, AutomergeError> {
-        let (author, _) = doc.get(&obj_id, "author")?.unwrap();
-        let (body, _) = doc.get(&obj_id, "body")?.unwrap();
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
-        let (_, reactions_id) = doc.get(&obj_id, "reactions")?.unwrap();
+    pub fn comment(doc: Document, obj_id: &automerge::ObjId) -> Result<Comment<()>, DocumentError> {
+        let (author, _) = doc.get(&obj_id, "author")?;
+        let (body, _) = doc.get(&obj_id, "body")?;
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let (_, reactions_id) = doc.get(&obj_id, "reactions")?;
 
         let author = Author::from_value(author)?;
-        let body = body.into_string().unwrap();
-        let timestamp = Timestamp::try_from(timestamp).unwrap();
+        let body = String::from_value(body)?;
+        let timestamp = Timestamp::try_from(timestamp)?;
 
         let mut reactions: HashMap<_, usize> = HashMap::new();
         for reaction in doc.keys(&reactions_id) {
-            let key = Reaction::from_str(&reaction).unwrap();
+            let key = Reaction::from_str(&reaction).map_err(|_| DocumentError::Property)?;
             let count = reactions.entry(key).or_default();
 
             *count += 1;
@@ -467,15 +476,15 @@ pub mod lookup {
     }
 
     pub fn thread(
-        doc: &Automerge,
+        doc: Document,
         obj_id: &automerge::ObjId,
-    ) -> Result<Comment<Replies>, AutomergeError> {
+    ) -> Result<Comment<Replies>, DocumentError> {
         let comment = self::comment(doc, obj_id)?;
 
         let mut replies = Vec::new();
-        if let Some((_, replies_id)) = doc.get(&obj_id, "replies")? {
+        if let Ok((_, replies_id)) = doc.get(&obj_id, "replies") {
             for i in 0..doc.length(&replies_id) {
-                let (_, reply_id) = doc.get(&replies_id, i as usize)?.unwrap();
+                let (_, reply_id) = doc.get(&replies_id, i as usize)?;
                 let reply = self::comment(doc, &reply_id)?;
 
                 replies.push(reply);

@@ -74,11 +74,9 @@ impl From<State> for ScalarValue {
     }
 }
 
-impl<'a> TryFrom<Value<'a>> for State {
-    type Error = &'static str;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let state = value.to_str().ok_or("value isn't a string")?;
+impl<'a> FromValue<'a> for State {
+    fn from_value(value: Value) -> Result<Self, ValueError> {
+        let state = value.to_str().ok_or(ValueError::InvalidType)?;
 
         match state {
             "open" => Ok(Self::Open),
@@ -88,7 +86,7 @@ impl<'a> TryFrom<Value<'a>> for State {
             "solved" => Ok(Self::Closed {
                 reason: CloseReason::Solved,
             }),
-            _ => Err("invalid state name"),
+            _ => Err(ValueError::InvalidValue(value.to_string())),
         }
     }
 }
@@ -176,29 +174,30 @@ impl TryFrom<&History> for Issue {
 }
 
 impl TryFrom<Automerge> for Issue {
-    type Error = AutomergeError;
+    type Error = DocumentError;
 
     fn try_from(doc: Automerge) -> Result<Self, Self::Error> {
-        let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "issue")?.unwrap();
-        let (title, _) = doc.get(&obj_id, "title")?.unwrap();
-        let (_, comment_id) = doc.get(&obj_id, "comment")?.unwrap();
-        let (discussion, discussion_id) = doc.get(&obj_id, "discussion")?.unwrap();
-        let (author, _) = doc.get(&obj_id, "author")?.unwrap();
-        let (state, _) = doc.get(&obj_id, "state")?.unwrap();
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
-        let (labels, labels_id) = doc.get(&obj_id, "labels")?.unwrap();
+        let doc = Document::new(&doc);
+        let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "issue")?;
+        let (title, _) = doc.get(&obj_id, "title")?;
+        let (_, comment_id) = doc.get(&obj_id, "comment")?;
+        let (discussion, discussion_id) = doc.get(&obj_id, "discussion")?;
+        let (author, _) = doc.get(&obj_id, "author")?;
+        let (state, _) = doc.get(&obj_id, "state")?;
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let (labels, labels_id) = doc.get(&obj_id, "labels")?;
 
         assert_eq!(discussion.to_objtype(), Some(ObjType::List));
         assert_eq!(labels.to_objtype(), Some(ObjType::Map));
 
         // Top-level comment.
-        let comment = shared::lookup::comment(&doc, &comment_id)?;
+        let comment = shared::lookup::comment(doc, &comment_id)?;
 
         // Discussion thread.
         let mut discussion: Discussion = Vec::new();
         for i in 0..doc.length(&discussion_id) {
-            let (_val, comment_id) = doc.get(&discussion_id, i as usize)?.unwrap();
-            let comment = shared::lookup::thread(&doc, &comment_id)?;
+            let (_val, comment_id) = doc.get(&discussion_id, i as usize)?;
+            let comment = shared::lookup::thread(doc, &comment_id)?;
 
             discussion.push(comment);
         }
@@ -211,12 +210,13 @@ impl TryFrom<Automerge> for Issue {
             labels.insert(label);
         }
 
+        let title = String::from_value(title)?;
         let author = Author::from_value(author)?;
-        let state = State::try_from(state).unwrap();
-        let timestamp = Timestamp::try_from(timestamp).unwrap();
+        let state = State::from_value(state)?;
+        let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Self {
-            title: title.into_string().unwrap(),
+            title,
             state,
             author,
             comment,

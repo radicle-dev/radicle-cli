@@ -142,11 +142,10 @@ impl Patch {
     }
 }
 
-impl TryFrom<Automerge> for Patch {
+impl TryFrom<Document<'_>> for Patch {
     type Error = DocumentError;
 
-    fn try_from(doc: Automerge) -> Result<Self, Self::Error> {
-        let doc = Document::new(&doc);
+    fn try_from(doc: Document) -> Result<Self, Self::Error> {
         let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "patch")?;
         let (title, _) = doc.get(&obj_id, "title")?;
         let (author, _) = doc.get(&obj_id, "author")?;
@@ -161,14 +160,14 @@ impl TryFrom<Automerge> for Patch {
         let mut revisions = Vec::new();
         let (_, revisions_id) = doc.get(&obj_id, "revisions")?;
         for i in 0..doc.length(&revisions_id) {
-            let revision = lookup::revision(&doc, &revisions_id, i)?;
+            let revision = lookup::revision(doc, &revisions_id, i)?;
             revisions.push(revision);
         }
 
         // Labels.
         let mut labels = HashSet::new();
         for key in doc.keys(&labels_id) {
-            let label = Label::new(key).map_err(|_| DocumentError::Key)?;
+            let label = Label::new(key).map_err(|_| DocumentError::Property)?;
             labels.insert(label);
         }
 
@@ -214,7 +213,7 @@ impl TryFrom<&History> for Patch {
             }
             ControlFlow::Continue(doc)
         });
-        let patch = Patch::try_from(doc)?;
+        let patch = Patch::try_from(Document::new(&doc))?;
 
         Ok(patch)
     }
@@ -608,19 +607,19 @@ mod lookup {
     use super::*;
 
     pub fn revision(
-        doc: &Automerge,
+        doc: Document,
         revisions_id: &automerge::ObjId,
         id: RevisionId,
-    ) -> Result<Revision, AutomergeError> {
-        let (_, revision_id) = doc.get(&revisions_id, id)?.unwrap();
-        let (_, comment_id) = doc.get(&revision_id, "comment")?.unwrap();
-        let (_, discussion_id) = doc.get(&revision_id, "discussion")?.unwrap();
-        let (_, _reviews_id) = doc.get(&revision_id, "reviews")?.unwrap();
-        let (_, merges_id) = doc.get(&revision_id, "merges")?.unwrap();
-        let (author, _) = doc.get(&revision_id, "author")?.unwrap();
-        let (peer, _) = doc.get(&revision_id, "peer")?.unwrap();
-        let (oid, _) = doc.get(&revision_id, "oid")?.unwrap();
-        let (timestamp, _) = doc.get(&revision_id, "timestamp")?.unwrap();
+    ) -> Result<Revision, DocumentError> {
+        let (_, revision_id) = doc.get(&revisions_id, id)?;
+        let (_, comment_id) = doc.get(&revision_id, "comment")?;
+        let (_, discussion_id) = doc.get(&revision_id, "discussion")?;
+        let (_, _reviews_id) = doc.get(&revision_id, "reviews")?;
+        let (_, merges_id) = doc.get(&revision_id, "merges")?;
+        let (author, _) = doc.get(&revision_id, "author")?;
+        let (peer, _) = doc.get(&revision_id, "peer")?;
+        let (oid, _) = doc.get(&revision_id, "oid")?;
+        let (timestamp, _) = doc.get(&revision_id, "timestamp")?;
 
         // Top-level comment.
         let comment = shared::lookup::comment(doc, &comment_id)?;
@@ -628,7 +627,7 @@ mod lookup {
         // Discussion thread.
         let mut discussion: Discussion = Vec::new();
         for i in 0..doc.length(&discussion_id) {
-            let (_, comment_id) = doc.get(&discussion_id, i as usize)?.unwrap();
+            let (_, comment_id) = doc.get(&discussion_id, i as usize)?;
             let comment = shared::lookup::thread(doc, &comment_id)?;
 
             discussion.push(comment);
@@ -637,7 +636,7 @@ mod lookup {
         // Patch merges.
         let mut merges: Vec<Merge> = Vec::new();
         for i in 0..doc.length(&merges_id) {
-            let (_, merge_id) = doc.get(&merges_id, i as usize)?.unwrap();
+            let (_, merge_id) = doc.get(&merges_id, i as usize)?;
             let merge = self::merge(doc, &merge_id)?;
 
             merges.push(merge);
@@ -645,9 +644,9 @@ mod lookup {
 
         let author = Author::from_value(author)?;
         let peer = PeerId::from_value(peer)?;
-        let oid = oid.to_str().unwrap().try_into().unwrap();
+        let oid = git::Oid::from_value(oid)?;
         let reviews = HashMap::new();
-        let timestamp = Timestamp::try_from(timestamp).unwrap();
+        let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Revision {
             author,
@@ -661,14 +660,14 @@ mod lookup {
         })
     }
 
-    pub fn merge(doc: &Automerge, obj_id: &automerge::ObjId) -> Result<Merge, AutomergeError> {
-        let (peer, _) = doc.get(&obj_id, "peer")?.unwrap();
-        let (commit, _) = doc.get(&obj_id, "commit")?.unwrap();
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
+    pub fn merge(doc: Document, obj_id: &automerge::ObjId) -> Result<Merge, DocumentError> {
+        let (peer, _) = doc.get(&obj_id, "peer")?;
+        let (commit, _) = doc.get(&obj_id, "commit")?;
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
 
         let peer = PeerId::from_value(peer)?;
-        let commit = git::Oid::from_str(&commit.into_string().unwrap()).unwrap();
-        let timestamp = Timestamp::try_from(timestamp).unwrap();
+        let commit = git::Oid::from_value(commit)?;
+        let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Merge {
             peer,
