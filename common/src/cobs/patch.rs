@@ -4,6 +4,7 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::ops::{ControlFlow, RangeInclusive};
 use std::str::FromStr;
+use std::sync::Arc;
 
 use automerge::transaction::Transactable;
 use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
@@ -161,6 +162,7 @@ impl TryFrom<Document<'_>> for Patch {
 
         assert_eq!(labels.to_objtype(), Some(ObjType::Map));
 
+        // Revisions.
         let mut revisions = Vec::new();
         let (_, revisions_id) = doc.get(&obj_id, "revisions")?;
         for i in 0..doc.length(&revisions_id) {
@@ -311,7 +313,7 @@ impl<'a> Patches<'a> {
         patch_id: &PatchId,
         revision_ix: RevisionIx,
         verdict: Verdict,
-        comment: Comment,
+        comment: impl Into<String>,
         inline: Vec<CodeComment>,
     ) -> Result<(), Error> {
         let timestamp = Timestamp::now();
@@ -563,7 +565,7 @@ pub struct Merge {
 }
 
 /// A patch review verdict.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Verdict {
     /// Accept patch.
@@ -592,13 +594,11 @@ impl From<Verdict> for ScalarValue {
 }
 
 impl<'a> TryFrom<Value<'a>> for Verdict {
-    type Error = serde_json::Error;
+    type Error = ValueError;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let verdict = value
-            .to_str()
-            .ok_or(serde::de::Error::custom("value is not a string"))?;
-        serde_json::from_str(verdict)
+        let verdict = value.to_str().ok_or(ValueError::InvalidType)?;
+        serde_json::from_str(verdict).map_err(|e| ValueError::Other(Arc::new(e)))
     }
 }
 
@@ -641,14 +641,14 @@ impl Review {
     pub fn new(
         author: Urn,
         verdict: Verdict,
-        comment: Comment,
+        comment: impl Into<String>,
         inline: Vec<CodeComment>,
         timestamp: Timestamp,
     ) -> Self {
         Self {
-            author: Author::from(author),
+            author: Author::from(author.clone()),
             verdict,
-            comment,
+            comment: Comment::new(author, comment.into(), timestamp),
             inline,
             timestamp,
         }
@@ -661,7 +661,7 @@ impl Review {
         id: &automerge::ObjId,
     ) -> Result<(), AutomergeError> {
         tx.put(&id, "author", self.author.urn().to_string())?;
-        tx.put(&id, "verdict", self.verdict.to_string())?;
+        tx.put(&id, "verdict", self.verdict)?;
 
         self.comment.put(tx, id)?;
 
@@ -683,7 +683,7 @@ mod lookup {
         let (_, revision_id) = doc.get(&revisions_id, ix)?;
         let (_, comment_id) = doc.get(&revision_id, "comment")?;
         let (_, discussion_id) = doc.get(&revision_id, "discussion")?;
-        let (_, _reviews_id) = doc.get(&revision_id, "reviews")?;
+        let (_, reviews_id) = doc.get(&revision_id, "reviews")?;
         let (_, merges_id) = doc.get(&revision_id, "merges")?;
         let (id, _) = doc.get(&revision_id, "id")?;
         let (peer, _) = doc.get(&revision_id, "peer")?;
@@ -711,10 +711,18 @@ mod lookup {
             merges.push(merge);
         }
 
+        // Reviews.
+        let mut reviews: HashMap<Urn, Review> = HashMap::new();
+        for i in 0..doc.length(&reviews_id) {
+            let (_, review_id) = doc.get(&reviews_id, i as usize)?;
+            let review = self::review(doc, &review_id)?;
+
+            reviews.insert(review.author.urn().clone(), review);
+        }
+
         let id = RevisionId::from_value(id)?;
         let peer = PeerId::from_value(peer)?;
         let oid = git::Oid::from_value(oid)?;
-        let reviews = HashMap::new();
         let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Revision {
@@ -741,6 +749,27 @@ mod lookup {
         Ok(Merge {
             peer,
             commit,
+            timestamp,
+        })
+    }
+
+    pub fn review(doc: Document, obj_id: &automerge::ObjId) -> Result<Review, DocumentError> {
+        let (author, _) = doc.get(&obj_id, "author")?;
+        let (verdict, _) = doc.get(&obj_id, "verdict")?;
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let (_, comment_id) = doc.get(&obj_id, "comment")?;
+
+        let comment = shared::lookup::comment(doc, &comment_id)?;
+        let author = Author::from_value(author)?;
+        let verdict = Verdict::try_from(verdict)?;
+        let timestamp = Timestamp::try_from(timestamp)?;
+        let inline = vec![];
+
+        Ok(Review {
+            author,
+            comment,
+            verdict,
+            inline,
             timestamp,
         })
     }
@@ -1006,6 +1035,37 @@ mod test {
         assert_eq!(merges.len(), 1);
         assert_eq!(merges[0].peer, *storage.peer_id());
         assert_eq!(merges[0].commit, base);
+    }
+
+    #[test]
+    fn test_patch_review() {
+        let (storage, profile, whoami, project) = test::setup::profile();
+        let patches = Patches::new(whoami.clone(), profile.paths(), &storage).unwrap();
+        let target = MergeTarget::Upstream;
+        let rev_oid = git::Oid::from_str("518d5069f94c03427f694bb494ac1cd7d1339380").unwrap();
+        let project = &project.urn();
+        let patch_id = patches
+            .create(
+                project,
+                "My first patch",
+                "Blah blah blah.",
+                target,
+                rev_oid,
+                &[],
+            )
+            .unwrap();
+
+        patches
+            .review(project, &patch_id, 0, Verdict::Accept, "LGTM", vec![])
+            .unwrap();
+        let patch = patches.get(project, &patch_id).unwrap().unwrap();
+        let reviews = patch.revisions.head.reviews;
+        assert_eq!(reviews.len(), 1);
+
+        let review = reviews.get(&whoami.urn()).unwrap();
+        assert_eq!(review.author.urn(), &whoami.urn());
+        assert_eq!(review.verdict, Verdict::Accept);
+        assert_eq!(review.comment.body.as_str(), "LGTM");
     }
 
     #[test]
