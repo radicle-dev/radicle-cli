@@ -6,6 +6,7 @@ use radicle_git_helpers::remote_helper;
 use radicle_common::{keys, profile, signer::ToSigner as _};
 
 use anyhow::anyhow;
+#[cfg(feature = "ethereum")]
 use futures_lite::future;
 
 use std::env;

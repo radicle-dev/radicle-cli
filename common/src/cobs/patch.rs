@@ -62,14 +62,14 @@ impl From<MergeTarget> for ScalarValue {
 }
 
 impl<'a> TryFrom<Value<'a>> for MergeTarget {
-    type Error = &'static str;
+    type Error = ValueError;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let state = value.to_str().ok_or("value isn't a string")?;
+        let state = value.to_str().ok_or(ValueError::InvalidType)?;
 
         match state {
             "upstream" => Ok(Self::Upstream),
-            _ => Err("invalid merge target type"),
+            _ => Err(ValueError::InvalidValue(value.to_string())),
         }
     }
 }
@@ -143,46 +143,49 @@ impl Patch {
 }
 
 impl TryFrom<Automerge> for Patch {
-    type Error = AutomergeError;
+    type Error = DocumentError;
 
     fn try_from(doc: Automerge) -> Result<Self, Self::Error> {
-        let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "patch")?.unwrap();
-        let (title, _) = doc.get(&obj_id, "title")?.unwrap();
-        let (author, _) = doc.get(&obj_id, "author")?.unwrap();
-        let (peer, _) = doc.get(&obj_id, "peer")?.unwrap();
-        let (state, _) = doc.get(&obj_id, "state")?.unwrap();
-        let (target, _) = doc.get(&obj_id, "target")?.unwrap();
-        let (timestamp, _) = doc.get(&obj_id, "timestamp")?.unwrap();
-        let (labels, labels_id) = doc.get(&obj_id, "labels")?.unwrap();
+        let doc = Document::new(&doc);
+        let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "patch")?;
+        let (title, _) = doc.get(&obj_id, "title")?;
+        let (author, _) = doc.get(&obj_id, "author")?;
+        let (peer, _) = doc.get(&obj_id, "peer")?;
+        let (state, _) = doc.get(&obj_id, "state")?;
+        let (target, _) = doc.get(&obj_id, "target")?;
+        let (timestamp, _) = doc.get(&obj_id, "timestamp")?;
+        let (labels, labels_id) = doc.get(&obj_id, "labels")?;
 
         assert_eq!(labels.to_objtype(), Some(ObjType::Map));
 
         let mut revisions = Vec::new();
-        let (_, revisions_id) = doc.get(&obj_id, "revisions")?.unwrap();
+        let (_, revisions_id) = doc.get(&obj_id, "revisions")?;
         for i in 0..doc.length(&revisions_id) {
-            let revision = lookup::revision(&doc, &revisions_id, i).unwrap();
+            let revision = lookup::revision(&doc, &revisions_id, i)?;
             revisions.push(revision);
         }
 
         // Labels.
         let mut labels = HashSet::new();
         for key in doc.keys(&labels_id) {
-            let label = Label::new(key).unwrap();
-
+            let label = Label::new(key).map_err(|_| DocumentError::Key)?;
             labels.insert(label);
         }
 
+        let title = title
+            .into_string()
+            .map_err(|_| DocumentError::Value(ValueError::InvalidType))?;
         let author = Author::from_value(author)?;
         let peer = PeerId::from_value(peer)?;
-        let state = State::try_from(state).unwrap();
-        let revisions = NonEmpty::from_vec(revisions).unwrap();
-        let target = MergeTarget::try_from(target).unwrap();
-        let timestamp = Timestamp::try_from(timestamp).unwrap();
+        let state = State::try_from(state)?;
+        let revisions = NonEmpty::from_vec(revisions).ok_or(DocumentError::EmptyList)?;
+        let target = MergeTarget::try_from(target)?;
+        let timestamp = Timestamp::try_from(timestamp)?;
 
         Ok(Self {
             author,
             peer,
-            title: title.into_string().unwrap(),
+            title,
             state,
             target,
             labels,
@@ -437,16 +440,16 @@ impl From<State> for ScalarValue {
 }
 
 impl<'a> TryFrom<Value<'a>> for State {
-    type Error = &'static str;
+    type Error = ValueError;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let state = value.to_str().ok_or("value isn't a string")?;
+        let state = value.to_str().ok_or(ValueError::InvalidType)?;
 
         match state {
             "proposed" => Ok(Self::Proposed),
             "draft" => Ok(Self::Draft),
             "archived" => Ok(Self::Archived),
-            _ => Err("invalid state name"),
+            _ => Err(ValueError::InvalidValue(value.to_string())),
         }
     }
 }

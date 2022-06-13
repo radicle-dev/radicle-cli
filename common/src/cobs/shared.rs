@@ -3,6 +3,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::convert::{Infallible, TryFrom};
 use std::fmt;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -17,6 +18,14 @@ use librad::PeerId;
 use radicle_git_ext as git;
 
 use crate::project;
+
+#[derive(thiserror::Error, Debug)]
+pub enum ValueError {
+    #[error("invalid type")]
+    InvalidType,
+    #[error("invalid value: `{0}`")]
+    InvalidValue(String),
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ResolveError {
@@ -51,6 +60,12 @@ impl FromStr for CobIdentifier {
 /// A discussion thread.
 pub type Discussion = Vec<Comment<Replies>>;
 
+#[derive(thiserror::Error, Debug)]
+pub enum ReactionError {
+    #[error("invalid reaction")]
+    InvalidReaction,
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Reaction {
@@ -58,24 +73,33 @@ pub struct Reaction {
 }
 
 impl Reaction {
-    pub fn new(emoji: char) -> Result<Self, Infallible> {
+    pub fn new(emoji: char) -> Result<Self, ReactionError> {
+        if emoji.is_whitespace() || emoji.is_ascii() || emoji.is_alphanumeric() {
+            return Err(ReactionError::InvalidReaction);
+        }
         Ok(Self { emoji })
     }
 }
 
 impl FromStr for Reaction {
-    type Err = String;
+    type Err = ReactionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
-        let first = chars.next().ok_or(String::new())?;
+        let first = chars.next().ok_or(ReactionError::InvalidReaction)?;
 
         // Reactions should not consist of more than a single emoji.
         if chars.next().is_some() {
-            return Err(String::new());
+            return Err(ReactionError::InvalidReaction);
         }
         Ok(Reaction::new(first).unwrap())
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LabelError {
+    #[error("invalid label name: `{0}`")]
+    InvalidName(String),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
@@ -83,8 +107,13 @@ impl FromStr for Reaction {
 pub struct Label(String);
 
 impl Label {
-    pub fn new(name: impl Into<String>) -> Result<Self, Infallible> {
-        Ok(Self(name.into()))
+    pub fn new(name: impl Into<String>) -> Result<Self, LabelError> {
+        let name = name.into();
+
+        if name.chars().any(|c| c.is_whitespace()) || name.is_empty() {
+            return Err(LabelError::InvalidName(name));
+        }
+        Ok(Self(name))
     }
 
     pub fn name(&self) -> &str {
@@ -298,17 +327,17 @@ impl From<Timestamp> for ScalarValue {
 }
 
 impl<'a> TryFrom<Value<'a>> for Timestamp {
-    type Error = String;
+    type Error = ValueError;
 
     fn try_from(val: Value) -> Result<Self, Self::Error> {
-        if let Value::Scalar(scalar) = val {
+        if let Value::Scalar(scalar) = &val {
             if let ScalarValue::Timestamp(ts) = scalar.borrow() {
                 return Ok(Self {
                     seconds: *ts as u64,
                 });
             }
         }
-        Err(String::from("value is not a timestamp"))
+        Err(ValueError::InvalidValue(val.to_string()))
     }
 }
 
@@ -350,6 +379,52 @@ impl FromValue for git::OneLevel {
 
         Ok(one)
     }
+}
+
+/// Automerge document decoder.
+///
+/// Wraps a document, providing convenience functions. Derefs to the underlying doc.
+pub struct Document<'a> {
+    doc: &'a Automerge,
+}
+
+impl<'a> Document<'a> {
+    pub fn new(doc: &'a Automerge) -> Self {
+        Self { doc }
+    }
+
+    pub fn get<O: AsRef<automerge::ObjId>>(
+        &self,
+        id: O,
+        field: &'static str,
+    ) -> Result<(automerge::Value<'a>, automerge::ObjId), DocumentError> {
+        self.doc
+            .get(id.as_ref(), field)?
+            .ok_or(DocumentError::KeyNotFound(field))
+    }
+}
+
+impl<'a> Deref for Document<'a> {
+    type Target = Automerge;
+
+    fn deref(&self) -> &Self::Target {
+        self.doc
+    }
+}
+
+/// Error decoding a document.
+#[derive(thiserror::Error, Debug)]
+pub enum DocumentError {
+    #[error(transparent)]
+    Automerge(#[from] AutomergeError),
+    #[error("key '{0}' not found in object")]
+    KeyNotFound(&'static str),
+    #[error("error decoding key")]
+    Key,
+    #[error("error decoding value: {0}")]
+    Value(#[from] ValueError),
+    #[error("list cannot be empty")]
+    EmptyList,
 }
 
 pub mod lookup {
