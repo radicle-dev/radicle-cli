@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
+use std::fmt;
 use std::ops::{ControlFlow, RangeInclusive};
 use std::str::FromStr;
 
@@ -304,6 +305,33 @@ impl<'a> Patches<'a> {
         Ok(revision_ix)
     }
 
+    pub fn review(
+        &self,
+        project: &Urn,
+        patch_id: &PatchId,
+        revision_ix: RevisionIx,
+        verdict: Verdict,
+        comment: Comment,
+        inline: Vec<CodeComment>,
+    ) -> Result<(), Error> {
+        let timestamp = Timestamp::now();
+        let review = Review::new(self.whoami.urn(), verdict, comment, inline, timestamp);
+
+        let mut patch = self.get_raw(project, patch_id)?.unwrap();
+        let (_, changes) = events::review(&mut patch, revision_ix, review)?;
+
+        cobs::update(
+            *patch_id,
+            project,
+            "Review patch",
+            changes,
+            &self.whoami,
+            &self.store,
+        )?;
+
+        Ok(())
+    }
+
     pub fn get(&self, project: &Urn, id: &PatchId) -> Result<Option<Patch>, Error> {
         let cob = self
             .store
@@ -511,16 +539,9 @@ impl Revision {
         tx.put(&id, "id", self.id.to_string())?;
         tx.put(&id, "peer", self.peer.to_string())?;
         tx.put(&id, "oid", self.oid.to_string())?;
-        {
-            // Top-level comment for first patch revision.
-            // Nb. top-level comment doesn't have a `replies` field.
-            let comment_id = tx.put_object(&id, "comment", ObjType::Map)?;
 
-            tx.put(&comment_id, "body", self.comment.body.trim())?;
-            tx.put(&comment_id, "author", self.comment.author.urn().to_string())?;
-            tx.put(&comment_id, "timestamp", self.comment.timestamp)?;
-            tx.put_object(&comment_id, "reactions", ObjType::Map)?;
-        }
+        self.comment.put(tx, id)?;
+
         tx.put_object(&id, "discussion", ObjType::List)?;
         tx.put_object(&id, "reviews", ObjType::Map)?;
         tx.put_object(&id, "merges", ObjType::List)?;
@@ -551,6 +572,16 @@ pub enum Verdict {
     Reject,
     /// Don't give a verdict.
     Pass,
+}
+
+impl fmt::Display for Verdict {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Accept => write!(f, "accept"),
+            Self::Reject => write!(f, "reject"),
+            Self::Pass => write!(f, "pass"),
+        }
+    }
 }
 
 impl From<Verdict> for ScalarValue {
@@ -604,6 +635,41 @@ pub struct Review {
     pub inline: Vec<CodeComment>,
     /// Review timestamp.
     pub timestamp: Timestamp,
+}
+
+impl Review {
+    pub fn new(
+        author: Urn,
+        verdict: Verdict,
+        comment: Comment,
+        inline: Vec<CodeComment>,
+        timestamp: Timestamp,
+    ) -> Self {
+        Self {
+            author: Author::from(author),
+            verdict,
+            comment,
+            inline,
+            timestamp,
+        }
+    }
+
+    /// Put this object into an automerge document.
+    fn put(
+        &self,
+        tx: &mut automerge::transaction::Transaction,
+        id: &automerge::ObjId,
+    ) -> Result<(), AutomergeError> {
+        tx.put(&id, "author", self.author.urn().to_string())?;
+        tx.put(&id, "verdict", self.verdict.to_string())?;
+
+        self.comment.put(tx, id)?;
+
+        tx.put_object(&id, "inline", ObjType::List)?;
+        tx.put(&id, "timestamp", self.timestamp)?;
+
+        Ok(())
+    }
 }
 
 mod lookup {
@@ -802,6 +868,36 @@ mod events {
                     revision.put(tx, &revision_id)?;
 
                     Ok(ix)
+                },
+            )
+            .map_err(|failure| failure.error)?;
+
+        let revision_ix = success.result;
+        let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok((revision_ix, EntryContents::Automerge(change)))
+    }
+
+    pub fn review(
+        patch: &mut Automerge,
+        revision_ix: RevisionIx,
+        review: Review,
+    ) -> Result<((), EntryContents), AutomergeError> {
+        let success = patch
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Review patch".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
+                    let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
+                    let (_, revision_id) = tx.get(&revisions_id, revision_ix)?.unwrap();
+                    let (_, reviews_id) = tx.get(&revision_id, "reviews")?.unwrap();
+
+                    let review_id =
+                        tx.put_object(&reviews_id, review.author.urn().to_string(), ObjType::Map)?;
+
+                    review.put(tx, &review_id)?;
+
+                    Ok(())
                 },
             )
             .map_err(|failure| failure.error)?;

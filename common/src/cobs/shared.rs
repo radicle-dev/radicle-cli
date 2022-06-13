@@ -8,7 +8,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use automerge::{Automerge, AutomergeError, ScalarValue, Value};
+use automerge::transaction::Transactable;
+use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use chrono::TimeZone;
 use serde::{Deserialize, Serialize};
 
@@ -279,6 +280,21 @@ impl Comment<()> {
 
     pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
         self.author.resolve(storage)
+    }
+
+    pub fn put(
+        &self,
+        tx: &mut automerge::transaction::Transaction,
+        id: &automerge::ObjId,
+    ) -> Result<(), AutomergeError> {
+        let comment_id = tx.put_object(&id, "comment", ObjType::Map)?;
+
+        tx.put(&comment_id, "body", self.body.trim())?;
+        tx.put(&comment_id, "author", self.author.urn().to_string())?;
+        tx.put(&comment_id, "timestamp", self.timestamp)?;
+        tx.put_object(&comment_id, "reactions", ObjType::Map)?;
+
+        Ok(())
     }
 }
 
