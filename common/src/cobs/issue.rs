@@ -17,6 +17,7 @@ use librad::git::storage::ReadOnly;
 use librad::git::Storage;
 use librad::git::Urn;
 use librad::paths::Paths;
+use librad::PeerId;
 
 use crate::cobs::shared;
 use crate::cobs::shared::*;
@@ -94,6 +95,7 @@ impl<'a> FromValue<'a> for State {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Issue {
     pub author: Author,
+    pub peer: PeerId,
     pub title: String,
     pub state: State,
     pub comment: Comment,
@@ -181,7 +183,10 @@ impl TryFrom<Automerge> for Issue {
         let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "issue")?;
         let title = doc.val(&obj_id, "title")?;
         let (_, comment_id) = doc.get(&obj_id, "comment")?;
-        let author = doc.val(&obj_id, "author")?;
+        let peer = doc.val(&obj_id, "peer")?;
+        let author = doc
+            .val(&obj_id, "author")
+            .map(|urn: Urn| Author::new(urn, peer))?;
         let state = doc.val(&obj_id, "state")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
 
@@ -193,6 +198,7 @@ impl TryFrom<Automerge> for Issue {
             title,
             state,
             author,
+            peer,
             comment,
             discussion,
             labels,
@@ -203,14 +209,24 @@ impl TryFrom<Automerge> for Issue {
 
 pub struct Issues<'a> {
     store: CollaborativeObjects<'a>,
+    peer_id: PeerId,
     whoami: LocalIdentity,
 }
 
 impl<'a> Issues<'a> {
     pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
         let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
+        let peer_id = *storage.peer_id();
 
-        Ok(Self { store, whoami })
+        Ok(Self {
+            store,
+            whoami,
+            peer_id,
+        })
+    }
+
+    pub fn author(&self) -> Author {
+        Author::new(self.whoami.urn(), self.peer_id)
     }
 
     pub fn create(
@@ -220,7 +236,7 @@ impl<'a> Issues<'a> {
         description: &str,
         labels: &[Label],
     ) -> Result<IssueId, Error> {
-        let author = self.whoami.urn();
+        let author = self.author();
         let timestamp = Timestamp::now();
         let history = events::create(&author, title, description, timestamp, labels)?;
 
@@ -232,7 +248,7 @@ impl<'a> Issues<'a> {
     }
 
     pub fn comment(&self, project: &Urn, issue_id: &IssueId, body: &str) -> Result<IssueId, Error> {
-        let author = self.whoami.urn();
+        let author = self.author();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
         let timestamp = Timestamp::now();
         let changes = events::comment(&mut issue, &author, body, timestamp)?;
@@ -335,7 +351,7 @@ impl<'a> Issues<'a> {
         comment_id: CommentId,
         reply: &str,
     ) -> Result<(), Error> {
-        let author = self.whoami.urn();
+        let author = self.author();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
         let changes = events::reply(&mut issue, comment_id, &author, reply, Timestamp::now())?;
 
@@ -447,7 +463,7 @@ mod events {
     };
 
     pub fn create(
-        author: &Urn,
+        author: &Author,
         title: &str,
         description: &str,
         timestamp: Timestamp,
@@ -468,7 +484,8 @@ mod events {
                     let issue = tx.put_object(ObjId::Root, "issue", ObjType::Map)?;
 
                     tx.put(&issue, "title", title)?;
-                    tx.put(&issue, "author", author.to_string())?;
+                    tx.put(&issue, "author", author.urn().to_string())?;
+                    tx.put(&issue, "peer", author.peer.default_encoding())?;
                     tx.put(&issue, "state", State::Open)?;
                     tx.put(&issue, "timestamp", timestamp)?;
                     tx.put_object(&issue, "discussion", ObjType::List)?;
@@ -482,7 +499,8 @@ mod events {
                     let comment_id = tx.put_object(&issue, "comment", ObjType::Map)?;
 
                     tx.put(&comment_id, "body", description.trim())?;
-                    tx.put(&comment_id, "author", author.to_string())?;
+                    tx.put(&comment_id, "author", author.urn().to_string())?;
+                    tx.put(&comment_id, "peer", author.peer.default_encoding())?;
                     tx.put(&comment_id, "timestamp", timestamp)?;
                     tx.put_object(&comment_id, "reactions", ObjType::Map)?;
 
@@ -497,7 +515,7 @@ mod events {
 
     pub fn comment(
         issue: &mut Automerge,
-        author: &Urn,
+        author: &Author,
         body: &str,
         timestamp: Timestamp,
     ) -> Result<EntryContents, AutomergeError> {
@@ -511,7 +529,8 @@ mod events {
                     let length = tx.length(&discussion_id);
                     let comment = tx.insert_object(&discussion_id, length, ObjType::Map)?;
 
-                    tx.put(&comment, "author", author.to_string())?;
+                    tx.put(&comment, "author", author.urn().to_string())?;
+                    tx.put(&comment, "peer", author.peer.default_encoding())?;
                     tx.put(&comment, "body", body.trim())?;
                     tx.put(&comment, "timestamp", timestamp)?;
                     tx.put_object(&comment, "replies", ObjType::List)?;
@@ -580,7 +599,7 @@ mod events {
     pub fn reply(
         issue: &mut Automerge,
         comment_id: CommentId,
-        author: &Urn,
+        author: &Author,
         body: &str,
         timestamp: Timestamp,
     ) -> Result<EntryContents, AutomergeError> {
@@ -597,7 +616,8 @@ mod events {
                     let reply = tx.insert_object(&replies_id, length, ObjType::Map)?;
 
                     // Nb. Replies don't themselves have replies.
-                    tx.put(&reply, "author", author.to_string())?;
+                    tx.put(&reply, "author", author.urn().to_string())?;
+                    tx.put(&reply, "peer", author.peer.default_encoding())?;
                     tx.put(&reply, "body", body.trim())?;
                     tx.put(&reply, "timestamp", timestamp)?;
                     tx.put_object(&reply, "reactions", ObjType::Map)?;
@@ -641,7 +661,7 @@ mod events {
                         } else {
                             tx.put_object(&reactions_id, reaction.emoji.to_string(), ObjType::Map)?
                         };
-                        tx.put(&reaction_id, author.encode_id(), true)?;
+                        tx.put(&reaction_id, author.to_string(), true)?;
                     }
 
                     Ok(())
@@ -817,9 +837,15 @@ mod test {
 
         let c1 = &issue.comments()[0];
 
-        assert!(matches!(issue.author(), Author::Resolved(id) if id.name == "cloudhead"));
-        assert!(matches!(&issue.comment.author, Author::Resolved(id) if id.name == "cloudhead"));
-        assert!(matches!(&c1.author, Author::Resolved(id) if id.name == "cloudhead"));
+        assert!(
+            matches!(&issue.author().identity, Identity::Resolved { identity } if identity.name == "cloudhead")
+        );
+        assert!(
+            matches!(&issue.comment.author.identity, Identity::Resolved { identity } if identity.name == "cloudhead")
+        );
+        assert!(
+            matches!(&c1.author.identity, Identity::Resolved { identity } if identity.name == "cloudhead")
+        );
     }
 
     #[test]
@@ -841,7 +867,7 @@ mod test {
     #[test]
     fn test_issue_all() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let author = whoami.urn();
+        let author = Author::new(whoami.urn(), *storage.peer_id());
         let issues = Issues::new(whoami.clone(), profile.paths(), &storage).unwrap();
 
         cobs::create(

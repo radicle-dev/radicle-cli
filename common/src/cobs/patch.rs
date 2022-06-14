@@ -160,6 +160,7 @@ impl TryFrom<Document<'_>> for Patch {
         let revisions = doc.list(&obj_id, "revisions", lookup::revision)?;
         let labels: HashSet<Label> = doc.keys(&obj_id, "labels")?;
         let revisions = NonEmpty::from_vec(revisions).ok_or(DocumentError::EmptyList)?;
+        let author: Author = Author::new(author, peer);
 
         Ok(Self {
             author,
@@ -228,6 +229,10 @@ impl<'a> Patches<'a> {
         })
     }
 
+    pub fn author(&self) -> Author {
+        Author::new(self.whoami.urn(), self.peer_id)
+    }
+
     pub fn create(
         &self,
         project: &Urn,
@@ -237,7 +242,7 @@ impl<'a> Patches<'a> {
         oid: impl Into<git::Oid>,
         labels: &[Label],
     ) -> Result<PatchId, Error> {
-        let author = self.whoami.urn();
+        let author = self.author();
         let timestamp = Timestamp::now();
         let revision = Revision::new(
             author.clone(),
@@ -246,15 +251,7 @@ impl<'a> Patches<'a> {
             description.to_owned(),
             timestamp,
         );
-        let history = events::create(
-            &author,
-            &self.peer_id,
-            title,
-            &revision,
-            target,
-            timestamp,
-            labels,
-        )?;
+        let history = events::create(&author, title, &revision, target, timestamp, labels)?;
 
         cobs::create(history, project, &self.whoami, &self.store)
     }
@@ -266,7 +263,7 @@ impl<'a> Patches<'a> {
         comment: impl ToString,
         oid: impl Into<git::Oid>,
     ) -> Result<RevisionIx, Error> {
-        let author = self.whoami.urn();
+        let author = self.author();
         let timestamp = Timestamp::now();
         let revision = Revision::new(
             author,
@@ -301,7 +298,7 @@ impl<'a> Patches<'a> {
         inline: Vec<CodeComment>,
     ) -> Result<(), Error> {
         let timestamp = Timestamp::now();
-        let review = Review::new(self.whoami.urn(), verdict, comment, inline, timestamp);
+        let review = Review::new(self.author(), verdict, comment, inline, timestamp);
 
         let mut patch = self.get_raw(project, patch_id)?.unwrap();
         let (_, changes) = events::review(&mut patch, revision_ix, review)?;
@@ -475,7 +472,7 @@ pub struct Revision {
 
 impl Revision {
     pub fn new(
-        author: Urn,
+        author: Author,
         peer: PeerId,
         oid: git::Oid,
         comment: String,
@@ -602,16 +599,18 @@ pub struct Review {
 
 impl Review {
     pub fn new(
-        author: Urn,
+        author: Author,
         verdict: Verdict,
         comment: impl Into<String>,
         inline: Vec<CodeComment>,
         timestamp: Timestamp,
     ) -> Self {
+        let comment = Comment::new(author.clone(), comment.into(), timestamp);
+
         Self {
-            author: Author::from(author.clone()),
+            author,
             verdict,
-            comment: Comment::new(author, comment.into(), timestamp),
+            comment,
             inline,
             timestamp,
         }
@@ -624,6 +623,7 @@ impl Review {
         id: &automerge::ObjId,
     ) -> Result<(), AutomergeError> {
         tx.put(&id, "author", self.author.urn().to_string())?;
+        tx.put(&id, "peer", self.author.peer.default_encoding())?;
         tx.put(&id, "verdict", self.verdict)?;
 
         self.comment.put(tx, id)?;
@@ -689,13 +689,14 @@ mod lookup {
 
     pub fn review(doc: Document, obj_id: &automerge::ObjId) -> Result<Review, DocumentError> {
         let author = doc.val(&obj_id, "author")?;
+        let peer = doc.val(&obj_id, "peer")?;
         let verdict = doc.val(&obj_id, "verdict")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
         let comment = doc.lookup(&obj_id, "comment", shared::lookup::comment)?;
         let inline = vec![];
 
         Ok(Review {
-            author,
+            author: Author::new(author, peer),
             comment,
             verdict,
             inline,
@@ -762,8 +763,7 @@ mod events {
     };
 
     pub fn create(
-        author: &Urn,
-        peer: &PeerId,
+        author: &Author,
         title: &str,
         revision: &Revision,
         target: MergeTarget,
@@ -784,8 +784,8 @@ mod events {
                     let patch_id = tx.put_object(ObjId::Root, "patch", ObjType::Map)?;
 
                     tx.put(&patch_id, "title", title)?;
-                    tx.put(&patch_id, "author", author.to_string())?;
-                    tx.put(&patch_id, "peer", peer.to_string())?;
+                    tx.put(&patch_id, "author", author.urn().to_string())?;
+                    tx.put(&patch_id, "peer", author.peer.default_encoding())?;
                     tx.put(&patch_id, "state", State::Proposed)?;
                     tx.put(&patch_id, "target", target)?;
                     tx.put(&patch_id, "timestamp", timestamp)?;

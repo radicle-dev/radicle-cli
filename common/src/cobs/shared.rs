@@ -259,45 +259,79 @@ impl<'a> Deserialize<'a> for Color {
     }
 }
 
-/// Author.
+/// A user identity.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
-pub enum Author {
-    Urn { urn: Urn },
-    Resolved(project::PeerIdentity),
+pub enum Identity {
+    /// Only the URN is known.
+    Unresolved { urn: Urn },
+    /// The full user identity is resolved.
+    Resolved { identity: project::PeerIdentity },
 }
 
-impl Author {
+impl Identity {
     pub fn urn(&self) -> &Urn {
         match self {
-            Self::Urn { ref urn } => urn,
-            Self::Resolved(project::PeerIdentity { urn, .. }) => urn,
+            Self::Unresolved { ref urn } => urn,
+            Self::Resolved {
+                identity: project::PeerIdentity { urn, .. },
+            } => urn,
         }
     }
 
     pub fn name(&self) -> String {
         match self {
-            Self::Urn { urn } => urn.encode_id(),
-            Self::Resolved(id) => id.name.clone(),
+            Self::Unresolved { urn } => urn.encode_id(),
+            Self::Resolved { identity } => identity.name.clone(),
         }
     }
 
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Identity, ResolveError> {
         match self {
-            Self::Urn { urn } => {
-                let id = project::PeerIdentity::get(urn, storage)?
+            Self::Unresolved { urn } => {
+                let identity = project::PeerIdentity::get(urn, storage)?
                     .ok_or_else(|| ResolveError::NotFound { urn: urn.clone() })?;
-                *self = Self::Resolved(id);
+                *self = Self::Resolved { identity };
             }
-            Self::Resolved(_) => {}
+            Self::Resolved { .. } => {}
         }
         Ok(self)
     }
 }
 
-impl From<Urn> for Author {
+impl From<Urn> for Identity {
     fn from(urn: Urn) -> Self {
-        Self::Urn { urn }
+        Self::Unresolved { urn }
+    }
+}
+
+/// Author.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Author {
+    pub peer: PeerId,
+    pub identity: Identity,
+}
+
+impl Author {
+    pub fn new(urn: Urn, peer: PeerId) -> Self {
+        Self {
+            peer,
+            identity: Identity::Unresolved { urn },
+        }
+    }
+
+    pub fn name(&self) -> String {
+        self.identity.name()
+    }
+
+    pub fn urn(&self) -> &Urn {
+        self.identity.urn()
+    }
+
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
+        self.identity.resolve(storage)?;
+
+        Ok(self)
     }
 }
 
@@ -341,9 +375,9 @@ pub struct Comment<R = ()> {
 }
 
 impl Comment<()> {
-    pub fn new(author: Urn, body: String, timestamp: Timestamp) -> Self {
+    pub fn new(author: Author, body: String, timestamp: Timestamp) -> Self {
         Self {
-            author: Author::from(author),
+            author,
             body,
             reactions: HashMap::default(),
             replies: (),
@@ -364,6 +398,7 @@ impl Comment<()> {
 
         tx.put(&comment_id, "body", self.body.trim())?;
         tx.put(&comment_id, "author", self.author.urn().to_string())?;
+        tx.put(&comment_id, "peer", self.author.peer.default_encoding())?;
         tx.put(&comment_id, "timestamp", self.timestamp)?;
         tx.put_object(&comment_id, "reactions", ObjType::Map)?;
 
@@ -461,12 +496,12 @@ impl<'a> FromValue<'a> for uuid::Uuid {
     }
 }
 
-impl<'a> FromValue<'a> for Author {
-    fn from_value(val: Value<'a>) -> Result<Author, ValueError> {
+impl<'a> FromValue<'a> for Urn {
+    fn from_value(val: Value<'a>) -> Result<Urn, ValueError> {
         let urn = String::from_value(val)?;
         let urn = Urn::from_str(&urn).map_err(|e| ValueError::Other(Arc::new(e)))?;
 
-        Ok(Author::Urn { urn })
+        Ok(urn)
     }
 }
 
@@ -649,11 +684,14 @@ pub enum DocumentError {
 }
 
 pub mod lookup {
-    use super::{Comment, HashMap, Reaction, Replies};
+    use super::{Author, Comment, HashMap, Reaction, Replies};
     use super::{Document, DocumentError};
 
     pub fn comment(doc: Document, obj_id: &automerge::ObjId) -> Result<Comment<()>, DocumentError> {
-        let author = doc.val(&obj_id, "author")?;
+        let peer = doc.val(&obj_id, "peer")?;
+        let author = doc
+            .val(&obj_id, "author")
+            .map(|urn| Author::new(urn, peer))?;
         let body = doc.val(&obj_id, "body")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
         let reactions: HashMap<Reaction, usize> = doc.map(&obj_id, "reactions", |v| *v += 1)?;
