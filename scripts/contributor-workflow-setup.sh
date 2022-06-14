@@ -109,7 +109,8 @@ rad track $CONTRIBUTOR_PEER --sync
 rad patch --list
 
 rm .gitignore
-rad merge hnrk # Will match the only patch
+rad review --accept hnrk --comment "LGTM." # Will match the only patch
+rad merge hnrk
 rad push
 
 ###################
