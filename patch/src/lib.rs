@@ -18,6 +18,7 @@ use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, Patches};
 use radicle_common::cobs::{CobIdentifier, Store as _};
 use radicle_common::{cobs, git, keys, patch, person, profile, project};
 use radicle_terminal as term;
+use radicle_terminal::patch::Comment;
 
 pub const HELP: Help = Help {
     name: "patch",
@@ -32,7 +33,7 @@ Create options
 
     -u, --update [<id>]      Update an existing patch (default: no)
         --[no-]sync          Sync patch to seed (default: sync)
-        --comment <string>   Provide a comment to the patch or revision (default: prompt)
+        --comment [<string>] Provide a comment to the patch or revision (default: prompt)
         --no-comment         Leave the patch or revision comment blank
 
 Options
@@ -60,19 +61,6 @@ Please enter a comment for your patch update. Leaving this
 blank is also okay.
 -->
 "#;
-
-#[derive(Debug)]
-pub enum Comment {
-    Prompt,
-    Blank,
-    Given(String),
-}
-
-impl Default for Comment {
-    fn default() -> Self {
-        Self::Prompt
-    }
-}
 
 #[derive(Debug)]
 pub enum Update {
@@ -116,7 +104,7 @@ impl Args for Options {
                     verbose = true;
                 }
                 Long("comment") => {
-                    comment = Comment::Given(parser.value()?.to_string_lossy().into());
+                    comment = Comment::Text(parser.value()?.to_string_lossy().into());
                 }
                 Long("no-comment") => {
                     comment = Comment::Blank;
@@ -258,19 +246,7 @@ fn update(
         term::format::dim(format!("R{}", current + 1)),
         term::format::secondary(common::fmt::oid(head)),
     );
-
-    let comment = match options.comment {
-        Comment::Prompt => term::Editor::new()
-            .require_save(true)
-            .trim_newlines(true)
-            .extension(".markdown")
-            .edit(REVISION_MSG)
-            .unwrap(),
-        Comment::Blank => None,
-        Comment::Given(c) => Some(c),
-    };
-    let comment = comment.unwrap_or_default().replace(&REVISION_MSG, "");
-    let comment = comment.trim();
+    let comment = options.comment.get(REVISION_MSG);
 
     // Difference between the two revisions.
     term::patch::print_commits_ahead_behind(repo, *head, *current_revision.oid)?;
