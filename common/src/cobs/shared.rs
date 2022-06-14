@@ -374,33 +374,68 @@ pub struct Comment<R = ()> {
     pub timestamp: Timestamp,
 }
 
-impl Comment<()> {
+impl<R: Default> Comment<R> {
     pub fn new(author: Author, body: String, timestamp: Timestamp) -> Self {
         Self {
             author,
             body,
             reactions: HashMap::default(),
-            replies: (),
+            replies: R::default(),
             timestamp,
         }
     }
+}
 
+impl Comment<()> {
     pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
         self.author.resolve(storage)
     }
 
-    pub fn put(
+    pub(super) fn put(
         &self,
         tx: &mut automerge::transaction::Transaction,
         id: &automerge::ObjId,
     ) -> Result<(), AutomergeError> {
         let comment_id = tx.put_object(&id, "comment", ObjType::Map)?;
 
+        assert!(
+            self.reactions.is_empty(),
+            "Cannot put comment with non-empty reactions"
+        );
+
         tx.put(&comment_id, "body", self.body.trim())?;
         tx.put(&comment_id, "author", self.author.urn().to_string())?;
         tx.put(&comment_id, "peer", self.author.peer.default_encoding())?;
         tx.put(&comment_id, "timestamp", self.timestamp)?;
         tx.put_object(&comment_id, "reactions", ObjType::Map)?;
+
+        Ok(())
+    }
+}
+
+impl Comment<Replies> {
+    pub(super) fn put(
+        &self,
+        tx: &mut automerge::transaction::Transaction,
+        id: &automerge::ObjId,
+    ) -> Result<(), AutomergeError> {
+        let comment_id = tx.put_object(&id, "comment", ObjType::Map)?;
+
+        assert!(
+            self.reactions.is_empty(),
+            "Cannot put comment with non-empty reactions"
+        );
+        assert!(
+            self.replies.is_empty(),
+            "Cannot put comment with non-empty replies"
+        );
+
+        tx.put(&comment_id, "body", self.body.trim())?;
+        tx.put(&comment_id, "author", self.author.urn().to_string())?;
+        tx.put(&comment_id, "peer", self.author.peer.default_encoding())?;
+        tx.put(&comment_id, "timestamp", self.timestamp)?;
+        tx.put_object(&comment_id, "reactions", ObjType::Map)?;
+        tx.put_object(&comment_id, "replies", ObjType::List)?;
 
         Ok(())
     }
@@ -710,16 +745,7 @@ pub mod lookup {
         obj_id: &automerge::ObjId,
     ) -> Result<Comment<Replies>, DocumentError> {
         let comment = self::comment(doc, obj_id)?;
-
-        let mut replies = Vec::new();
-        if let Ok((_, replies_id)) = doc.get(&obj_id, "replies") {
-            for i in 0..doc.length(&replies_id) {
-                let (_, reply_id) = doc.get(&replies_id, i as usize)?;
-                let reply = self::comment(doc, &reply_id)?;
-
-                replies.push(reply);
-            }
-        }
+        let replies = doc.list(&obj_id, "replies", self::comment)?;
 
         Ok(Comment {
             author: comment.author,

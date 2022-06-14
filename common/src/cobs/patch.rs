@@ -508,6 +508,19 @@ impl Revision {
         tx: &mut automerge::transaction::Transaction,
         id: &automerge::ObjId,
     ) -> Result<(), AutomergeError> {
+        assert!(
+            self.merges.is_empty(),
+            "Cannot put revision with non-empty merges"
+        );
+        assert!(
+            self.reviews.is_empty(),
+            "Cannot put revision with non-empty reviews"
+        );
+        assert!(
+            self.discussion.is_empty(),
+            "Cannot put revision with non-empty discussion"
+        );
+
         tx.put(&id, "id", self.id.to_string())?;
         tx.put(&id, "peer", self.peer.to_string())?;
         tx.put(&id, "oid", self.oid.to_string())?;
@@ -610,7 +623,7 @@ pub struct Review {
     /// Review verdict.
     pub verdict: Verdict,
     /// Review general comment.
-    pub comment: Comment,
+    pub comment: Comment<Replies>,
     /// Review inline code comments.
     pub inline: Vec<CodeComment>,
     /// Review timestamp.
@@ -642,6 +655,11 @@ impl Review {
         tx: &mut automerge::transaction::Transaction,
         id: &automerge::ObjId,
     ) -> Result<(), AutomergeError> {
+        assert!(
+            self.inline.is_empty(),
+            "Cannot put review with non-empty inline comments"
+        );
+
         tx.put(&id, "author", self.author.urn().to_string())?;
         tx.put(&id, "peer", self.author.peer.default_encoding())?;
         tx.put(&id, "verdict", self.verdict)?;
@@ -716,7 +734,7 @@ mod lookup {
         let peer = doc.val(&obj_id, "peer")?;
         let verdict = doc.val(&obj_id, "verdict")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
-        let comment = doc.lookup(&obj_id, "comment", shared::lookup::comment)?;
+        let comment = doc.lookup(&obj_id, "comment", shared::lookup::thread)?;
         let inline = vec![];
 
         Ok(Review {
