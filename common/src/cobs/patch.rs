@@ -17,6 +17,7 @@ use librad::collaborative_objects::{
     UpdateObjectSpec,
 };
 use librad::git::identities::local::LocalIdentity;
+use librad::git::storage::ReadOnly;
 use librad::git::Storage;
 use librad::git::Urn;
 use librad::paths::Paths;
@@ -142,6 +143,16 @@ impl Patch {
 
     pub fn description(&self) -> &str {
         self.latest().1.description()
+    }
+
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.author.resolve(storage)?;
+
+        for revision in &mut self.revisions.iter_mut() {
+            revision.resolve(storage)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -513,6 +524,18 @@ impl Revision {
 
         Ok(())
     }
+
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.comment.author.resolve(storage)?;
+        for comment in &mut self.discussion {
+            comment.resolve(storage)?;
+        }
+        for (_urn, review) in &mut self.reviews.iter_mut() {
+            review.resolve(storage)?;
+        }
+
+        Ok(())
+    }
 }
 
 /// A merged patch revision.
@@ -632,6 +655,10 @@ impl Review {
         tx.put(&id, "timestamp", self.timestamp)?;
 
         Ok(())
+    }
+
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
+        self.author.resolve(storage)
     }
 }
 
