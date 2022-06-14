@@ -570,7 +570,7 @@ pub fn print(
             badges.push(term::format::badge_secondary("delegate"));
         }
         if peer.id == *storage.peer_id() {
-            badges.push(term::format::badge_primary("you"));
+            badges.push(term::format::secondary("(you)"));
         }
 
         timeline.push((
@@ -590,14 +590,24 @@ pub fn print(
             Verdict::Reject => term::format::negative(term::format::dim("✗ rejected")),
             Verdict::Pass => term::format::negative(term::format::dim("⋄ reviewed")),
         };
+        let peer = project::PeerInfo::get(&review.author.peer, project, storage);
+        let mut badges = Vec::new();
+
+        if peer.delegate {
+            badges.push(term::format::badge_secondary("delegate"));
+        }
+        if peer.id == *storage.peer_id() {
+            badges.push(term::format::secondary("(you)"));
+        }
 
         timeline.push((
             review.timestamp,
             format!(
-                "{}{} by {}",
+                "{}{} by {} {}",
                 " ".repeat(term::text_width(prefix)),
                 verdict,
                 term::format::tertiary(review.author.name()),
+                badges.join(" "),
             ),
         ));
     }
