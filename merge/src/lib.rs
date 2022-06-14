@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context};
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{Patch, PatchId};
-use radicle_common::cobs::shared::CobIdentifier;
+use radicle_common::cobs::{CobIdentifier, Store as _};
 use radicle_common::patch::MergeStyle;
 use radicle_common::{cobs, git, keys, person, profile, project};
 use radicle_terminal as term;
@@ -114,26 +114,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let whoami = person::local(&storage)?;
     let whoami_urn = whoami.urn();
     let patches = cobs::patch::Patches::new(whoami, profile.paths(), &storage)?;
-
-    let patch_id = match options.id {
-        CobIdentifier::Full(id) => id,
-        CobIdentifier::Prefix(prefix) => {
-            let matches = patches.find(&urn, |p| p.to_string().starts_with(&prefix))?;
-
-            match matches.as_slice() {
-                [id] => *id,
-                [_id, ..] => {
-                    anyhow::bail!(
-                        "patch id `{}` is ambiguous; please use the fully qualified id",
-                        prefix
-                    );
-                }
-                [] => {
-                    anyhow::bail!("patch `{}` not found in local storage", prefix);
-                }
-            }
-        }
-    };
+    let patch_id = patches.resolve_id(&urn, options.id)?;
 
     if repo.head_detached()? {
         anyhow::bail!("HEAD is in a detached state; can't merge");

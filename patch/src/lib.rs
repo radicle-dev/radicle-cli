@@ -15,7 +15,7 @@ use librad::profile::Profile;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, Patches};
-use radicle_common::cobs::CobIdentifier;
+use radicle_common::cobs::{CobIdentifier, Store as _};
 use radicle_common::{cobs, git, keys, patch, person, profile, project};
 use radicle_terminal as term;
 
@@ -400,7 +400,7 @@ fn create(
             }
         }
         Update::Patch(identifier) => {
-            let id = find_id(identifier.clone(), &project.urn, &patches)?;
+            let id = patches.resolve_id(&project.urn, identifier.clone())?;
 
             if let Some(patch) = patches.get(&project.urn, &id)? {
                 Some((id, patch))
@@ -633,30 +633,4 @@ fn find_unmerged_with_base(
         }
     }
     Ok(matches)
-}
-
-fn find_id(
-    identifier: CobIdentifier,
-    project: &common::Urn,
-    patches: &Patches,
-) -> anyhow::Result<PatchId> {
-    match identifier {
-        CobIdentifier::Full(id) => Ok(id),
-        CobIdentifier::Prefix(prefix) => {
-            let matches = patches.find(project, |p| p.to_string().starts_with(&prefix))?;
-
-            match matches.as_slice() {
-                [id] => Ok(*id),
-                [_id, ..] => {
-                    anyhow::bail!(
-                        "patch id `{}` is ambiguous; please use the fully qualified id",
-                        prefix
-                    );
-                }
-                [] => {
-                    anyhow::bail!("patch `{}` not found in local storage", prefix);
-                }
-            }
-        }
-    }
 }

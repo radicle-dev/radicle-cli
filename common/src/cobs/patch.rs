@@ -206,6 +206,16 @@ pub struct Patches<'a> {
     store: CollaborativeObjects<'a>,
 }
 
+impl<'a> Store<'a> for Patches<'a> {
+    fn type_name() -> TypeName {
+        TYPENAME.clone()
+    }
+
+    fn store(&self) -> &CollaborativeObjects<'a> {
+        &self.store
+    }
+}
+
 impl<'a> Patches<'a> {
     pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
         let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
@@ -375,23 +385,6 @@ impl<'a> Patches<'a> {
         )?;
 
         Ok(merge)
-    }
-
-    pub fn find(
-        &self,
-        project: &Urn,
-        predicate: impl Fn(&PatchId) -> bool,
-    ) -> Result<Vec<PatchId>, Error> {
-        let cobs = self
-            .store
-            .list(project, &TYPENAME)
-            .map_err(|e| Error::List(e.to_string()))?;
-
-        Ok(cobs
-            .into_iter()
-            .map(|c| *c.id())
-            .filter(|id| predicate(id))
-            .collect())
     }
 
     pub fn all(&self, project: &Urn) -> Result<Vec<(PatchId, Patch)>, Error> {

@@ -14,7 +14,7 @@ use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use chrono::TimeZone;
 use serde::{Deserialize, Serialize};
 
-use librad::collaborative_objects::ObjectId;
+use librad::collaborative_objects::{CollaborativeObjects, ObjectId, TypeName};
 use librad::git::storage::ReadOnly;
 use librad::git::Urn;
 use librad::PeerId;
@@ -43,7 +43,7 @@ pub enum ResolveError {
 /// A generic COB identifier.
 #[derive(Debug, Clone)]
 pub enum CobIdentifier {
-    /// Regular, full patch id.
+    /// Regular, full object id.
     Full(ObjectId),
     /// A prefix of a full id.
     Prefix(String),
@@ -58,6 +58,69 @@ impl FromStr for CobIdentifier {
         } else {
             // TODO: Do some validation here.
             Ok(CobIdentifier::Prefix(s.to_owned()))
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum StoreError {
+    #[error("Create error: {0}")]
+    Create(String),
+
+    #[error("Update error: {0}")]
+    Update(String),
+
+    #[error("List error: {0}")]
+    List(String),
+
+    #[error("Retrieve error: {0}")]
+    Retrieve(String),
+
+    #[error(transparent)]
+    Automerge(#[from] AutomergeError),
+}
+
+pub trait Store<'a> {
+    fn type_name() -> TypeName;
+
+    fn store(&self) -> &CollaborativeObjects<'a>;
+
+    fn find(
+        &self,
+        project: &Urn,
+        predicate: impl Fn(&ObjectId) -> bool,
+    ) -> Result<Vec<ObjectId>, StoreError> {
+        let cobs = self
+            .store()
+            .list(project, &Self::type_name())
+            .map_err(|e| StoreError::List(e.to_string()))?;
+
+        Ok(cobs
+            .into_iter()
+            .map(|c| *c.id())
+            .filter(|id| predicate(id))
+            .collect())
+    }
+
+    fn resolve_id(&self, project: &Urn, identifier: CobIdentifier) -> anyhow::Result<ObjectId> {
+        match identifier {
+            CobIdentifier::Full(id) => Ok(id),
+            CobIdentifier::Prefix(prefix) => {
+                let matches = self.find(project, |p| p.to_string().starts_with(&prefix))?;
+
+                match matches.as_slice() {
+                    [id] => Ok(*id),
+                    [_id, ..] => {
+                        anyhow::bail!(
+                            "object id `{}` is ambiguous; please use the fully qualified id",
+                            prefix
+                        );
+                    }
+                    [] => {
+                        anyhow::bail!("object `{}` not found in local storage", prefix);
+                    }
+                }
+            }
         }
     }
 }
