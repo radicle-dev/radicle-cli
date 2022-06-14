@@ -68,6 +68,7 @@ rad-push = { path = "./push" }
 rad-pull = { path = "./pull" }
 rad-sync = { path = "./sync" }
 rad-remote = { path = "./remote" }
+rad-review = { path = "./review" }
 rad-checkout = { path = "./checkout" }
 rad-path = { path = "./path" }
 rad-track = { path = "./track" }

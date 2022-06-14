@@ -4903,6 +4903,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-review"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "librad",
+ "lnk-identities",
+ "lnk-profile",
+ "rad-sync",
+ "radicle-common",
+ "radicle-terminal",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rad-reward"
 version = "0.1.0"
 dependencies = [
@@ -5012,6 +5028,7 @@ dependencies = [
  "rad-pull",
  "rad-push",
  "rad-remote",
+ "rad-review",
  "rad-reward",
  "rad-rm",
  "rad-self",
