@@ -95,7 +95,6 @@ impl<'a> FromValue<'a> for State {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Issue {
     pub author: Author,
-    pub peer: PeerId,
     pub title: String,
     pub state: State,
     pub comment: Comment,
@@ -198,7 +197,6 @@ impl TryFrom<Automerge> for Issue {
             title,
             state,
             author,
-            peer,
             comment,
             discussion,
             labels,

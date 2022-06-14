@@ -100,8 +100,6 @@ pub enum Error {
 pub struct Patch {
     /// Author of the patch.
     pub author: Author,
-    /// Peer who authored the patch.
-    pub peer: PeerId,
     /// Title of the patch.
     pub title: String,
     /// Current state of the patch.
@@ -175,7 +173,6 @@ impl TryFrom<Document<'_>> for Patch {
 
         Ok(Self {
             author,
-            peer,
             title,
             state,
             target,
@@ -952,7 +949,7 @@ mod test {
 
         assert_eq!(&patch.title, "My first patch");
         assert_eq!(patch.author.urn(), &author);
-        assert_eq!(&patch.peer, storage.peer_id());
+        assert_eq!(&patch.author.peer, storage.peer_id());
         assert_eq!(patch.state, State::Proposed);
         assert!(patch.timestamp >= timestamp);
 
