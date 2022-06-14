@@ -7,6 +7,7 @@ use std::hash::Hash;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use automerge::transaction::Transactable;
@@ -402,12 +403,19 @@ impl Timestamp {
     pub fn as_secs(&self) -> u64 {
         self.seconds
     }
+
+    pub fn to_rfc2822(&self) -> String {
+        chrono::Utc.timestamp(self.as_secs() as i64, 0).to_rfc2822()
+    }
 }
 
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let time = chrono::Utc.timestamp(self.as_secs() as i64, 0);
-        write!(f, "{}", time.to_rfc2822())
+        let fmt = timeago::Formatter::new();
+        let now = Timestamp::now();
+        let duration = time::Duration::from_secs(now.seconds - self.seconds);
+
+        write!(f, "{}", fmt.convert(duration))
     }
 }
 
