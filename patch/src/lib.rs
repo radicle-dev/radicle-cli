@@ -1,11 +1,13 @@
 #![allow(clippy::or_fun_call)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::for_kv_map)]
 use std::convert::TryFrom;
 use std::ffi::OsString;
 use std::str::FromStr;
 
 use anyhow::anyhow;
 
+use common::cobs::patch::Verdict;
 use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnlyStorage;
 use librad::git::Storage;
@@ -200,7 +202,6 @@ fn list(
         for (id, patch) in &mut own {
             term::blank();
 
-            patch.author.resolve(storage).ok();
             print(&whoami, id, patch, project, &head, repo, storage)?;
         }
     }
@@ -212,7 +213,6 @@ fn list(
         term::print(&term::format::italic("Nothing to show."));
     } else {
         for (id, patch) in &mut other {
-            patch.author.resolve(storage).ok();
             print(&whoami, id, patch, project, &head, repo, storage)?;
         }
     }
@@ -508,12 +508,19 @@ fn edit_message(message: &str) -> anyhow::Result<(String, String)> {
 pub fn print(
     whoami: &LocalIdentity,
     patch_id: &PatchId,
-    patch: &Patch,
+    patch: &mut Patch,
     project: &project::Metadata,
     head: &git::Reference,
     repo: &git::Repository,
     storage: &Storage,
 ) -> anyhow::Result<()> {
+    for r in patch.revisions.iter_mut() {
+        for (_, r) in &mut r.reviews {
+            r.author.resolve(storage).ok();
+        }
+    }
+    patch.author.resolve(storage).ok();
+
     let revision = patch.revisions.last();
     let revision_oid = revision.oid;
     let revision_pretty = term::format::dim(format!("R{}", patch.version()));
@@ -554,6 +561,7 @@ pub fn print(
     );
     term::info!("{}", author_info.join(" "));
 
+    let mut timeline = Vec::new();
     for merge in &revision.merges {
         let peer = project::PeerInfo::get(&merge.peer, project, storage);
         let mut badges = Vec::new();
@@ -565,14 +573,38 @@ pub fn print(
             badges.push(term::format::badge_primary("you"));
         }
 
-        term::info!(
-            "{}{} by {} {} {}",
-            " ".repeat(term::text_width(prefix)),
-            term::format::secondary(term::format::dim("✓ merged")),
-            term::format::tertiary(peer.name()),
-            badges.join(" "),
-            term::format::dim(merge.timestamp)
-        );
+        timeline.push((
+            merge.timestamp,
+            format!(
+                "{}{} by {} {}",
+                " ".repeat(term::text_width(prefix)),
+                term::format::secondary(term::format::dim("✓ merged")),
+                term::format::tertiary(peer.name()),
+                badges.join(" "),
+            ),
+        ));
+    }
+    for (_, review) in &revision.reviews {
+        let verdict = match review.verdict {
+            Verdict::Accept => term::format::positive(term::format::dim("✓ accepted")),
+            Verdict::Reject => term::format::negative(term::format::dim("✗ rejected")),
+            Verdict::Pass => term::format::negative(term::format::dim("⋄ reviewed")),
+        };
+
+        timeline.push((
+            review.timestamp,
+            format!(
+                "{}{} by {}",
+                " ".repeat(term::text_width(prefix)),
+                verdict,
+                term::format::tertiary(review.author.name()),
+            ),
+        ));
+    }
+    timeline.sort_by_key(|(t, _)| *t);
+
+    for (time, event) in timeline.iter().rev() {
+        term::info!("{} {}", event, term::format::dim(time));
     }
 
     Ok(())
