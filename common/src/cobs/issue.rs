@@ -181,34 +181,13 @@ impl TryFrom<Automerge> for Issue {
         let (_obj, obj_id) = doc.get(automerge::ObjId::Root, "issue")?;
         let title = doc.val(&obj_id, "title")?;
         let (_, comment_id) = doc.get(&obj_id, "comment")?;
-        let (discussion, discussion_id) = doc.get(&obj_id, "discussion")?;
         let author = doc.val(&obj_id, "author")?;
         let state = doc.val(&obj_id, "state")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
-        let (labels, labels_id) = doc.get(&obj_id, "labels")?;
 
-        assert_eq!(discussion.to_objtype(), Some(ObjType::List));
-        assert_eq!(labels.to_objtype(), Some(ObjType::Map));
-
-        // Top-level comment.
         let comment = shared::lookup::comment(doc, &comment_id)?;
-
-        // Discussion thread.
-        let mut discussion: Discussion = Vec::new();
-        for i in 0..doc.length(&discussion_id) {
-            let (_val, comment_id) = doc.get(&discussion_id, i as usize)?;
-            let comment = shared::lookup::thread(doc, &comment_id)?;
-
-            discussion.push(comment);
-        }
-
-        // Labels.
-        let mut labels = HashSet::new();
-        for key in doc.keys(&labels_id) {
-            let label = Label::new(key).unwrap();
-
-            labels.insert(label);
-        }
+        let discussion: Discussion = doc.list(&obj_id, "discussion", shared::lookup::thread)?;
+        let labels: HashSet<Label> = doc.keys(&obj_id, "labels")?;
 
         Ok(Self {
             title,

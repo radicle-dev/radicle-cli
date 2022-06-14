@@ -1,8 +1,9 @@
 #![allow(clippy::large_enum_variant)]
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::{Infallible, TryFrom};
 use std::fmt;
+use std::hash::Hash;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -122,6 +123,14 @@ impl Label {
 
     pub fn name(&self) -> &str {
         self.0.as_str()
+    }
+}
+
+impl FromStr for Label {
+    type Err = LabelError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
     }
 }
 
@@ -488,6 +497,61 @@ impl<'a> Document<'a> {
         }
         Ok(objs)
     }
+
+    pub fn map<
+        V: Default,
+        K: Hash + Eq + FromStr,
+        O: AsRef<automerge::ObjId>,
+        P: Into<automerge::Prop>,
+    >(
+        &self,
+        id: O,
+        prop: P,
+        mut value: impl FnMut(&mut V),
+    ) -> Result<HashMap<K, V>, DocumentError> {
+        let prop = prop.into();
+        let id = id.as_ref();
+
+        let (obj, obj_id) = self
+            .doc
+            .get(id, prop.clone())?
+            .ok_or_else(|| DocumentError::PropertyNotFound(prop.to_string()))?;
+
+        assert_eq!(obj.to_objtype(), Some(ObjType::Map));
+
+        let mut map = HashMap::new();
+        for key in self.doc.keys(&obj_id) {
+            let key = K::from_str(&key).map_err(|_| DocumentError::Property)?;
+            let val = map.entry(key).or_default();
+
+            value(val);
+        }
+        Ok(map)
+    }
+
+    pub fn keys<K: Hash + Eq + FromStr, O: AsRef<automerge::ObjId>, P: Into<automerge::Prop>>(
+        &self,
+        id: O,
+        prop: P,
+    ) -> Result<HashSet<K>, DocumentError> {
+        let prop = prop.into();
+        let id = id.as_ref();
+
+        let (obj, obj_id) = self
+            .doc
+            .get(id, prop.clone())?
+            .ok_or_else(|| DocumentError::PropertyNotFound(prop.to_string()))?;
+
+        assert_eq!(obj.to_objtype(), Some(ObjType::Map));
+
+        let mut keys = HashSet::new();
+        for key in self.doc.keys(&obj_id) {
+            let key = K::from_str(&key).map_err(|_| DocumentError::Property)?;
+
+            keys.insert(key);
+        }
+        Ok(keys)
+    }
 }
 
 impl<'a> Deref for Document<'a> {
@@ -514,8 +578,6 @@ pub enum DocumentError {
 }
 
 pub mod lookup {
-    use std::str::FromStr;
-
     use super::{Comment, HashMap, Reaction, Replies};
     use super::{Document, DocumentError};
 
@@ -523,15 +585,7 @@ pub mod lookup {
         let author = doc.val(&obj_id, "author")?;
         let body = doc.val(&obj_id, "body")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
-        let (_, reactions_id) = doc.get(&obj_id, "reactions")?;
-
-        let mut reactions: HashMap<_, usize> = HashMap::new();
-        for reaction in doc.keys(&reactions_id) {
-            let key = Reaction::from_str(&reaction).map_err(|_| DocumentError::Property)?;
-            let count = reactions.entry(key).or_default();
-
-            *count += 1;
-        }
+        let reactions: HashMap<Reaction, usize> = doc.map(&obj_id, "reactions", |v| *v += 1)?;
 
         Ok(Comment {
             author,

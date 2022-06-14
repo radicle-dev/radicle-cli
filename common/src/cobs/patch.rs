@@ -156,19 +156,9 @@ impl TryFrom<Document<'_>> for Patch {
         let state = doc.val(&obj_id, "state")?;
         let target = doc.val(&obj_id, "target")?;
         let timestamp = doc.val(&obj_id, "timestamp")?;
-        let (labels, labels_id) = doc.get(&obj_id, "labels")?;
 
-        assert_eq!(labels.to_objtype(), Some(ObjType::Map));
-
-        // Revisions.
         let revisions = doc.list(&obj_id, "revisions", lookup::revision)?;
-
-        // Labels.
-        let mut labels = HashSet::new();
-        for key in doc.keys(&labels_id) {
-            let label = Label::new(key).map_err(|_| DocumentError::Property)?;
-            labels.insert(label);
-        }
+        let labels: HashSet<Label> = doc.keys(&obj_id, "labels")?;
         let revisions = NonEmpty::from_vec(revisions).ok_or(DocumentError::EmptyList)?;
 
         Ok(Self {
@@ -666,20 +656,15 @@ mod lookup {
         let oid = doc.val(&revision_id, "oid")?;
         let timestamp = doc.val(&revision_id, "timestamp")?;
 
-        // Top-level comment.
         let comment = shared::lookup::comment(doc, &comment_id)?;
-
-        // Discussion thread.
         let discussion: Discussion =
             doc.list(&revision_id, "discussion", shared::lookup::thread)?;
-
-        // Patch merges.
         let merges: Vec<Merge> = doc.list(&revision_id, "merges", self::merge)?;
 
         // Reviews.
         let mut reviews: HashMap<Urn, Review> = HashMap::new();
-        for i in 0..doc.length(&reviews_id) {
-            let (_, review_id) = doc.get(&reviews_id, i as usize)?;
+        for key in (*doc).keys(&reviews_id) {
+            let (_, review_id) = doc.get(&reviews_id, key)?;
             let review = self::review(doc, &review_id)?;
 
             reviews.insert(review.author.urn().clone(), review);
