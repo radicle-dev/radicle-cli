@@ -20,6 +20,7 @@ pub const HELP: Help = Help {
 Usage
 
     rad issue new [--title <title>] [--description <text>]
+    rad issue state <id> [--closed | --open | --solved]
     rad issue delete <id>
     rad issue comment <id> [--description <text>]
     rad issue react <id> [--emoji <char>]
@@ -40,6 +41,7 @@ pub struct Metadata {
 #[derive(Debug, PartialEq, Eq)]
 pub enum OperationName {
     Create,
+    State,
     Comment,
     React,
     Delete,
@@ -57,6 +59,10 @@ pub enum Operation {
     Create {
         title: Option<String>,
         description: Option<String>,
+    },
+    State {
+        id: cobs::issue::IssueId,
+        state: cobs::issue::State,
     },
     Delete {
         id: cobs::issue::IssueId,
@@ -88,6 +94,7 @@ impl Args for Options {
         let mut title: Option<String> = None;
         let mut reaction: Option<cobs::Reaction> = None;
         let mut description: Option<String> = None;
+        let mut state: Option<cobs::issue::State> = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -96,6 +103,19 @@ impl Args for Options {
                 }
                 Long("title") if op == Some(OperationName::Create) => {
                     title = Some(parser.value()?.to_string_lossy().into());
+                }
+                Long("closed") if op == Some(OperationName::State) => {
+                    state = Some(cobs::issue::State::Closed {
+                        reason: CloseReason::Other,
+                    });
+                }
+                Long("open") if op == Some(OperationName::State) => {
+                    state = Some(cobs::issue::State::Open);
+                }
+                Long("solved") if op == Some(OperationName::State) => {
+                    state = Some(cobs::issue::State::Closed {
+                        reason: CloseReason::Solved,
+                    });
                 }
                 Long("reaction") if op == Some(OperationName::React) => {
                     if let Some(emoji) = parser.value()?.to_str() {
@@ -112,6 +132,7 @@ impl Args for Options {
                 }
                 Value(val) if op.is_none() => match val.to_string_lossy().as_ref() {
                     "n" | "new" => op = Some(OperationName::Create),
+                    "s" | "state" => op = Some(OperationName::State),
                     "d" | "delete" => op = Some(OperationName::Delete),
                     "l" | "list" => op = Some(OperationName::List),
                     "r" | "react" => op = Some(OperationName::React),
@@ -137,6 +158,10 @@ impl Args for Options {
 
         let op = match op.unwrap_or_default() {
             OperationName::Create => Operation::Create { title, description },
+            OperationName::State => Operation::State {
+                id: id.ok_or_else(|| anyhow!("an issue id must be provided"))?,
+                state: state.ok_or_else(|| anyhow!("a state operation must be provided"))?,
+            },
             OperationName::React => Operation::React {
                 id: id.ok_or_else(|| anyhow!("an issue id must be provided"))?,
                 reaction: reaction.ok_or_else(|| anyhow!("a reaction emoji must be provided"))?,
@@ -169,6 +194,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             description: Some(description),
         } => {
             issues.create(&project, &title, &description, &[])?;
+        }
+        Operation::State { id, state } => {
+            issues.lifecycle(&project, &id, state)?;
         }
         Operation::React { id, reaction } => {
             if let Some(issue) = issues.get(&project, &id)? {

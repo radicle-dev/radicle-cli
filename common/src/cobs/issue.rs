@@ -61,6 +61,15 @@ pub enum State {
     Closed { reason: CloseReason },
 }
 
+impl State {
+    fn lifecycle_message(self) -> String {
+        match self {
+            State::Open => "Open issue".to_owned(),
+            State::Closed { .. } => "Close issue".to_owned(),
+        }
+    }
+}
+
 impl From<State> for ScalarValue {
     fn from(state: State) -> Self {
         match state {
@@ -267,16 +276,10 @@ impl<'a> Issues<'a> {
         Ok(*cob.id()) // TODO: Return something other than doc id.
     }
 
-    pub fn close(&self, project: &Urn, issue_id: &IssueId) -> Result<(), Error> {
+    pub fn lifecycle(&self, project: &Urn, issue_id: &IssueId, state: State) -> Result<(), Error> {
         let author = self.whoami.urn();
         let mut issue = self.get_raw(project, issue_id)?.unwrap();
-        let changes = events::lifecycle(
-            &mut issue,
-            &author,
-            State::Closed {
-                reason: CloseReason::Other,
-            },
-        )?;
+        let changes = events::lifecycle(&mut issue, &author, state)?;
         let _cob = self
             .store
             .update(
@@ -561,7 +564,7 @@ mod events {
     ) -> Result<EntryContents, AutomergeError> {
         issue
             .transact_with::<_, _, AutomergeError, _, ()>(
-                |_| CommitOptions::default().with_message("Close issue".to_owned()),
+                |_| CommitOptions::default().with_message(state.lifecycle_message()),
                 |tx| {
                     let (_, obj_id) = tx.get(ObjId::Root, "issue")?.unwrap();
                     tx.put(&obj_id, "state", state)?;
@@ -714,7 +717,15 @@ mod test {
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
 
-        issues.close(&project.urn(), &issue_id).unwrap();
+        issues
+            .lifecycle(
+                &project.urn(),
+                &issue_id,
+                State::Closed {
+                    reason: CloseReason::Other,
+                },
+            )
+            .unwrap();
 
         let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
         assert_eq!(
@@ -723,6 +734,12 @@ mod test {
                 reason: CloseReason::Other
             }
         );
+
+        issues
+            .lifecycle(&project.urn(), &issue_id, State::Open)
+            .unwrap();
+        let issue = issues.get(&project.urn(), &issue_id).unwrap().unwrap();
+        assert_eq!(issue.state(), State::Open);
     }
 
     #[test]
