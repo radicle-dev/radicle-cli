@@ -21,6 +21,7 @@ use librad::git::Urn;
 use librad::PeerId;
 use radicle_git_ext as git;
 
+use crate::person;
 use crate::project;
 
 #[derive(thiserror::Error, Debug)]
@@ -266,23 +267,25 @@ pub enum Identity {
     /// Only the URN is known.
     Unresolved { urn: Urn },
     /// The full user identity is resolved.
-    Resolved { identity: project::PeerIdentity },
+    Resolved {
+        urn: Urn,
+        name: String,
+        ens: Option<person::Ens>,
+    },
 }
 
 impl Identity {
     pub fn urn(&self) -> &Urn {
         match self {
             Self::Unresolved { ref urn } => urn,
-            Self::Resolved {
-                identity: project::PeerIdentity { urn, .. },
-            } => urn,
+            Self::Resolved { urn, .. } => urn,
         }
     }
 
     pub fn name(&self) -> String {
         match self {
             Self::Unresolved { urn } => urn.encode_id(),
-            Self::Resolved { identity } => identity.name.clone(),
+            Self::Resolved { name, .. } => name.clone(),
         }
     }
 
@@ -291,7 +294,11 @@ impl Identity {
             Self::Unresolved { urn } => {
                 let identity = project::PeerIdentity::get(urn, storage)?
                     .ok_or_else(|| ResolveError::NotFound { urn: urn.clone() })?;
-                *self = Self::Resolved { identity };
+                *self = Self::Resolved {
+                    urn: identity.urn,
+                    name: identity.name,
+                    ens: identity.ens,
+                };
             }
             Self::Resolved { .. } => {}
         }
