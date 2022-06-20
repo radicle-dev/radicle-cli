@@ -309,6 +309,7 @@ impl From<Urn> for Identity {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Author {
     pub peer: PeerId,
+    #[serde(flatten)]
     pub identity: Identity,
 }
 
