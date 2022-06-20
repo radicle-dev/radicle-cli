@@ -386,6 +386,15 @@ impl<'a> Issues<'a> {
         Ok(issues)
     }
 
+    pub fn count(&self, project: &Urn) -> Result<usize, Error> {
+        let cobs = self
+            .store
+            .list(project, &TYPENAME)
+            .map_err(|e| Error::List(e.to_string()))?;
+
+        Ok(cobs.len())
+    }
+
     pub fn get(&self, project: &Urn, id: &IssueId) -> Result<Option<Issue>, Error> {
         let cob = self
             .store

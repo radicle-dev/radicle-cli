@@ -392,6 +392,15 @@ impl<'a> Patches<'a> {
         Ok(merge)
     }
 
+    pub fn count(&self, project: &Urn) -> Result<usize, Error> {
+        let cobs = self
+            .store
+            .list(project, &TYPENAME)
+            .map_err(|e| Error::List(e.to_string()))?;
+
+        Ok(cobs.len())
+    }
+
     pub fn all(&self, project: &Urn) -> Result<Vec<(PatchId, Patch)>, Error> {
         let cobs = self
             .store
