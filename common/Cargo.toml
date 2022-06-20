@@ -6,7 +6,7 @@ license = "GPL-3.0-or-later"
 
 [features]
 default = []
-ethereum = ["ethers", "coins-bip32", "hex", "walletconnect"]
+ethereum = ["ethers", "coins-bip32", "hex", "walletconnect", "tokio"]
 
 [dependencies]
 async-trait = "0.1.53"
@@ -35,12 +35,17 @@ thiserror = "1"
 timeago = { version = "0.3.1", default-features = false }
 uuid = { version = "1.1.2", features = ["v4", "fast-rng", "serde"] }
 zeroize = "1.1"
-tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 quickcheck = "1"
 
 # Ethereum feature dependencies
+
+[dependencies.tokio]
+version = "1"
+default-features = false
+features = ["macros", "rt"]
+optional = true
 
 [dependencies.ethers]
 version = "0.6.2"

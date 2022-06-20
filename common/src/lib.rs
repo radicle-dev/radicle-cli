@@ -28,6 +28,7 @@ pub use lnk_identities as identities;
 pub use serde_json as json;
 pub use url::Url;
 
+#[cfg(feature = "ethereum")]
 pub use tokio;
 
 /// String formatting of various types.
