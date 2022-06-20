@@ -6,26 +6,38 @@ use serde::{de::DeserializeOwned, Serialize};
 
 pub use librad::profile::{LnkHome, Profile, ProfileId};
 
+use librad::crypto::{
+    keystore::{FileStorage, Keystore as _},
+    PublicKey, SecretKey,
+};
 use librad::PeerId;
-use librad::{git::storage::ReadOnly, keystore::crypto::Crypto};
-
-use lnk_profile;
+use librad::{git::storage::ReadOnly, git::Storage, keystore::crypto::Crypto};
 
 use crate::args;
+use crate::keys;
 
 /// Environment var that sets the radicle home directory.
 pub const RAD_HOME: &str = "RAD_HOME";
 
 /// Create a new profile.
-pub fn create<C: Crypto>(
-    home: impl Into<LnkHome>,
-    crypto: C,
-) -> Result<(Profile, PeerId), lnk_profile::Error>
+pub fn create<C: Crypto>(home: impl Into<LnkHome>, crypto: C) -> Result<(Profile, PeerId)>
 where
     C::Error: fmt::Debug + fmt::Display + Send + Sync + 'static,
     C::SecretBox: Serialize + DeserializeOwned,
 {
-    lnk_profile::create(Some(home.into()), crypto)
+    let home = home.into();
+    let profile = Profile::new(&home)?;
+
+    Profile::set(&home, profile.id().clone())?;
+
+    let key = SecretKey::new();
+    let mut store: FileStorage<C, PublicKey, SecretKey, _> =
+        FileStorage::new(&profile.paths().keys_dir().join(keys::KEY_FILE), crypto);
+
+    store.put_key(key.clone())?;
+    Storage::open(profile.paths(), key.clone())?;
+
+    Ok((profile, PeerId::from(key)))
 }
 
 /// Get the radicle home.
@@ -49,7 +61,7 @@ pub fn default() -> Result<Profile, Error> {
         hint: "To setup your radicle profile, run `rad auth --init`.",
     };
 
-    match lnk_profile::get(home(), None) {
+    match Profile::active(&home()) {
         Ok(Some(profile)) => Ok(profile),
         Ok(None) => Err(not_active_error.into()),
         Err(_) => Err(error.into()),
@@ -67,7 +79,7 @@ pub fn name(profile: Option<&Profile>) -> Result<String, Error> {
 
 /// List all profiles.
 pub fn list() -> Result<Vec<Profile>, Error> {
-    lnk_profile::list(home()).map_err(|e| e.into())
+    Profile::list(&home()).map_err(|e| e.into())
 }
 
 /// Get the count of all profiles.
@@ -79,7 +91,7 @@ pub fn count() -> Result<usize, Error> {
 
 /// Set the default profile.
 pub fn set(id: &ProfileId) -> Result<(), Error> {
-    lnk_profile::set(home(), id.clone())?;
+    Profile::set(&home(), id.clone())?;
 
     Ok(())
 }

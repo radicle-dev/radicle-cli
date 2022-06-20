@@ -24,7 +24,6 @@ serde = "1.0"
 lexopt = "0.2"
 librad = { version = "0" }
 lnk-clib = { version = "0" }
-lnk-profile = { version = "0" }
 lnk-identities = { version = "0" }
 log = { version = "0.4", features = ["std"] }
 radicle-git-ext = { version = "0" }

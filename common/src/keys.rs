@@ -6,7 +6,7 @@ use librad::crypto::keystore::crypto::Pwhash;
 use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
 use librad::crypto::keystore::{FileStorage, Keystore};
 use librad::git::storage::Storage;
-use librad::profile::{Profile, ProfileId};
+use librad::profile::Profile;
 use librad::{PeerId, PublicKey};
 
 use lnk_clib::keys;
@@ -14,7 +14,6 @@ use lnk_clib::keys::ssh::SshAuthSock;
 
 pub use lnk_clib::keys::LIBRAD_KEY_FILE as KEY_FILE;
 
-use crate::profile;
 use crate::signer::{ToSigner, ZeroizingSecretKey};
 
 /// Env var used to pass down the passphrase to the git-remote-helper when
@@ -36,22 +35,13 @@ pub fn storage(profile: &Profile, signer: impl ToSigner) -> Result<Storage, Erro
 }
 
 /// Add a profile's radicle signing key to ssh-agent.
-pub fn add<P: Pinentry>(
-    profile: &Profile,
-    pass: Pwhash<P>,
-    sock: SshAuthSock,
-) -> Result<ProfileId, Error>
+pub fn add<P: Pinentry>(profile: &Profile, pass: Pwhash<P>, sock: SshAuthSock) -> Result<(), Error>
 where
     <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
 {
-    lnk_profile::ssh_add(
-        profile::home(),
-        profile.id().clone(),
-        sock,
-        pass,
-        Vec::new(),
-    )
-    .context("could not add ssh key")
+    keys::ssh::add_signer(profile, sock, pass, vec![]).context("could not add ssh key")?;
+
+    Ok(())
 }
 
 /// Remove a profile's radicle signing key from the ssh-agent
@@ -59,12 +49,13 @@ pub fn remove<P: Pinentry>(
     profile: &Profile,
     pass: Pwhash<P>,
     sock: SshAuthSock,
-) -> Result<ProfileId, Error>
+) -> Result<(), Error>
 where
     <P as Pinentry>::Error: std::fmt::Debug + std::error::Error + Send + Sync + 'static,
 {
-    lnk_profile::ssh_remove(profile::home(), profile.id().clone(), sock, pass)
-        .context("could not remove ssh key")
+    keys::ssh::remove_signer(profile, sock, pass).context("could not remove ssh key")?;
+
+    Ok(())
 }
 
 /// Get the SSH auth socket and error if ssh-agent is not running.
@@ -77,9 +68,8 @@ pub fn ssh_auth_sock() -> Result<SshAuthSock, anyhow::Error> {
 
 /// Check whether the radicle signing key has been added to ssh-agent.
 pub fn is_ready(profile: &Profile, sock: SshAuthSock) -> Result<bool, Error> {
-    lnk_profile::ssh_ready(profile::home(), profile.id().clone(), sock)
+    keys::ssh::is_signer_present(profile, sock)
         .context("could not lookup ssh key, is ssh-agent running?")
-        .map(|(_, is_ready)| is_ready)
 }
 
 /// Get the SSH long key from a peer id.
@@ -129,10 +119,8 @@ pub fn load_secret_key(
     passphrase: SecUtf8,
 ) -> Result<ZeroizingSecretKey, anyhow::Error> {
     let pwhash = pwhash(passphrase);
-    let file_storage: FileStorage<_, PublicKey, _, _> = FileStorage::new(
-        &profile.paths().keys_dir().join(keys::LIBRAD_KEY_FILE),
-        pwhash,
-    );
+    let file_storage: FileStorage<_, PublicKey, _, _> =
+        FileStorage::new(&profile.paths().keys_dir().join(KEY_FILE), pwhash);
     let keypair = file_storage.get_key()?;
 
     Ok(ZeroizingSecretKey::new(keypair.secret_key))

@@ -55,7 +55,6 @@ log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
 futures-lite = { version = "1.12" }
 rad = { path = "./rad" }
-lnk-profile = { version = "0" }
 rad-clone = { path = "./clone" }
 rad-auth = { path = "./auth" }
 rad-init = { path = "./init" }

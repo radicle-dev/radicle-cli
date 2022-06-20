@@ -163,22 +163,20 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     git::configure_signing(profile.paths().git_dir(), &peer_id)?;
 
-    let (profile_id, signer) = if let Ok(sock) = sock {
+    let signer = if let Ok(sock) = sock {
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");
 
-        let profile_id = keys::add(&profile, pwhash, sock.clone())?;
+        keys::add(&profile, pwhash, sock.clone())?;
         let signer = sock.to_signer(&profile)?;
 
         spinner.finish();
-
-        (profile_id, signer)
+        signer
     } else {
         let signer = keys::load_secret_key(&profile, passphrase)?.to_signer(&profile)?;
 
         spinner.finish();
-
-        (profile.id().clone(), signer)
+        signer
     };
 
     let storage = keys::storage(&profile, signer.clone())?;
@@ -188,7 +186,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     term::success!(
         "Profile {} created.",
-        term::format::highlight(&profile_id.to_string())
+        term::format::highlight(&profile.id().to_string())
     );
 
     term::blank();

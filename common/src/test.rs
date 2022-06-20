@@ -42,7 +42,7 @@ pub mod setup {
 
         let name = "cloudhead";
         let pass = Pwhash::new(SecUtf8::from(test::USER_PASS), *KDF_PARAMS_TEST);
-        let (profile, _peer_id) = lnk_profile::create(None, pass.clone()).unwrap();
+        let (profile, _peer_id) = profile::create(profile::home(), pass.clone()).unwrap();
         let signer = test::signer(&profile, pass).unwrap();
         let storage = keys::storage(&profile, signer.clone()).unwrap();
         let person = person::create(&profile, name, signer, &storage).unwrap();
