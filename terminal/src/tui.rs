@@ -34,30 +34,12 @@ pub enum State {
     Exiting,
 }
 
-/// Basic, multi-threaded tui-application with default initialized store. 
-/// When creating an application, an update callback needs to be passed. 
+/// Basic, multi-threaded tui-application with default initialized store.
+/// When creating an application, an update callback needs to be passed.
 /// This will be called for every input event received from event thread.
 ///
-/// # Example
-/// ```
-/// use anyhow::{Error, Result};
-/// 
-/// use tui::{Application, State};
-/// use tui::events::InputEvent;
-/// use tui::store::Store;
-/// 
-/// fn main() {
-///     let mut application = Application::new(&update);
-///     application.execute()?;
-/// }
+/// An example application can be found in `examples/tui.rs`.
 ///
-/// fn update(store: &mut Store, event: &InputEvent) -> Result<(), Error> {
-///     if let InputEvent::Input(Key::Char('q')) = *event {
-///         store.set("app.state", Box::new(State::Exiting));
-///     }
-///     Ok(())
-/// }
-/// ```
 pub struct Application<'a> {
     store: Store,
     update: &'a Update,
