@@ -23,7 +23,7 @@ pub mod window;
 use events::{Events, InputEvent};
 use store::{Store, Value};
 use theme::Theme;
-use window::{ApplicationWindow, ShortcutWidget};
+use window::{ApplicationWindow, ShortcutWidget, TitleWidget};
 
 pub const TICK_RATE: u64 = 200;
 
@@ -86,6 +86,7 @@ impl<'a> Application<'a> {
     /// Leave render loop if property `app.state` signals exit.
     fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>, theme: &Theme) -> Result<(), Error> {
         let window = ApplicationWindow {
+            title: Rc::new(TitleWidget),
             shortcuts: Rc::new(ShortcutWidget),
         };
         let events = Events::new(Duration::from_millis(TICK_RATE));
@@ -95,7 +96,7 @@ impl<'a> Application<'a> {
                 error = window.draw(&self.store, frame, theme).err();
             })?;
             if let Some(err) = error {
-                return Err(err.into());
+                return Err(err);
             }
 
             self.on_event(events.next()?)?;

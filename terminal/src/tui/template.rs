@@ -1,5 +1,7 @@
 use tui::layout::Rect;
-use tui::widgets::{Block, Borders};
+use tui::style::Style;
+use tui::text::{Span, Spans};
+use tui::widgets::{Block, Borders, Paragraph};
 
 use super::layout;
 use super::layout::Padding;
@@ -24,4 +26,11 @@ pub fn block(theme: &Theme, area: Rect, padding: Padding, borders: bool) -> (Blo
 
     let inner = layout::inner_area(area, padding);
     (block, inner)
+}
+
+pub fn paragraph(text: &String, style: Style) -> Paragraph {
+    let text = format!("{:1}{}{:1}", "", text, "");
+    let text = Span::styled(text, style);
+
+    Paragraph::new(vec![Spans::from(text)])
 }

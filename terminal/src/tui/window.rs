@@ -16,6 +16,7 @@ use super::theme::Theme;
 
 /// Basic application window with layout for shortcut widget.
 pub struct ApplicationWindow<B: Backend> {
+    pub title: Rc<dyn Widget<B>>,
     pub shortcuts: Rc<dyn Widget<B>>,
 }
 
@@ -25,10 +26,13 @@ where
 {
     /// Draw the application window to given `frame`.
     pub fn draw(&self, store: &Store, frame: &mut Frame<B>, theme: &Theme) -> Result<(), Error> {
+        let title_h = self.title.height(frame.size());
         let shortcut_h = self.shortcuts.height(frame.size());
-        let areas = layout::split_area(frame.size(), vec![shortcut_h], Direction::Vertical);
+        let areas =
+            layout::split_area(frame.size(), vec![title_h, shortcut_h], Direction::Vertical);
 
-        self.shortcuts.draw(store, frame, areas[0], theme)?;
+        self.title.draw(store, frame, areas[0], theme)?;
+        self.shortcuts.draw(store, frame, areas[1], theme)?;
         Ok(())
     }
 }
@@ -71,6 +75,38 @@ where
 
     fn height(&self, _area: Rect) -> u16 {
         0_u16
+    }
+}
+
+/// A common title widget. Expects the property `app.title` to
+/// be defined.
+#[derive(Copy, Clone)]
+pub struct TitleWidget;
+
+impl<B> Widget<B> for TitleWidget
+where
+    B: Backend,
+{
+    fn draw(
+        &self,
+        store: &Store,
+        frame: &mut Frame<B>,
+        area: Rect,
+        theme: &Theme,
+    ) -> Result<(), Error> {
+        let title = store.get::<String>("app.title")?;
+
+        let (block, inner) = template::block(theme, area, Padding { top: 1, left: 4 }, true);
+        frame.render_widget(block, area);
+
+        let title = template::paragraph(title, theme.highlight_invert);
+        frame.render_widget(title, inner);
+
+        Ok(())
+    }
+
+    fn height(&self, _area: Rect) -> u16 {
+        3_u16
     }
 }
 
