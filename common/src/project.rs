@@ -30,6 +30,7 @@ use librad::profile::Profile;
 use librad::PeerId;
 
 use lnk_identities;
+use lnk_identities::working_copy_dir::WorkingCopyDir;
 
 use crate as common;
 use crate::person::Ens;
@@ -312,7 +313,14 @@ pub fn checkout<S>(
 where
     S: AsRef<ReadOnly>,
 {
-    let repo = crate::identities::project::checkout(storage, paths, signer, urn, peer, path)?;
+    let repo = crate::identities::project::checkout(
+        storage,
+        paths,
+        signer,
+        urn,
+        peer,
+        WorkingCopyDir::At(path),
+    )?;
     // The checkout leaves a leftover config section sometimes, we clean it up here.
     git::git(
         repo.path(),
