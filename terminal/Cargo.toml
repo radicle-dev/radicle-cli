@@ -16,6 +16,7 @@ indicatif = "0.16.2"
 console = "0.15"
 crossterm = { version = "0.23" }
 lexopt = "0.2.0"
+lazy_static = { version = "1.4.0" }
 librad = { version = "0" }
 lnk-profile = { version = "0" }
 thiserror = "1.0"
