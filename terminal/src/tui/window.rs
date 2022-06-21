@@ -14,10 +14,10 @@ use super::store::Store;
 use super::template;
 use super::theme::Theme;
 
-/// Basic application window with layout for shortcut widget.
+/// Application window with layout that supports multiple pages.
+/// Expects the property `app.page.active` to be defined.
 pub struct ApplicationWindow<B: Backend> {
-    pub title: Rc<dyn Widget<B>>,
-    pub shortcuts: Rc<dyn Widget<B>>,
+    pub pages: Vec<PageWidget<B>>,
 }
 
 impl<B> ApplicationWindow<B>
@@ -26,13 +26,25 @@ where
 {
     /// Draw the application window to given `frame`.
     pub fn draw(&self, store: &Store, frame: &mut Frame<B>, theme: &Theme) -> Result<(), Error> {
-        let title_h = self.title.height(frame.size());
-        let shortcut_h = self.shortcuts.height(frame.size());
-        let areas =
-            layout::split_area(frame.size(), vec![title_h, shortcut_h], Direction::Vertical);
+        let page_h = frame.size().height;
+        let areas = layout::split_area(frame.size(), vec![page_h], Direction::Vertical);
 
-        self.title.draw(store, frame, areas[0], theme)?;
-        self.shortcuts.draw(store, frame, areas[1], theme)?;
+        self.draw_active_page(store, frame, areas[0], theme)?;
+
+        Ok(())
+    }
+
+    pub fn draw_active_page(
+        &self,
+        store: &Store,
+        frame: &mut Frame<B>,
+        area: Rect,
+        theme: &Theme,
+    ) -> Result<(), Error> {
+        let active = store.get::<usize>("app.page.active")?;
+        if let Some(page) = self.pages.get(*active) {
+            page.draw(store, frame, area, theme)?;
+        }
         Ok(())
     }
 }
@@ -50,6 +62,62 @@ pub trait Widget<B: Backend> {
     ) -> Result<(), Error>;
     /// Return height of widget. Used while layouting.
     fn height(&self, area: Rect) -> u16;
+}
+
+/// A common page widget that can hold a title and arbitrary child
+/// widgets.
+#[derive(Clone)]
+pub struct PageWidget<B: Backend> {
+    pub title: Rc<dyn Widget<B>>,
+    pub widgets: Vec<Rc<dyn Widget<B>>>,
+    pub shortcuts: Rc<dyn Widget<B>>,
+}
+
+impl<B> Widget<B> for PageWidget<B>
+where
+    B: Backend,
+{
+    fn draw(
+        &self,
+        store: &Store,
+        frame: &mut Frame<B>,
+        area: Rect,
+        theme: &Theme,
+    ) -> Result<(), Error> {
+        let title_h = self.title.height(area);
+        let shortcut_h = self.shortcuts.height(area);
+
+        let area_h = area.height.saturating_sub(title_h + shortcut_h);
+        let widget_h = area_h.checked_div(self.widgets.len() as u16).unwrap_or(0);
+
+        let lengths = [
+            vec![title_h],
+            vec![widget_h; self.widgets.len()],
+            vec![shortcut_h],
+        ]
+        .concat();
+
+        let areas = layout::split_area(area, lengths, Direction::Vertical);
+        let mut areas = areas.iter();
+
+        if let Some(area) = areas.next() {
+            self.title.draw(store, frame, *area, theme)?;
+        }
+        for widget in &self.widgets {
+            if let Some(area) = areas.next() {
+                widget.draw(store, frame, *area, theme)?;
+            }
+        }
+        if let Some(area) = areas.next() {
+            self.shortcuts.draw(store, frame, *area, theme)?;
+        }
+
+        Ok(())
+    }
+
+    fn height(&self, area: Rect) -> u16 {
+        area.height
+    }
 }
 
 /// An empty widget with no height. Can be used as placeholder.

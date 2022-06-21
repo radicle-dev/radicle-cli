@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use anyhow::{Error, Result};
 use lazy_static::lazy_static;
@@ -6,6 +7,7 @@ use lazy_static::lazy_static;
 use radicle_terminal::tui::events::{InputEvent, Key};
 use radicle_terminal::tui::store::Store;
 use radicle_terminal::tui::theme::Theme;
+use radicle_terminal::tui::window::{EmptyWidget, PageWidget, ShortcutWidget, TitleWidget};
 use radicle_terminal::tui::{Application, State};
 
 #[derive(Clone, Eq, PartialEq)]
@@ -25,8 +27,19 @@ fn main() -> Result<(), Error> {
         ("app.shortcuts", Box::new(vec![String::from("q quit")])),
         ("app.title", Box::new(String::from("tui-example"))),
     ]);
+
+    // Create a single-page application
+    let pages = vec![PageWidget {
+        title: Rc::new(TitleWidget),
+        widgets: vec![Rc::new(EmptyWidget)],
+        shortcuts: Rc::new(ShortcutWidget),
+    }];
+
+    // Use default, borderless theme
     let theme = Theme::default_dark();
-    application.execute(&theme)?;
+
+    // Run application
+    application.execute(pages, &theme)?;
     Ok(())
 }
 

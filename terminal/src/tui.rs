@@ -1,5 +1,4 @@
-use std::io::stdout;
-use std::rc::Rc;
+use std::io::{stdout, Stdout};
 use std::time::Duration;
 
 use anyhow::{Error, Result};
@@ -23,7 +22,7 @@ pub mod window;
 use events::{Events, InputEvent};
 use store::{Store, Value};
 use theme::Theme;
-use window::{ApplicationWindow, ShortcutWidget, TitleWidget};
+use window::{ApplicationWindow, PageWidget};
 
 pub const TICK_RATE: u64 = 200;
 
@@ -57,19 +56,26 @@ impl<'a> Application<'a> {
             store: Store::default(),
             update,
         };
-        application.store(vec![("app.state", Box::new(State::Running))])
+        application.store(vec![
+            ("app.page.active", Box::new(0_usize)),
+            ("app.state", Box::new(State::Running)),
+        ])
     }
 
     /// Initializes backend, enters alternative screen, runs application and restores
     /// terminal after application exited.
-    pub fn execute(&mut self, theme: &Theme) -> Result<(), Error> {
+    pub fn execute(
+        &mut self,
+        pages: Vec<PageWidget<CrosstermBackend<Stdout>>>,
+        theme: &Theme,
+    ) -> Result<(), Error> {
         enable_raw_mode()?;
         let mut stdout = stdout();
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
-        let result = self.run(&mut terminal, theme);
+        let result = self.run(&mut terminal, pages, theme);
 
         disable_raw_mode()?;
         execute!(
@@ -84,11 +90,13 @@ impl<'a> Application<'a> {
 
     /// Starts the render loop, the event thread and re-draws an application window.
     /// Leave render loop if property `app.state` signals exit.
-    fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>, theme: &Theme) -> Result<(), Error> {
-        let window = ApplicationWindow {
-            title: Rc::new(TitleWidget),
-            shortcuts: Rc::new(ShortcutWidget),
-        };
+    fn run<B: Backend>(
+        &mut self,
+        terminal: &mut Terminal<B>,
+        pages: Vec<PageWidget<B>>,
+        theme: &Theme,
+    ) -> Result<(), Error> {
+        let window = ApplicationWindow { pages };
         let events = Events::new(Duration::from_millis(TICK_RATE));
         loop {
             let mut error: Option<Error> = None;
