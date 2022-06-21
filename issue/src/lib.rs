@@ -9,6 +9,8 @@ use radicle_common::cobs::issue::*;
 use radicle_common::{cobs, keys, profile, project};
 use radicle_terminal as term;
 
+mod tui;
+
 pub const HELP: Help = Help {
     name: "issue",
     description: env!("CARGO_PKG_DESCRIPTION"),
@@ -21,6 +23,7 @@ Usage
     rad issue delete <id>
     rad issue react <id> [--emoji <char>]
     rad issue list
+    rad issue interactive
 
 Options
 
@@ -41,6 +44,7 @@ pub enum OperationName {
     React,
     Delete,
     List,
+    Interactive,
 }
 
 impl Default for OperationName {
@@ -67,6 +71,7 @@ pub enum Operation {
         reaction: cobs::Reaction,
     },
     List,
+    Interactive,
 }
 
 /// Tool options.
@@ -125,6 +130,7 @@ impl Args for Options {
                     "d" | "delete" => op = Some(OperationName::Delete),
                     "l" | "list" => op = Some(OperationName::List),
                     "r" | "react" => op = Some(OperationName::React),
+                    "i" | "interactive" => op = Some(OperationName::Interactive),
 
                     unknown => anyhow::bail!("unknown operation '{}'", unknown),
                 },
@@ -158,6 +164,7 @@ impl Args for Options {
                 id: id.ok_or_else(|| anyhow!("an issue id to remove must be provided"))?,
             },
             OperationName::List => Operation::List,
+            OperationName::Interactive => Operation::Interactive,
         };
 
         Ok((Options { op }, vec![]))
@@ -234,6 +241,23 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Operation::Delete { id } => {
             issues.remove(&project, &id)?;
+        }
+        Operation::Interactive => {
+            if let Some(metadata) = project::get(&storage, &project)? {
+                let load = || -> anyhow::Result<Vec<_>> {
+                    let mut list = issues.all(&metadata.urn)?;
+                    for (_, issue) in &mut list {
+                        issue.resolve(&storage)?;
+                    }
+                    Ok(list)
+                };
+                let mut list = load()?;                
+                while let Some(_) = tui::run(&metadata, list.clone())? {
+                    list = load()?;
+                }
+            } else {
+                anyhow::bail!("could not load project metadata");
+            }
         }
     }
 

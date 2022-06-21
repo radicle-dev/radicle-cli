@@ -17,3 +17,4 @@ radicle-common = { path = "../common" }
 serde_json = { version = "1.0" }
 serde_yaml = { version = "0.8" }
 serde = { version = "1.0" }
+tui = { version = "0.18.0" }
