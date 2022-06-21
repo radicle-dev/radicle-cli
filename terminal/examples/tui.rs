@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 
 use radicle_terminal::tui::events::{InputEvent, Key};
 use radicle_terminal::tui::store::Store;
+use radicle_terminal::tui::theme::Theme;
 use radicle_terminal::tui::{Application, State};
 
 #[derive(Clone, Eq, PartialEq)]
@@ -21,7 +22,8 @@ fn main() -> Result<(), Error> {
     // Create basic application that will call `update` on
     // every input event received from event thread.
     let mut application = Application::new(&on_action);
-    application.execute()?;
+    let theme = Theme::default_dark();
+    application.execute(&theme)?;
     Ok(())
 }
 
@@ -35,6 +37,5 @@ fn on_action(store: &mut Store, event: &InputEvent) -> anyhow::Result<(), anyhow
             }
         }
     }
-    
     Ok(())
 }

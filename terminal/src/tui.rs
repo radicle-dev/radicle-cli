@@ -16,10 +16,12 @@ use tui::Terminal;
 pub mod events;
 pub mod layout;
 pub mod store;
+pub mod theme;
 pub mod window;
 
 use events::{Events, InputEvent};
 use store::{Store, Value};
+use theme::Theme;
 use window::{ApplicationWindow, EmptyWidget};
 
 pub const TICK_RATE: u64 = 200;
@@ -59,14 +61,14 @@ impl<'a> Application<'a> {
 
     /// Initializes backend, enters alternative screen, runs application and restores
     /// terminal after application exited.
-    pub fn execute(&mut self) -> Result<(), Error> {
+    pub fn execute(&mut self, theme: &Theme) -> Result<(), Error> {
         enable_raw_mode()?;
         let mut stdout = stdout();
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
-        self.run(&mut terminal)?;
+        self.run(&mut terminal, theme)?;
 
         disable_raw_mode()?;
         execute!(
@@ -81,14 +83,14 @@ impl<'a> Application<'a> {
 
     /// Starts the render loop, the event thread and re-draws an application window.
     /// Leave render loop if property `app.state` signals exit.
-    fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<(), Error> {
+    fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>, theme: &Theme) -> Result<(), Error> {
         let window = ApplicationWindow {
             shortcuts: Rc::new(EmptyWidget)
         };
         let events = Events::new(Duration::from_millis(TICK_RATE));
         loop {
-            terminal.draw(|f| {
-                let _ = window.draw(f, &self.store);
+            terminal.draw(|frame| {
+                let _ = window.draw(&self.store, frame, theme);
             })?;
 
             self.on_event(events.next()?)?;
