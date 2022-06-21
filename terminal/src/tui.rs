@@ -1,4 +1,5 @@
 use std::io::stdout;
+use std::rc::Rc;
 use std::time::Duration;
 
 use anyhow::{Error, Result};
@@ -13,12 +14,13 @@ use tui::backend::{Backend, CrosstermBackend};
 use tui::Terminal;
 
 pub mod events;
+pub mod layout;
 pub mod store;
 pub mod window;
 
 use events::{Events, InputEvent};
 use store::{Store, Value};
-use window::ApplicationWindow;
+use window::{ApplicationWindow, EmptyWidget};
 
 pub const TICK_RATE: u64 = 200;
 
@@ -80,11 +82,13 @@ impl<'a> Application<'a> {
     /// Starts the render loop, the event thread and re-draws an application window.
     /// Leave render loop if property `app.state` signals exit.
     fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<(), Error> {
-        let window = ApplicationWindow::new();
+        let window = ApplicationWindow {
+            shortcuts: Rc::new(EmptyWidget)
+        };
         let events = Events::new(Duration::from_millis(TICK_RATE));
         loop {
             terminal.draw(|f| {
-                let _ = window.draw(f);
+                let _ = window.draw(f, &self.store);
             })?;
 
             self.on_event(events.next()?)?;
