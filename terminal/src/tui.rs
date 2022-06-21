@@ -1,4 +1,5 @@
 use std::io::stdout;
+use std::time::Duration;
 
 use anyhow::{Error, Result};
 
@@ -11,9 +12,13 @@ use crossterm::terminal::{
 use tui::backend::{Backend, CrosstermBackend};
 use tui::Terminal;
 
+pub mod events;
 pub mod window;
 
+use events::{Events, InputEvent, Key};
 use window::ApplicationWindow;
+
+pub const TICK_RATE: u64 = 200;
 
 /// Basic tui-application with no state.
 ///
@@ -52,13 +57,24 @@ impl Application {
         Ok(())
     }
 
-    // Starts the render loop and re-draws an application window infinitely.
+    /// Starts the render loop, the event thread and re-draws an application window.
+    /// Leave render loop if an input event for key 'q' was received.
     fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<(), Error> {
         let window = ApplicationWindow::new();
+        let events = Events::new(Duration::from_millis(TICK_RATE));
         loop {
             terminal.draw(|f| {
                 let _ = window.draw(f);
             })?;
+
+            match events.next()? {
+                InputEvent::Input(key) => {
+                    if let Key::Char('q') = key {
+                        return Ok(());
+                    }
+                }
+                InputEvent::Tick => {}
+            }
         }
     }
 }
