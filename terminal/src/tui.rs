@@ -16,11 +16,14 @@ pub mod events;
 pub mod store;
 pub mod window;
 
-use events::{Events, InputEvent, Key};
+use events::{Events, InputEvent};
 use store::{Store, Value};
 use window::ApplicationWindow;
 
 pub const TICK_RATE: u64 = 200;
+
+/// Update callback that must be passed to the application.
+pub type Update = dyn Fn(&mut Store, &InputEvent) -> Result<(), Error>;
 
 /// Internal execution state of a tui-application. Setting the state
 /// property `app.state` to `State::Exiting` will exit the
@@ -31,22 +34,41 @@ pub enum State {
     Exiting,
 }
 
-/// Basic tui-application with no state.
+/// Basic, multi-threaded tui-application with default initialized store. 
+/// When creating an application, an update callback needs to be passed. 
+/// This will be called for every input event received from event thread.
 ///
 /// # Example
 /// ```
-/// let mut application = Application::new();
-/// application.execute()?;
+/// use anyhow::{Error, Result};
+/// 
+/// use tui::{Application, State};
+/// use tui::events::InputEvent;
+/// use tui::store::Store;
+/// 
+/// fn main() {
+///     let mut application = Application::new(&update);
+///     application.execute()?;
+/// }
+///
+/// fn update(store: &mut Store, event: &InputEvent) -> Result<(), Error> {
+///     if let InputEvent::Input(Key::Char('q')) = *event {
+///         store.set("app.state", Box::new(State::Exiting));
+///     }
+///     Ok(())
+/// }
 /// ```
-pub struct Application {
+pub struct Application<'a> {
     store: Store,
+    update: &'a Update,
 }
 
-impl Application {
+impl<'a> Application<'a> {
     /// Returns a default tui-application that can be quited.
-    pub fn new() -> Self {
+    pub fn new(update: &'a Update) -> Self {
         let application = Self {
             store: Store::default(),
+            update,
         };
         application.store(vec![("app.state", Box::new(State::Running))])
     }
@@ -83,10 +105,7 @@ impl Application {
                 let _ = window.draw(f);
             })?;
 
-            match events.next()? {
-                InputEvent::Input(key) => self.on_key(key)?,
-                InputEvent::Tick => {}
-            }
+            self.on_event(events.next()?)?;
 
             let state = self.store.get::<State>("app.state")?;
             if *state == State::Exiting {
@@ -103,17 +122,11 @@ impl Application {
         self
     }
 
-    /// Handle input key and update store based on type.
-    pub fn on_key(&mut self, key: Key) -> Result<(), Error> {
-        if let Key::Char('q') = key {
-            self.store.set("app.state", Box::new(State::Exiting));
-        }
+    /// Call update function that needs to be passed when creating
+    /// the tui-application. It may update the internal store based on
+    /// the input event type.
+    pub fn on_event(&mut self, event: InputEvent) -> Result<(), Error> {
+        (self.update)(&mut self.store, &event)?;
         Ok(())
-    }
-}
-
-impl Default for Application {
-    fn default() -> Self {
-        Self::new()
     }
 }
