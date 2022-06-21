@@ -45,7 +45,7 @@ pub enum State {
 /// An example application can be found in `examples/tui.rs`.
 ///
 pub struct Application<'a> {
-    store: Store,
+    pub store: Store,
     update: &'a Update,
 }
 
