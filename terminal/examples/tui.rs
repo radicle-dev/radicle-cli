@@ -21,7 +21,10 @@ lazy_static! {
 fn main() -> Result<(), Error> {
     // Create basic application that will call `update` on
     // every input event received from event thread.
-    let mut application = Application::new(&on_action);
+    let mut application = Application::new(&on_action).store(vec![(
+        "app.shortcuts",
+        Box::new(vec![String::from("q quit")]),
+    )]);
     let theme = Theme::default_dark();
     application.execute(&theme)?;
     Ok(())

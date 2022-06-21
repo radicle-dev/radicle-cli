@@ -4,11 +4,14 @@ use anyhow::{Error, Result};
 
 use tui::backend::Backend;
 use tui::layout::{Direction, Rect};
-use tui::widgets::{Block, Borders};
+use tui::text::{Span, Spans};
+use tui::widgets::{Block, Borders, Paragraph};
 use tui::Frame;
 
 use super::layout;
+use super::layout::Padding;
 use super::store::Store;
+use super::template;
 use super::theme::Theme;
 
 /// Basic application window with layout for shortcut widget.
@@ -68,5 +71,51 @@ where
 
     fn height(&self, _area: Rect) -> u16 {
         0_u16
+    }
+}
+
+/// A common shortcut widget that will be drawn on the bottom
+/// of the application frame. Expects the property `app.shortcuts` to
+/// be defined.
+#[derive(Copy, Clone)]
+pub struct ShortcutWidget;
+
+impl<B> Widget<B> for ShortcutWidget
+where
+    B: Backend,
+{
+    fn draw(
+        &self,
+        store: &Store,
+        frame: &mut Frame<B>,
+        area: Rect,
+        theme: &Theme,
+    ) -> Result<(), Error> {
+        let shortcuts = store.get::<Vec<String>>("app.shortcuts")?;
+        let lengths = shortcuts
+            .iter()
+            .map(|s| s.len() as u16 + 2)
+            .collect::<Vec<_>>();
+
+        let (_, inner) = template::block(theme, area, Padding { top: 1, left: 2 }, false);
+        let areas = layout::split_area(inner, lengths, Direction::Horizontal);
+        let mut areas = areas.iter();
+
+        let shortcuts = shortcuts
+            .iter()
+            .map(|s| Span::styled(s, theme.ternary))
+            .collect::<Vec<_>>();
+        for shortcut in shortcuts {
+            if let Some(area) = areas.next() {
+                let paragraph = Paragraph::new(Spans::from(shortcut));
+                frame.render_widget(paragraph, *area);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn height(&self, _area: Rect) -> u16 {
+        3_u16
     }
 }

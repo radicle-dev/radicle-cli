@@ -16,13 +16,14 @@ use tui::Terminal;
 pub mod events;
 pub mod layout;
 pub mod store;
+pub mod template;
 pub mod theme;
 pub mod window;
 
 use events::{Events, InputEvent};
 use store::{Store, Value};
 use theme::Theme;
-use window::{ApplicationWindow, EmptyWidget};
+use window::{ApplicationWindow, ShortcutWidget};
 
 pub const TICK_RATE: u64 = 200;
 
@@ -68,7 +69,7 @@ impl<'a> Application<'a> {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
-        self.run(&mut terminal, theme)?;
+        let result = self.run(&mut terminal, theme);
 
         disable_raw_mode()?;
         execute!(
@@ -78,20 +79,24 @@ impl<'a> Application<'a> {
         )?;
         terminal.show_cursor()?;
 
-        Ok(())
+        result
     }
 
     /// Starts the render loop, the event thread and re-draws an application window.
     /// Leave render loop if property `app.state` signals exit.
     fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>, theme: &Theme) -> Result<(), Error> {
         let window = ApplicationWindow {
-            shortcuts: Rc::new(EmptyWidget)
+            shortcuts: Rc::new(ShortcutWidget),
         };
         let events = Events::new(Duration::from_millis(TICK_RATE));
         loop {
+            let mut error: Option<Error> = None;
             terminal.draw(|frame| {
-                let _ = window.draw(&self.store, frame, theme);
+                error = window.draw(&self.store, frame, theme).err();
             })?;
+            if let Some(err) = error {
+                return Err(err.into());
+            }
 
             self.on_event(events.next()?)?;
 
