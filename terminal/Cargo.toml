@@ -14,10 +14,12 @@ anyhow = "1.0"
 dialoguer = "0.10.0"
 indicatif = "0.16.2"
 console = "0.15"
+crossterm = { version = "0.23" }
 lexopt = "0.2.0"
 librad = { version = "0" }
 lnk-profile = { version = "0" }
 thiserror = "1.0"
+tui = { version = "0.18.0" }
 zeroize = "1.1"
 
 [dependencies.radicle-common]

@@ -11,6 +11,7 @@ pub mod spinner;
 pub mod sync;
 pub mod table;
 pub mod textbox;
+pub mod tui;
 
 use std::process;
 
