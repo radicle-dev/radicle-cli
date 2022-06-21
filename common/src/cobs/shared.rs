@@ -671,6 +671,40 @@ impl<'a> Document<'a> {
         Ok(map)
     }
 
+    pub fn fold<
+        T: Default,
+        V: FromValue<'a> + fmt::Debug,
+        O: AsRef<automerge::ObjId>,
+        P: Into<automerge::Prop>,
+    >(
+        &self,
+        id: O,
+        prop: P,
+        mut f: impl FnMut(&mut T, V),
+    ) -> Result<T, DocumentError> {
+        let prop = prop.into();
+        let id = id.as_ref();
+
+        let (obj, obj_id) = self
+            .doc
+            .get(id, prop.clone())?
+            .ok_or_else(|| DocumentError::PropertyNotFound(prop.to_string()))?;
+
+        assert_eq!(obj.to_objtype(), Some(ObjType::List));
+
+        let mut acc = T::default();
+        for i in 0..self.doc.length(&obj_id) {
+            let (item, _) = self
+                .doc
+                .get(&obj_id, i as usize)?
+                .ok_or_else(|| DocumentError::PropertyNotFound(prop.to_string()))?;
+            let val = V::from_value(item)?;
+
+            f(&mut acc, val);
+        }
+        Ok(acc)
+    }
+
     pub fn keys<K: Hash + Eq + FromStr, O: AsRef<automerge::ObjId>, P: Into<automerge::Prop>>(
         &self,
         id: O,
