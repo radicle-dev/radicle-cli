@@ -387,18 +387,8 @@ impl<'a> PatchStore<'a> {
         Ok(())
     }
 
-    pub fn get(&self, project: &Urn, id: &PatchId) -> Result<Option<Patch>, Error> {
-        let cob = self
-            .store
-            .retrieve(project, &TYPENAME, id)
-            .map_err(|e| Error::Retrieve(e.to_string()))?;
-
-        if let Some(cob) = cob {
-            let patch = Patch::try_from(cob.history()).unwrap();
-            Ok(Some(patch))
-        } else {
-            Ok(None)
-        }
+    pub fn get(&self, namespace: &Urn, id: &ObjectId) -> anyhow::Result<Option<Patch>> {
+        self.store.get::<Patch>(namespace, id)
     }
 
     pub fn get_raw(&self, project: &Urn, id: &PatchId) -> Result<Option<Automerge>, Error> {

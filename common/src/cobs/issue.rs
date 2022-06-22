@@ -398,18 +398,8 @@ impl<'a> IssueStore<'a> {
         Ok(cobs.len())
     }
 
-    pub fn get(&self, project: &Urn, id: &IssueId) -> Result<Option<Issue>, Error> {
-        let cob = self
-            .store
-            .retrieve(project, &TYPENAME, id)
-            .map_err(|e| Error::Retrieve(e.to_string()))?;
-
-        if let Some(cob) = cob {
-            let issue = Issue::try_from(cob.history()).unwrap();
-            Ok(Some(issue))
-        } else {
-            Ok(None)
-        }
+    pub fn get(&self, namespace: &Urn, id: &ObjectId) -> anyhow::Result<Option<Issue>> {
+        self.store.get::<Issue>(namespace, id)
     }
 
     pub fn get_raw(&self, project: &Urn, id: &IssueId) -> Result<Option<Automerge>, Error> {
