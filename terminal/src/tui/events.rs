@@ -9,6 +9,12 @@ use crossterm::event;
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Key {
     Char(char),
+    Ctrl(char),
+    Shift(char),
+    Up,
+    Down,
+    Esc,
+    Enter,
     Unknown,
 }
 
@@ -18,8 +24,32 @@ impl From<event::KeyEvent> for Key {
         match key_event {
             event::KeyEvent {
                 code: event::KeyCode::Char(c),
-                ..
+                modifiers: event::KeyModifiers::NONE,
             } => Key::Char(c),
+            event::KeyEvent {
+                code: event::KeyCode::Char(c),
+                modifiers: event::KeyModifiers::SHIFT,
+            } => Key::Shift(c),
+            event::KeyEvent {
+                code: event::KeyCode::Char(c),
+                modifiers: event::KeyModifiers::CONTROL,
+            } => Key::Ctrl(c),
+            event::KeyEvent {
+                code: event::KeyCode::Up,
+                ..
+            } => Key::Up,
+            event::KeyEvent {
+                code: event::KeyCode::Down,
+                ..
+            } => Key::Down,
+            event::KeyEvent {
+                code: event::KeyCode::Esc,
+                ..
+            } => Key::Esc,
+            event::KeyEvent {
+                code: event::KeyCode::Enter,
+                ..
+            } => Key::Enter,
             _ => Key::Unknown,
         }
     }
