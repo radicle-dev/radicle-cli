@@ -115,24 +115,6 @@ impl<'a> Store<'a> {
         user::UserStore::new(self)
     }
 
-    pub fn find(
-        &self,
-        type_name: &TypeName,
-        project: &Urn,
-        predicate: impl Fn(&ObjectId) -> bool,
-    ) -> Result<Vec<ObjectId>, StoreError> {
-        let cobs = self
-            .store
-            .list(project, type_name)
-            .map_err(|e| StoreError::List(e.to_string()))?;
-
-        Ok(cobs
-            .into_iter()
-            .map(|c| *c.id())
-            .filter(|id| predicate(id))
-            .collect())
-    }
-
     pub fn resolve_id(
         &self,
         type_name: &TypeName,
@@ -142,8 +124,16 @@ impl<'a> Store<'a> {
         match identifier {
             CobIdentifier::Full(id) => Ok(id),
             CobIdentifier::Prefix(prefix) => {
-                let matches =
-                    self.find(type_name, project, |p| p.to_string().starts_with(&prefix))?;
+                let cobs = self
+                    .store
+                    .list(project, type_name)
+                    .map_err(|e| StoreError::List(e.to_string()))?;
+
+                let matches = cobs
+                    .into_iter()
+                    .map(|c| *c.id())
+                    .filter(|id| id.to_string().starts_with(&prefix))
+                    .collect::<Vec<_>>();
 
                 match matches.as_slice() {
                     [id] => Ok(*id),
