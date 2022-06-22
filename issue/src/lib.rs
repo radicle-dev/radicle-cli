@@ -251,8 +251,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                     }
                     Ok(list)
                 };
-                let mut list = load()?;                
-                while let Some(_) = tui::run(&metadata, list.clone())? {
+                let mut list = load()?;
+                while (tui::run(&metadata, list.clone())?).is_some() {
                     list = load()?;
                 }
             } else {

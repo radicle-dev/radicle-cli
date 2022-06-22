@@ -11,8 +11,11 @@ use radicle_terminal as term;
 use term::tui::events::{InputEvent, Key};
 use term::tui::store::Store;
 use term::tui::theme::Theme;
-use term::tui::window::{EmptyWidget, PageWidget, ShortcutWidget, TitleWidget};
+use term::tui::window::{PageWidget, ShortcutWidget, TitleWidget};
 use term::tui::{Application, State};
+
+pub mod window;
+use window::BrowserWidget;
 
 type IssueList = Vec<(IssueId, Issue)>;
 
@@ -29,17 +32,19 @@ lazy_static! {
         [(Key::Char('q'), Action::Quit),].iter().cloned().collect();
 }
 
-pub fn run(project: &Metadata, _issues: IssueList) -> Result<Option<InternalCall>, Error> {
+pub fn run(project: &Metadata, issues: IssueList) -> Result<Option<InternalCall>, Error> {
     let call: Option<InternalCall> = None;
     let mut app = Application::new(&update).store(vec![
         ("app.title", Box::new(project.name.clone())),
         ("app.call.internal", Box::new(call)),
         ("app.shortcuts", Box::new(vec![String::from("q quit")])),
+        ("project.issue.list", Box::new(issues)),
+        ("project.issue.active", Box::new(0_usize)),
     ]);
 
     let pages = vec![PageWidget {
         title: Rc::new(TitleWidget),
-        widgets: vec![Rc::new(EmptyWidget)],
+        widgets: vec![Rc::new(BrowserWidget)],
         shortcuts: Rc::new(ShortcutWidget),
     }];
 
@@ -47,8 +52,8 @@ pub fn run(project: &Metadata, _issues: IssueList) -> Result<Option<InternalCall
     app.execute(pages, &theme)?;
 
     match app.store.get::<Option<InternalCall>>("app.call.internal") {
-        Ok(Some(call)) => return Ok(Some(call.clone())),
-        Ok(None) | Err(_) => return Ok(None),
+        Ok(Some(call)) => Ok(Some(call.clone())),
+        Ok(None) | Err(_) => Ok(None),
     }
 }
 
