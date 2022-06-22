@@ -6,9 +6,9 @@ use anyhow::{anyhow, Context};
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{Patch, PatchId};
-use radicle_common::cobs::{CobIdentifier, Store as _};
+use radicle_common::cobs::CobIdentifier;
 use radicle_common::patch::MergeStyle;
-use radicle_common::{cobs, git, keys, person, profile, project};
+use radicle_common::{cobs, git, keys, profile, project};
 use radicle_terminal as term;
 
 use cobs::patch::RevisionIx;
@@ -111,9 +111,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let storage = keys::storage(&profile, signer)?;
     let _project = project::get(&storage, &urn)?
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
-    let whoami = person::local(&storage)?;
-    let whoami_urn = whoami.urn();
-    let patches = cobs::patch::Patches::new(whoami, profile.paths(), &storage)?;
+    let cobs = cobs::store(&profile, &storage)?;
+    let patches = cobs.patches();
     let patch_id = patches.resolve_id(&urn, options.id)?;
 
     if repo.head_detached()? {
@@ -223,7 +222,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     //
     match merge_style {
         MergeStyle::Commit => {
-            merge_commit(&repo, patch_id, &patch_commit, &patch, whoami_urn)?;
+            merge_commit(&repo, patch_id, &patch_commit, &patch, cobs.whoami.urn())?;
         }
         MergeStyle::FastForward => {
             fast_forward(&repo, &revision.oid)?;

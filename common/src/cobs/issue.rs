@@ -1,7 +1,7 @@
 #![allow(clippy::large_enum_variant)]
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::ops::ControlFlow;
+use std::ops::{ControlFlow, Deref};
 use std::str::FromStr;
 
 use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
@@ -14,10 +14,7 @@ use librad::collaborative_objects::{
 };
 use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnly;
-use librad::git::Storage;
 use librad::git::Urn;
-use librad::paths::Paths;
-use librad::PeerId;
 
 use crate::cobs::shared;
 use crate::cobs::shared::*;
@@ -214,36 +211,21 @@ impl TryFrom<Automerge> for Issue {
     }
 }
 
-pub struct Issues<'a> {
-    store: CollaborativeObjects<'a>,
-    peer_id: PeerId,
-    whoami: LocalIdentity,
+pub struct IssueStore<'a> {
+    store: &'a Store<'a>,
 }
 
-impl<'a> Store<'a> for Issues<'a> {
-    fn type_name() -> TypeName {
-        TYPENAME.clone()
-    }
+impl<'a> Deref for IssueStore<'a> {
+    type Target = Store<'a>;
 
-    fn store(&self) -> &CollaborativeObjects<'a> {
-        &self.store
+    fn deref(&self) -> &Self::Target {
+        self.store
     }
 }
 
-impl<'a> Issues<'a> {
-    pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
-        let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
-        let peer_id = *storage.peer_id();
-
-        Ok(Self {
-            store,
-            whoami,
-            peer_id,
-        })
-    }
-
-    pub fn author(&self) -> Author {
-        Author::new(self.whoami.urn(), self.peer_id)
+impl<'a> IssueStore<'a> {
+    pub fn new(store: &'a Store<'a>) -> Self {
+        Self { store }
     }
 
     pub fn create(
@@ -257,7 +239,7 @@ impl<'a> Issues<'a> {
         let timestamp = Timestamp::now();
         let history = events::create(&author, title, description, timestamp, labels)?;
 
-        cobs::create(history, project, &self.whoami, &self.store)
+        cobs::create(history, project, &self.whoami, self.store)
     }
 
     pub fn remove(&self, _project: &Urn, _issue_id: &IssueId) -> Result<(), Error> {
@@ -705,7 +687,8 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
         let timestamp = Timestamp::now();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
@@ -722,7 +705,8 @@ mod test {
     #[test]
     fn test_issue_create_and_change_state() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
@@ -755,7 +739,8 @@ mod test {
     #[test]
     fn test_issue_react() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let project = project.urn();
         let issue_id = issues
             .create(&project, "My first issue", "Blah blah blah.", &[])
@@ -777,7 +762,8 @@ mod test {
     #[test]
     fn test_issue_reply() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let project = project.urn();
         let issue_id = issues
             .create(&project, "My first issue", "Blah blah blah.", &[])
@@ -802,7 +788,8 @@ mod test {
     #[test]
     fn test_issue_label() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let project = project.urn();
         let issue_id = issues
             .create(&project, "My first issue", "Blah blah blah.", &[])
@@ -830,7 +817,8 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let now = Timestamp::now();
         let author = whoami.urn();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
@@ -857,7 +845,8 @@ mod test {
     #[test]
     fn test_issue_resolve() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let issues = Issues::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
             .unwrap();
@@ -902,7 +891,8 @@ mod test {
     fn test_issue_all() {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = Author::new(whoami.urn(), *storage.peer_id());
-        let issues = Issues::new(whoami.clone(), profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let issues = cobs.issues();
 
         cobs::create(
             events::create(
@@ -914,8 +904,8 @@ mod test {
             )
             .unwrap(),
             &project.urn(),
-            &whoami,
-            &issues.store,
+            &cobs.whoami,
+            issues.store,
         )
         .unwrap();
 
@@ -929,8 +919,8 @@ mod test {
             )
             .unwrap(),
             &project.urn(),
-            &whoami,
-            &issues.store,
+            &cobs.whoami,
+            issues.store,
         )
         .unwrap();
 
@@ -944,8 +934,8 @@ mod test {
             )
             .unwrap(),
             &project.urn(),
-            &whoami,
-            &issues.store,
+            &cobs.whoami,
+            issues.store,
         )
         .unwrap();
 

@@ -16,9 +16,9 @@ use librad::profile::Profile;
 
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, Patches};
-use radicle_common::cobs::{CobIdentifier, Store as _};
-use radicle_common::{cobs, git, keys, patch, person, profile, project};
+use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, PatchStore};
+use radicle_common::cobs::CobIdentifier;
+use radicle_common::{cobs, git, keys, patch, profile, project};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
 
@@ -175,8 +175,8 @@ fn list(
     profile: &Profile,
     project: &project::Metadata,
 ) -> anyhow::Result<()> {
-    let whoami = person::local(storage)?;
-    let patches = cobs::patch::Patches::new(whoami.clone(), profile.paths(), storage)?;
+    let cobs = cobs::store(profile, storage)?;
+    let patches = cobs.patches();
     let proposed = patches.proposed(&project.urn)?;
 
     // Our `HEAD`.
@@ -187,7 +187,7 @@ fn list(
     let mut other = Vec::new();
 
     for (id, patch) in proposed {
-        if *patch.author.urn() == whoami.urn() {
+        if *patch.author.urn() == cobs.whoami.urn() {
             own.push((id, patch));
         } else {
             other.push((id, patch));
@@ -202,7 +202,7 @@ fn list(
         for (id, patch) in &mut own {
             term::blank();
 
-            print(&whoami, id, patch, project, &head, repo, storage)?;
+            print(&cobs.whoami, id, patch, project, &head, repo, storage)?;
         }
     }
     term::blank();
@@ -213,7 +213,7 @@ fn list(
         term::print(&term::format::italic("Nothing to show."));
     } else {
         for (id, patch) in &mut other {
-            print(&whoami, id, patch, project, &head, repo, storage)?;
+            print(&cobs.whoami, id, patch, project, &head, repo, storage)?;
         }
     }
     term::blank();
@@ -226,7 +226,7 @@ fn update(
     patch_id: PatchId,
     head: &git::Oid,
     branch: &RefLike,
-    patches: &Patches,
+    patches: &PatchStore,
     project: &project::Metadata,
     repo: &git::Repository,
     options: Options,
@@ -285,8 +285,8 @@ fn create(
         "🌱 Creating patch for {}",
         term::format::highlight(&project.name)
     ));
-    let whoami = person::local(storage)?;
-    let patches = cobs::patch::Patches::new(whoami, profile.paths(), storage)?;
+    let cobs = cobs::store(profile, storage)?;
+    let patches = cobs.patches();
 
     // `HEAD`; This is what we are proposing as a patch.
     let head = repo.head()?;
@@ -625,7 +625,7 @@ fn find_unmerged_with_base(
     patch_head: git::Oid,
     target_head: git::Oid,
     merge_base: git::Oid,
-    patches: &Patches,
+    patches: &PatchStore,
     project: &common::Urn,
     repo: &git::Repository,
 ) -> anyhow::Result<Vec<(PatchId, Patch)>> {

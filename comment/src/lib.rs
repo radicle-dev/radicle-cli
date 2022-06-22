@@ -6,8 +6,8 @@ use anyhow::anyhow;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{
-    cobs::{self, issue::*, CobIdentifier, CommentId, Store as _},
-    keys, person, profile, project,
+    cobs::{self, issue, patch, CobIdentifier, CommentId},
+    keys, profile, project,
 };
 use radicle_terminal as term;
 
@@ -92,9 +92,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let (project, _) = project::cwd()?;
-    let whoami = person::local(&storage)?;
-    let issues = Issues::new(whoami.clone(), profile.paths(), &storage)?;
-    let patches = cobs::patch::Patches::new(whoami, profile.paths(), &storage)?;
+    let cobs = cobs::store(&profile, &storage)?;
     let cob_id = options.id;
 
     let doc = options
@@ -102,20 +100,23 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .unwrap_or("Enter a description...".to_owned());
 
     if let Some(text) = term::Editor::new().edit(&doc)? {
-        if let Ok(id) = issues.resolve_id(&project, cob_id.clone()) {
+        if let Ok(id) = cobs.resolve_id(&issue::TYPENAME, &project, cob_id.clone()) {
             if let Some(reply_to_index) = options.reply_index {
-                issues.reply(&project, &id, reply_to_index, &text)?;
+                cobs.issues().reply(&project, &id, reply_to_index, &text)?;
             } else {
-                issues.comment(&project, &id, &text)?;
+                cobs.issues().comment(&project, &id, &text)?;
             }
-        } else if let Ok(id) = patches.resolve_id(&project, cob_id) {
-            let patch = patches
+        } else if let Ok(id) = cobs.resolve_id(&patch::TYPENAME, &project, cob_id) {
+            let patch = cobs
+                .patches()
                 .get(&project, &id)?
                 .ok_or_else(|| anyhow!("Couldn't get the patch"))?;
             if let Some(reply_to_index) = options.reply_index {
-                patches.reply(&project, &id, patch.version(), reply_to_index, &text)?;
+                cobs.patches()
+                    .reply(&project, &id, patch.version(), reply_to_index, &text)?;
             } else {
-                patches.comment(&project, &id, patch.version(), &text)?;
+                cobs.patches()
+                    .comment(&project, &id, patch.version(), &text)?;
             }
         }
     }

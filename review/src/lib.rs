@@ -6,8 +6,8 @@ use anyhow::anyhow;
 use common::cobs::patch::Verdict;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::cobs::{CobIdentifier, Store as _};
-use radicle_common::{cobs, keys, person, profile, project};
+use radicle_common::cobs::CobIdentifier;
+use radicle_common::{cobs, keys, profile, project};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
 
@@ -119,8 +119,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let profile = profile::default()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
-    let whoami = person::local(&storage)?;
-    let patches = cobs::patch::Patches::new(whoami, profile.paths(), &storage)?;
+    let cobs = cobs::store(&profile, &storage)?;
+    let patches = cobs.patches();
 
     let patch_id = patches.resolve_id(&urn, options.id.clone())?;
     let patch_id_pretty = term::format::tertiary(common::fmt::cob(&patch_id));

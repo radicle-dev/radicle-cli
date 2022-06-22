@@ -5,10 +5,8 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context};
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{
-    cobs::{self, issue::*, Label},
-    keys, person, profile, project,
-};
+use radicle_common::cobs::issue::*;
+use radicle_common::{cobs, keys, profile, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -33,7 +31,7 @@ Options
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Metadata {
     title: String,
-    labels: Vec<Label>,
+    labels: Vec<cobs::Label>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -171,8 +169,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let (project, _) = project::cwd()?;
-    let whoami = person::local(&storage)?;
-    let issues = Issues::new(whoami, profile.paths(), &storage)?;
+    let cobs = cobs::store(&profile, &storage)?;
+    let issues = cobs.issues();
 
     match options.op {
         Operation::Create {

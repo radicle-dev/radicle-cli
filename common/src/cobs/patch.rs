@@ -2,7 +2,7 @@
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
-use std::ops::{ControlFlow, RangeInclusive};
+use std::ops::{ControlFlow, Deref, RangeInclusive};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -18,9 +18,7 @@ use librad::collaborative_objects::{
 };
 use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnly;
-use librad::git::Storage;
 use librad::git::Urn;
-use librad::paths::Paths;
 use librad::PeerId;
 
 use radicle_git_ext as git;
@@ -208,37 +206,25 @@ impl TryFrom<&History> for Patch {
     }
 }
 
-pub struct Patches<'a> {
-    pub whoami: LocalIdentity,
-    pub peer_id: PeerId,
-
-    store: CollaborativeObjects<'a>,
+pub struct PatchStore<'a> {
+    store: &'a Store<'a>,
 }
 
-impl<'a> Store<'a> for Patches<'a> {
-    fn type_name() -> TypeName {
-        TYPENAME.clone()
-    }
+impl<'a> Deref for PatchStore<'a> {
+    type Target = Store<'a>;
 
-    fn store(&self) -> &CollaborativeObjects<'a> {
-        &self.store
+    fn deref(&self) -> &Self::Target {
+        self.store
     }
 }
 
-impl<'a> Patches<'a> {
-    pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
-        let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
-        let peer_id = *storage.peer_id();
-
-        Ok(Self {
-            store,
-            whoami,
-            peer_id,
-        })
+impl<'a> PatchStore<'a> {
+    pub fn new(store: &'a Store<'a>) -> Self {
+        Self { store }
     }
 
-    pub fn author(&self) -> Author {
-        Author::new(self.whoami.urn(), self.peer_id)
+    pub fn resolve_id(&self, project: &Urn, identifier: CobIdentifier) -> anyhow::Result<ObjectId> {
+        self.store.resolve_id(&TYPENAME, project, identifier)
     }
 
     pub fn create(
@@ -261,7 +247,7 @@ impl<'a> Patches<'a> {
         );
         let history = events::create(&author, title, &revision, target, timestamp, labels)?;
 
-        cobs::create(history, project, &self.whoami, &self.store)
+        cobs::create(history, project, &self.whoami, &*self.store)
     }
 
     pub fn comment(
@@ -318,7 +304,7 @@ impl<'a> Patches<'a> {
             "Update patch",
             changes,
             &self.whoami,
-            &self.store,
+            self.store,
         )?;
 
         Ok(revision_ix)
@@ -381,7 +367,7 @@ impl<'a> Patches<'a> {
             "Review patch",
             changes,
             &self.whoami,
-            &self.store,
+            self.store,
         )?;
 
         Ok(())
@@ -450,7 +436,7 @@ impl<'a> Patches<'a> {
             "Merge revision",
             changes,
             &self.whoami,
-            &self.store,
+            self.store,
         )?;
 
         Ok(merge)
@@ -1099,7 +1085,8 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
         let timestamp = Timestamp::now();
-        let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let oid = git::Oid::from(git2::Oid::zero());
         let patch_id = patches
@@ -1133,7 +1120,8 @@ mod test {
     #[test]
     fn test_patch_merge() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let oid = git::Oid::from(git2::Oid::zero());
         let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
@@ -1160,7 +1148,8 @@ mod test {
     #[test]
     fn test_patch_review() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let patches = Patches::new(whoami.clone(), profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami.clone(), profile.paths(), &storage).unwrap();
+        let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let rev_oid = git::Oid::from_str("518d5069f94c03427f694bb494ac1cd7d1339380").unwrap();
         let project = &project.urn();
@@ -1191,7 +1180,8 @@ mod test {
     #[test]
     fn test_patch_update() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let patches = Patches::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let rev0_oid = git::Oid::from_str("518d5069f94c03427f694bb494ac1cd7d1339380").unwrap();
         let rev1_oid = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();

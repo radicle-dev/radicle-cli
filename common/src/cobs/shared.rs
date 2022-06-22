@@ -16,12 +16,17 @@ use chrono::TimeZone;
 use serde::{Deserialize, Serialize};
 
 use librad::collaborative_objects::{CollaborativeObjects, ObjectId, TypeName};
+use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnly;
+use librad::git::Storage;
 use librad::git::Urn;
+use librad::paths::Paths;
+use librad::profile::Profile;
 use librad::PeerId;
 use radicle_git_ext as git;
 
-use crate::project;
+use crate::cobs::{issue, patch, user};
+use crate::{person, project};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ValueError {
@@ -63,37 +68,62 @@ impl FromStr for CobIdentifier {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum StoreError {
-    #[error("Create error: {0}")]
-    Create(String),
+pub struct Store<'a> {
+    pub whoami: LocalIdentity,
+    pub peer_id: PeerId,
 
-    #[error("Update error: {0}")]
-    Update(String),
-
-    #[error("List error: {0}")]
-    List(String),
-
-    #[error("Retrieve error: {0}")]
-    Retrieve(String),
-
-    #[error(transparent)]
-    Automerge(#[from] AutomergeError),
+    store: CollaborativeObjects<'a>,
 }
 
-pub trait Store<'a> {
-    fn type_name() -> TypeName;
+impl<'a> Deref for Store<'a> {
+    type Target = CollaborativeObjects<'a>;
 
-    fn store(&self) -> &CollaborativeObjects<'a>;
+    fn deref(&self) -> &Self::Target {
+        &self.store
+    }
+}
 
-    fn find(
+impl<'a> Store<'a> {
+    pub fn new(
+        whoami: LocalIdentity,
+        paths: &Paths,
+        storage: &'a Storage,
+    ) -> Result<Self, StoreError> {
+        let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
+        let peer_id = *storage.peer_id();
+
+        Ok(Self {
+            store,
+            whoami,
+            peer_id,
+        })
+    }
+
+    pub fn author(&self) -> Author {
+        Author::new(self.whoami.urn(), self.peer_id)
+    }
+
+    pub fn patches(&self) -> patch::PatchStore<'_> {
+        patch::PatchStore::new(self)
+    }
+
+    pub fn issues(&self) -> issue::IssueStore<'_> {
+        issue::IssueStore::new(self)
+    }
+
+    pub fn users(&self) -> user::UserStore<'_> {
+        user::UserStore::new(self)
+    }
+
+    pub fn find(
         &self,
+        type_name: &TypeName,
         project: &Urn,
         predicate: impl Fn(&ObjectId) -> bool,
     ) -> Result<Vec<ObjectId>, StoreError> {
         let cobs = self
-            .store()
-            .list(project, &Self::type_name())
+            .store
+            .list(project, type_name)
             .map_err(|e| StoreError::List(e.to_string()))?;
 
         Ok(cobs
@@ -103,11 +133,17 @@ pub trait Store<'a> {
             .collect())
     }
 
-    fn resolve_id(&self, project: &Urn, identifier: CobIdentifier) -> anyhow::Result<ObjectId> {
+    pub fn resolve_id(
+        &self,
+        type_name: &TypeName,
+        project: &Urn,
+        identifier: CobIdentifier,
+    ) -> anyhow::Result<ObjectId> {
         match identifier {
             CobIdentifier::Full(id) => Ok(id),
             CobIdentifier::Prefix(prefix) => {
-                let matches = self.find(project, |p| p.to_string().starts_with(&prefix))?;
+                let matches =
+                    self.find(type_name, project, |p| p.to_string().starts_with(&prefix))?;
 
                 match matches.as_slice() {
                     [id] => Ok(*id),
@@ -124,6 +160,24 @@ pub trait Store<'a> {
             }
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum StoreError {
+    #[error("Create error: {0}")]
+    Create(String),
+
+    #[error("Update error: {0}")]
+    Update(String),
+
+    #[error("List error: {0}")]
+    List(String),
+
+    #[error("Retrieve error: {0}")]
+    Retrieve(String),
+
+    #[error(transparent)]
+    Automerge(#[from] AutomergeError),
 }
 
 /// A discussion thread.
@@ -790,6 +844,13 @@ pub mod lookup {
             timestamp: comment.timestamp,
         })
     }
+}
+
+pub fn store<'a>(profile: &Profile, storage: &'a Storage) -> anyhow::Result<Store<'a>> {
+    let whoami = person::local(storage)?;
+    let cobs = Store::new(whoami, profile.paths(), storage)?;
+
+    Ok(cobs)
 }
 
 #[cfg(test)]

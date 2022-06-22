@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use std::ops::ControlFlow;
+use std::ops::{ControlFlow, Deref};
 use std::str::FromStr;
 
 use automerge::{Automerge, AutomergeError, ObjType};
@@ -11,10 +11,7 @@ use librad::collaborative_objects::{
     UpdateObjectSpec,
 };
 use librad::git::identities::local::LocalIdentity;
-use librad::git::Storage;
 use librad::git::Urn;
-use librad::paths::Paths;
-use librad::PeerId;
 
 use crate::cobs::shared::*;
 
@@ -106,33 +103,21 @@ impl TryFrom<&History> for User {
     }
 }
 
-pub struct Users<'a> {
-    pub whoami: LocalIdentity,
-    pub peer_id: PeerId,
-
-    store: CollaborativeObjects<'a>,
+pub struct UserStore<'a> {
+    store: &'a Store<'a>,
 }
 
-impl<'a> Store<'a> for Users<'a> {
-    fn type_name() -> TypeName {
-        TYPENAME.clone()
-    }
+impl<'a> Deref for UserStore<'a> {
+    type Target = Store<'a>;
 
-    fn store(&self) -> &CollaborativeObjects<'a> {
-        &self.store
+    fn deref(&self) -> &Self::Target {
+        self.store
     }
 }
 
-impl<'a> Users<'a> {
-    pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
-        let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
-        let peer_id = *storage.peer_id();
-
-        Ok(Self {
-            store,
-            whoami,
-            peer_id,
-        })
+impl<'a> UserStore<'a> {
+    pub fn new(store: &'a Store<'a>) -> Self {
+        Self { store }
     }
 
     pub fn create(&self) -> Result<(), Error> {
@@ -140,7 +125,7 @@ impl<'a> Users<'a> {
         let urn = self.whoami.urn();
         let history = events::create(&urn, timestamp)?;
 
-        cobs::create(history, &urn, &self.whoami, &self.store)
+        cobs::create(history, &urn, &self.whoami, self.store)
     }
 
     pub fn local(&self) -> Result<Option<User>, Error> {
@@ -287,18 +272,19 @@ mod test {
     #[test]
     fn test_create() {
         let (storage, profile, whoami, _project) = test::setup::profile();
-        let users = Users::new(whoami.clone(), profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
 
-        users.create().unwrap();
+        cobs.users().create().unwrap();
 
-        let user = users.local().unwrap().unwrap();
-        assert_eq!(user.urn, whoami.urn());
+        let user = cobs.users().local().unwrap().unwrap();
+        assert_eq!(user.urn, cobs.whoami.urn());
     }
 
     #[test]
     fn test_projects() {
         let (storage, profile, whoami, _project) = test::setup::profile();
-        let mut users = Users::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let mut users = cobs.users();
         let project1 = Urn::from_str("rad:git:hnrkbjokbt439jk3p1dsi67u3mca85yiy7fiy").unwrap();
         let project2 = Urn::from_str("rad:git:hnrkbtw9t1of4ykjy6er4qqwxtc54k9943eto").unwrap();
 
