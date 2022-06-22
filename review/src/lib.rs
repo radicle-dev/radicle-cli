@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use common::cobs::patch::Verdict;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
+use radicle_common::cobs::patch::Patch;
 use radicle_common::{cobs, keys, profile, project};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
@@ -121,11 +122,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let cobs = cobs::store(&profile, &storage)?;
     let patches = cobs.patches();
 
-    let patch_id = patches.resolve_id(&urn, &options.id)?;
+    let (patch_id, mut patch) = patches
+        .resolve::<Patch>(&urn, &options.id)?
+        .ok_or_else(|| anyhow!("couldn't find patch {} locally", options.id))?;
     let patch_id_pretty = term::format::tertiary(common::fmt::cob(&patch_id));
-    let mut patch = patches
-        .get(&urn, &patch_id)?
-        .ok_or_else(|| anyhow!("couldn't find patch {} locally", patch_id))?;
     let revision_ix = options.revision.unwrap_or_else(|| patch.version());
     let _revision = patch
         .revisions

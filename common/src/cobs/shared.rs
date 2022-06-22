@@ -153,19 +153,22 @@ impl<'a> Store<'a> {
         namespace: &Urn,
         id: &Identifier,
     ) -> anyhow::Result<Option<(ObjectId, T)>> {
-        let id = self.resolve_id::<T>(namespace, id)?;
-        let obj = self.get(namespace, &id)?;
+        if let Some(id) = self.resolve_id::<T>(namespace, id)? {
+            let obj = self.get(namespace, &id)?;
 
-        Ok(obj.map(|o| (id, o)))
+            Ok(obj.map(|o| (id, o)))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn resolve_id<T: Cob>(
         &self,
         project: &Urn,
         identifier: &Identifier,
-    ) -> anyhow::Result<ObjectId> {
+    ) -> anyhow::Result<Option<ObjectId>> {
         match identifier {
-            Identifier::Full(id) => Ok(*id),
+            Identifier::Full(id) => Ok(Some(*id)),
             Identifier::Prefix(prefix) => {
                 let cobs = self
                     .store
@@ -179,16 +182,14 @@ impl<'a> Store<'a> {
                     .collect::<Vec<_>>();
 
                 match matches.as_slice() {
-                    [id] => Ok(*id),
+                    [id] => Ok(Some(*id)),
                     [_, ..] => {
                         anyhow::bail!(
                             "object id `{}` is ambiguous; please use the fully qualified id",
                             prefix
                         );
                     }
-                    [] => {
-                        anyhow::bail!("object `{}` not found in local storage", prefix);
-                    }
+                    [] => Ok(None),
                 }
             }
         }
