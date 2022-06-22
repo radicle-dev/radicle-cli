@@ -1,7 +1,7 @@
 use tui::layout::Rect;
 use tui::style::Style;
 use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, Paragraph};
+use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 
 use super::layout;
 use super::layout::Padding;
@@ -33,4 +33,27 @@ pub fn paragraph(text: &String, style: Style) -> Paragraph {
     let text = Span::styled(text, style);
 
     Paragraph::new(vec![Spans::from(text)])
+}
+
+pub fn paragraph_styled(text: &String, style: Style) -> Paragraph {
+    let text = format!("{:1}{}{:1}", "", text, "");
+    let text = Span::styled(text, style);
+
+    Paragraph::new(vec![Spans::from(text)]).style(style)
+}
+
+pub fn list<'a>(
+    items: Vec<ListItem<'a>>,
+    selected: usize,
+    theme: &'a Theme,
+) -> (List<'a>, ListState) {
+    let mut state = ListState::default();
+    state.select(Some(selected));
+
+    let items = List::new(items)
+        .highlight_style(theme.highlight)
+        .highlight_symbol(&theme.list.symbol)
+        .repeat_highlight_symbol(true);
+
+    (items, state)
 }

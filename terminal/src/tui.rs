@@ -14,7 +14,9 @@ use tui::Terminal;
 
 pub mod events;
 pub mod layout;
+pub mod spans;
 pub mod store;
+pub mod strings;
 pub mod template;
 pub mod theme;
 pub mod window;
