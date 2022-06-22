@@ -68,6 +68,15 @@ impl FromStr for CobIdentifier {
     }
 }
 
+impl fmt::Display for CobIdentifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Full(id) => write!(f, "{}", id),
+            Self::Prefix(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 /// A collaborative object. Objects of this type can be turned into rust types.
 pub trait Cob: Sized {
     /// The object type name.
@@ -142,22 +151,22 @@ impl<'a> Store<'a> {
     pub fn resolve<T: Cob>(
         &self,
         namespace: &Urn,
-        id: impl Into<CobIdentifier>,
-    ) -> anyhow::Result<Option<T>> {
-        let id = id.into();
+        id: &CobIdentifier,
+    ) -> anyhow::Result<Option<(ObjectId, T)>> {
         let id = self.resolve_id(T::type_name(), namespace, id)?;
+        let obj = self.get(namespace, &id)?;
 
-        self.get(namespace, &id)
+        Ok(obj.map(|o| (id, o)))
     }
 
     pub fn resolve_id(
         &self,
         type_name: &TypeName,
         project: &Urn,
-        identifier: CobIdentifier,
+        identifier: &CobIdentifier,
     ) -> anyhow::Result<ObjectId> {
         match identifier {
-            CobIdentifier::Full(id) => Ok(id),
+            CobIdentifier::Full(id) => Ok(*id),
             CobIdentifier::Prefix(prefix) => {
                 let cobs = self
                     .store
@@ -167,7 +176,7 @@ impl<'a> Store<'a> {
                 let matches = cobs
                     .into_iter()
                     .map(|c| *c.id())
-                    .filter(|id| id.to_string().starts_with(&prefix))
+                    .filter(|id| id.to_string().starts_with(prefix))
                     .collect::<Vec<_>>();
 
                 match matches.as_slice() {

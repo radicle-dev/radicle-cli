@@ -100,17 +100,13 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .unwrap_or("Enter a description...".to_owned());
 
     if let Some(text) = term::Editor::new().edit(&doc)? {
-        if let Ok(id) = cobs.resolve_id(&issue::TYPENAME, &project, cob_id.clone()) {
+        if let Ok(id) = cobs.resolve_id(&issue::TYPENAME, &project, &cob_id) {
             if let Some(reply_to_index) = options.reply_index {
                 cobs.issues().reply(&project, &id, reply_to_index, &text)?;
             } else {
                 cobs.issues().comment(&project, &id, &text)?;
             }
-        } else if let Ok(id) = cobs.resolve_id(&patch::TYPENAME, &project, cob_id) {
-            let patch = cobs
-                .patches()
-                .get(&project, &id)?
-                .ok_or_else(|| anyhow!("Couldn't get the patch"))?;
+        } else if let Some((id, patch)) = cobs.resolve::<patch::Patch>(&project, &cob_id)? {
             if let Some(reply_to_index) = options.reply_index {
                 cobs.patches()
                     .reply(&project, &id, patch.version(), reply_to_index, &text)?;
@@ -118,6 +114,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 cobs.patches()
                     .comment(&project, &id, patch.version(), &text)?;
             }
+        } else {
+            anyhow::bail!("Couldn't find issue or patch {}", cob_id);
         }
     }
 

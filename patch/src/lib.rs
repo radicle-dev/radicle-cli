@@ -376,7 +376,7 @@ fn create(
             }
         }
         Update::Patch(identifier) => {
-            let id = patches.resolve_id(&project.urn, identifier.clone())?;
+            let id = patches.resolve_id(&project.urn, &identifier)?;
 
             if let Some(patch) = patches.get(&project.urn, &id)? {
                 Some((id, patch))

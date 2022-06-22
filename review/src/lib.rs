@@ -122,7 +122,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let cobs = cobs::store(&profile, &storage)?;
     let patches = cobs.patches();
 
-    let patch_id = patches.resolve_id(&urn, options.id.clone())?;
+    let patch_id = patches.resolve_id(&urn, &options.id)?;
     let patch_id_pretty = term::format::tertiary(common::fmt::cob(&patch_id));
     let mut patch = patches
         .get(&urn, &patch_id)?

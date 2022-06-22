@@ -113,7 +113,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
     let cobs = cobs::store(&profile, &storage)?;
     let patches = cobs.patches();
-    let patch_id = patches.resolve_id(&urn, options.id)?;
+    let patch_id = patches.resolve_id(&urn, &options.id)?;
 
     if repo.head_detached()? {
         anyhow::bail!("HEAD is in a detached state; can't merge");
