@@ -15,6 +15,7 @@ pub enum Key {
     Down,
     Esc,
     Enter,
+    Tab,
     Unknown,
 }
 
@@ -50,6 +51,10 @@ impl From<event::KeyEvent> for Key {
                 code: event::KeyCode::Enter,
                 ..
             } => Key::Enter,
+            event::KeyEvent {
+                code: event::KeyCode::Tab,
+                ..
+            } => Key::Tab,
             _ => Key::Unknown,
         }
     }
