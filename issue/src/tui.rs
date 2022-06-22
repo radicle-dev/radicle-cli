@@ -4,7 +4,7 @@ use std::rc::Rc;
 use anyhow::{Error, Result};
 use lazy_static::lazy_static;
 
-use radicle_common::cobs::issue::{Issue, IssueId};
+use radicle_common::cobs::issue::{Issue, IssueId, State as IssueState};
 use radicle_common::project::Metadata;
 use radicle_terminal as term;
 
@@ -14,8 +14,11 @@ use term::tui::theme::Theme;
 use term::tui::window::{PageWidget, ShortcutWidget, TitleWidget};
 use term::tui::{Application, State};
 
+pub mod state;
 pub mod window;
-use window::BrowserWidget;
+
+use state::Tab;
+use window::{BrowserWidget, TabWidget};
 
 type IssueList = Vec<(IssueId, Issue)>;
 
@@ -26,6 +29,7 @@ pub enum InternalCall {}
 pub enum Action {
     Up,
     Down,
+    NextTab,
     Quit,
 }
 
@@ -33,6 +37,7 @@ lazy_static! {
     static ref BINDINGS: HashMap<Key, Action> = [
         (Key::Up, Action::Up),
         (Key::Down, Action::Down),
+        (Key::Tab, Action::NextTab),
         (Key::Char('q'), Action::Quit)
     ]
     .iter()
@@ -42,17 +47,28 @@ lazy_static! {
 
 pub fn run(project: &Metadata, issues: IssueList) -> Result<Option<InternalCall>, Error> {
     let call: Option<InternalCall> = None;
+    let mut open = issues.clone();
+    let mut closed = issues;
+
+    open.retain(|(_, issue)| issue.state() == IssueState::Open);
+    closed.retain(|(_, issue)| issue.state() != IssueState::Open);
+
     let mut app = Application::new(&update).store(vec![
         ("app.title", Box::new(project.name.clone())),
         ("app.call.internal", Box::new(call)),
+        ("app.browser.tab.active", Box::new(Tab::Open)),
         ("app.shortcuts", Box::new(vec![String::from("q quit")])),
-        ("project.issue.list", Box::new(issues)),
-        ("project.issue.active", Box::new(0_usize)),
+        ("project.issue.open.list", Box::new(open)),
+        ("project.issue.open.active", Box::new(0_usize)),
+        ("project.issue.closed.list", Box::new(closed)),
+        ("project.issue.closed.active", Box::new(0_usize)),
     ]);
 
     let pages = vec![PageWidget {
         title: Rc::new(TitleWidget),
-        widgets: vec![Rc::new(BrowserWidget)],
+        widgets: vec![Rc::new(BrowserWidget {
+            tabs: Rc::new(TabWidget),
+        })],
         shortcuts: Rc::new(ShortcutWidget),
     }];
 
@@ -85,6 +101,9 @@ pub fn on_action(store: &mut Store, key: Key) -> Result<(), Error> {
             Action::Down => {
                 select_next_issue(store)?;
             }
+            Action::NextTab => {
+                select_next_tab(store)?;
+            }
         }
     }
     Ok(())
@@ -96,24 +115,55 @@ pub fn quit_application(store: &mut Store) -> Result<(), Error> {
 }
 
 pub fn select_next_issue(store: &mut Store) -> Result<(), Error> {
-    let issues = store.get::<IssueList>("project.issue.list")?;
-    let active = store.get::<usize>("project.issue.active")?;
+    let tab = store.get::<Tab>("app.browser.tab.active")?;
+    let (issues, active) = match tab {
+        Tab::Open => {
+            let issues = store.get::<IssueList>("project.issue.open.list")?;
+            let active = store.get::<usize>("project.issue.open.active")?;
+            (issues, active)
+        }
+        Tab::Closed => {
+            let issues = store.get::<IssueList>("project.issue.closed.list")?;
+            let active = store.get::<usize>("project.issue.closed.active")?;
+            (issues, active)
+        }
+    };
     let active = match *active >= issues.len() - 1 {
         true => issues.len() - 1,
         false => active + 1,
     };
-    store.set("project.issue.active", Box::new(active));
+    match tab {
+        Tab::Open => store.set("project.issue.open.active", Box::new(active)),
+        Tab::Closed => store.set("project.issue.closed.active", Box::new(active)),
+    }
 
     Ok(())
 }
 
 pub fn select_previous_issue(store: &mut Store) -> Result<(), Error> {
-    let active = store.get::<usize>("project.issue.active")?;
+    let tab = store.get::<Tab>("app.browser.tab.active")?;
+    let active = match tab {
+        Tab::Open => store.get::<usize>("project.issue.open.active")?,
+        Tab::Closed => store.get::<usize>("project.issue.closed.active")?,
+    };
+
     let active = match *active == 0 {
         true => 0,
         false => active - 1,
     };
-    store.set("project.issue.active", Box::new(active));
+    match tab {
+        Tab::Open => store.set("project.issue.open.active", Box::new(active)),
+        Tab::Closed => store.set("project.issue.closed.active", Box::new(active)),
+    }
 
+    Ok(())
+}
+
+pub fn select_next_tab(store: &mut Store) -> Result<(), Error> {
+    let tab = store.get::<Tab>("app.browser.tab.active")?;
+    match tab {
+        Tab::Open => store.set("app.browser.tab.active", Box::new(Tab::Closed)),
+        Tab::Closed => store.set("app.browser.tab.active", Box::new(Tab::Open)),
+    }
     Ok(())
 }
