@@ -24,12 +24,20 @@ pub enum InternalCall {}
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum Action {
+    Up,
+    Down,
     Quit,
 }
 
 lazy_static! {
-    static ref BINDINGS: HashMap<Key, Action> =
-        [(Key::Char('q'), Action::Quit),].iter().cloned().collect();
+    static ref BINDINGS: HashMap<Key, Action> = [
+        (Key::Up, Action::Up),
+        (Key::Down, Action::Down),
+        (Key::Char('q'), Action::Quit)
+    ]
+    .iter()
+    .cloned()
+    .collect();
 }
 
 pub fn run(project: &Metadata, issues: IssueList) -> Result<Option<InternalCall>, Error> {
@@ -71,6 +79,12 @@ pub fn on_action(store: &mut Store, key: Key) -> Result<(), Error> {
             Action::Quit => {
                 quit_application(store)?;
             }
+            Action::Up => {
+                select_previous_issue(store)?;
+            }
+            Action::Down => {
+                select_next_issue(store)?;
+            }
         }
     }
     Ok(())
@@ -78,5 +92,28 @@ pub fn on_action(store: &mut Store, key: Key) -> Result<(), Error> {
 
 pub fn quit_application(store: &mut Store) -> Result<(), Error> {
     store.set("app.state", Box::new(State::Exiting));
+    Ok(())
+}
+
+pub fn select_next_issue(store: &mut Store) -> Result<(), Error> {
+    let issues = store.get::<IssueList>("project.issue.list")?;
+    let active = store.get::<usize>("project.issue.active")?;
+    let active = match *active >= issues.len() - 1 {
+        true => issues.len() - 1,
+        false => active + 1,
+    };
+    store.set("project.issue.active", Box::new(active));
+
+    Ok(())
+}
+
+pub fn select_previous_issue(store: &mut Store) -> Result<(), Error> {
+    let active = store.get::<usize>("project.issue.active")?;
+    let active = match *active == 0 {
+        true => 0,
+        false => active - 1,
+    };
+    store.set("project.issue.active", Box::new(active));
+
     Ok(())
 }

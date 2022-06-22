@@ -7,7 +7,7 @@ use tui::backend::Backend;
 use tui::layout::{Alignment, Rect};
 use tui::style::{Modifier, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{ListItem};
+use tui::widgets::ListItem;
 use tui::Frame;
 
 use radicle_common::cobs::issue::{Issue, IssueId};
@@ -72,10 +72,10 @@ where
         if !issues.is_empty() {
             let items: Vec<ListItem> = issues
                 .iter()
-                .map(|(id, issue)| self.items(&id, &issue, &theme))
+                .map(|(id, issue)| self.items(id, issue, theme))
                 .collect();
 
-            let (list, mut state) = template::list(items, *active, &theme);
+            let (list, mut state) = template::list(items, *active, theme);
             frame.render_stateful_widget(list, inner, &mut state);
         } else {
             let message = String::from("No issues found");
