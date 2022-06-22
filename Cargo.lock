@@ -4714,6 +4714,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rad-comment"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lexopt",
+ "radicle-common",
+ "radicle-terminal",
+]
+
+[[package]]
 name = "rad-edit"
 version = "0.1.0"
 dependencies = [
@@ -5030,6 +5040,7 @@ dependencies = [
  "rad-auth",
  "rad-checkout",
  "rad-clone",
+ "rad-comment",
  "rad-edit",
  "rad-ens",
  "rad-gov",

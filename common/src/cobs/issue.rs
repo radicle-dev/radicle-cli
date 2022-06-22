@@ -220,6 +220,16 @@ pub struct Issues<'a> {
     whoami: LocalIdentity,
 }
 
+impl<'a> Store<'a> for Issues<'a> {
+    fn type_name() -> TypeName {
+        TYPENAME.clone()
+    }
+
+    fn store(&self) -> &CollaborativeObjects<'a> {
+        &self.store
+    }
+}
+
 impl<'a> Issues<'a> {
     pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Result<Self, Error> {
         let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));

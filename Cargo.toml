@@ -40,6 +40,7 @@ assets = [
     ["target/release/rad-gov", "usr/bin/rad-gov", "755"],
     ["target/release/rad-edit", "usr/bin/rad-edit", "755"],
     ["target/release/rad-reward", "usr/bin/rad-reward", "755"],
+    ["target/release/rad-comment", "usr/bin/rad-comment", "755"],
     ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
     ["rad.1.gz", "usr/share/man/man1/rad.1.gz", "644"],
     ["rad-checkout.1.gz", "usr/share/man/man1/rad-checkout.1.gz", "644"],
@@ -76,6 +77,7 @@ rad-help = { path = "./help" }
 rad-ls = { path = "./ls" }
 rad-rm = { path = "./rm" }
 rad-edit = { path = "./edit" }
+rad-comment = { path = "./comment" }
 link-identities = { version = "0" }
 radicle-common = { path = "./common" }
 radicle-terminal = { path = "./terminal" }
@@ -139,6 +141,7 @@ members = [
   "gov",
   "edit",
   "reward",
+  "comment",
 ]
 
 [patch.crates-io.link-crypto]

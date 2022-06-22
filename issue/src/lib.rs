@@ -5,12 +5,11 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context};
 
 use radicle_common::args::{Args, Error, Help};
-
-use radicle_common::{cobs, keys, person, profile, project};
+use radicle_common::{
+    cobs::{self, issue::*, Label},
+    keys, person, profile, project,
+};
 use radicle_terminal as term;
-
-use cobs::issue::*;
-use cobs::Label;
 
 pub const HELP: Help = Help {
     name: "issue",
@@ -22,7 +21,6 @@ Usage
     rad issue new [--title <title>] [--description <text>]
     rad issue state <id> [--closed | --open | --solved]
     rad issue delete <id>
-    rad issue comment <id> [--description <text>]
     rad issue react <id> [--emoji <char>]
     rad issue list
 
@@ -42,7 +40,6 @@ pub struct Metadata {
 pub enum OperationName {
     Create,
     State,
-    Comment,
     React,
     Delete,
     List,
@@ -70,10 +67,6 @@ pub enum Operation {
     React {
         id: cobs::issue::IssueId,
         reaction: cobs::Reaction,
-    },
-    Comment {
-        id: cobs::issue::IssueId,
-        description: Option<String>,
     },
     List,
 }
@@ -125,9 +118,7 @@ impl Args for Options {
                         );
                     }
                 }
-                Long("description")
-                    if op == Some(OperationName::Create) || op == Some(OperationName::Comment) =>
-                {
+                Long("description") if op == Some(OperationName::Create) => {
                     description = Some(parser.value()?.to_string_lossy().into());
                 }
                 Value(val) if op.is_none() => match val.to_string_lossy().as_ref() {
@@ -136,7 +127,6 @@ impl Args for Options {
                     "d" | "delete" => op = Some(OperationName::Delete),
                     "l" | "list" => op = Some(OperationName::List),
                     "r" | "react" => op = Some(OperationName::React),
-                    "c" | "comment" => op = Some(OperationName::Comment),
 
                     unknown => anyhow::bail!("unknown operation '{}'", unknown),
                 },
@@ -170,10 +160,6 @@ impl Args for Options {
                 id: id.ok_or_else(|| anyhow!("an issue id to remove must be provided"))?,
             },
             OperationName::List => Operation::List,
-            OperationName::Comment => Operation::Comment {
-                id: id.ok_or_else(|| anyhow!("an issue id to comment must be provided"))?,
-                description,
-            },
         };
 
         Ok((Options { op }, vec![]))
@@ -250,12 +236,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         Operation::Delete { id } => {
             issues.remove(&project, &id)?;
-        }
-        Operation::Comment { id, description } => {
-            let doc = description.unwrap_or("Enter a description...".to_owned());
-            if let Some(text) = term::Editor::new().edit(&doc)? {
-                issues.comment(&project, &id, &text)?;
-            }
         }
     }
 

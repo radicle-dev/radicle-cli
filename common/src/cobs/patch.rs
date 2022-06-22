@@ -264,6 +264,34 @@ impl<'a> Patches<'a> {
         cobs::create(history, project, &self.whoami, &self.store)
     }
 
+    pub fn comment(
+        &self,
+        project: &Urn,
+        patch_id: &PatchId,
+        revision_ix: RevisionIx,
+        body: &str,
+    ) -> Result<PatchId, Error> {
+        let author = self.author();
+        let mut patch = self.get_raw(project, patch_id)?.unwrap();
+        let timestamp = Timestamp::now();
+        let changes = events::comment(&mut patch, revision_ix, &author, body, timestamp)?;
+        let cob = self
+            .store
+            .update(
+                &self.whoami,
+                project,
+                UpdateObjectSpec {
+                    object_id: *patch_id,
+                    typename: TYPENAME.clone(),
+                    message: Some("Add comment".to_owned()),
+                    changes,
+                },
+            )
+            .unwrap();
+
+        Ok(*cob.id()) // TODO: Return something other than doc id.
+    }
+
     pub fn update(
         &self,
         project: &Urn,
@@ -294,6 +322,42 @@ impl<'a> Patches<'a> {
         )?;
 
         Ok(revision_ix)
+    }
+
+    pub fn reply(
+        &self,
+        project: &Urn,
+        patch_id: &PatchId,
+        revision_ix: RevisionIx,
+        comment_id: CommentId,
+        reply: &str,
+    ) -> Result<(), Error> {
+        let author = self.author();
+        let mut patch = self.get_raw(project, patch_id)?.unwrap();
+        let changes = events::reply(
+            &mut patch,
+            revision_ix,
+            comment_id,
+            &author,
+            reply,
+            Timestamp::now(),
+        )?;
+
+        let _cob = self
+            .store
+            .update(
+                &self.whoami,
+                project,
+                UpdateObjectSpec {
+                    object_id: *patch_id,
+                    typename: TYPENAME.clone(),
+                    message: Some("Reply".to_owned()),
+                    changes,
+                },
+            )
+            .unwrap();
+
+        Ok(())
     }
 
     pub fn review(
@@ -860,6 +924,43 @@ mod events {
         Ok(EntryContents::Automerge(doc.save_incremental()))
     }
 
+    pub fn comment(
+        patch: &mut Automerge,
+        revision_ix: RevisionIx,
+        author: &Author,
+        body: &str,
+        timestamp: Timestamp,
+    ) -> Result<EntryContents, AutomergeError> {
+        let _comment = patch
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Add comment".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
+                    let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
+                    let (_, revision_id) = tx.get(&revisions_id, revision_ix)?.unwrap();
+                    let (_, discussion_id) = tx.get(&revision_id, "discussion")?.unwrap();
+
+                    let length = tx.length(&discussion_id);
+                    let comment = tx.insert_object(&discussion_id, length, ObjType::Map)?;
+
+                    tx.put(&comment, "author", author.urn().to_string())?;
+                    tx.put(&comment, "peer", author.peer.default_encoding())?;
+                    tx.put(&comment, "body", body.trim())?;
+                    tx.put(&comment, "timestamp", timestamp)?;
+                    tx.put_object(&comment, "replies", ObjType::List)?;
+                    tx.put_object(&comment, "reactions", ObjType::Map)?;
+
+                    Ok(comment)
+                },
+            )
+            .map_err(|failure| failure.error)?
+            .result;
+
+        let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok(EntryContents::Automerge(change))
+    }
+
     pub fn update(
         patch: &mut Automerge,
         revision: Revision,
@@ -885,6 +986,45 @@ mod events {
         let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
 
         Ok((revision_ix, EntryContents::Automerge(change)))
+    }
+
+    pub fn reply(
+        patch: &mut Automerge,
+        revision_ix: RevisionIx,
+        comment_id: CommentId,
+        author: &Author,
+        body: &str,
+        timestamp: Timestamp,
+    ) -> Result<EntryContents, AutomergeError> {
+        patch
+            .transact_with::<_, _, AutomergeError, _, ()>(
+                |_| CommitOptions::default().with_message("Reply".to_owned()),
+                |tx| {
+                    let (_, obj_id) = tx.get(ObjId::Root, "patch")?.unwrap();
+                    let (_, revisions_id) = tx.get(&obj_id, "revisions")?.unwrap();
+                    let (_, revision_id) = tx.get(&revisions_id, revision_ix)?.unwrap();
+                    let (_, discussion_id) = tx.get(&revision_id, "discussion")?.unwrap();
+                    let (_, comment_id) = tx.get(&discussion_id, usize::from(comment_id))?.unwrap();
+                    let (_, replies_id) = tx.get(&comment_id, "replies")?.unwrap();
+
+                    let length = tx.length(&replies_id);
+                    let reply = tx.insert_object(&replies_id, length, ObjType::Map)?;
+
+                    // Nb. Replies don't themselves have replies.
+                    tx.put(&reply, "author", author.urn().to_string())?;
+                    tx.put(&reply, "peer", author.peer.default_encoding())?;
+                    tx.put(&reply, "body", body.trim())?;
+                    tx.put(&reply, "timestamp", timestamp)?;
+                    tx.put_object(&reply, "reactions", ObjType::Map)?;
+
+                    Ok(())
+                },
+            )
+            .map_err(|failure| failure.error)?;
+
+        let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
+
+        Ok(EntryContents::Automerge(change))
     }
 
     pub fn review(
