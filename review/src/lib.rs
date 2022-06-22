@@ -6,7 +6,6 @@ use anyhow::anyhow;
 use common::cobs::patch::Verdict;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::cobs::CobIdentifier;
 use radicle_common::{cobs, keys, profile, project};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
@@ -46,7 +45,7 @@ Markdown supported.
 
 #[derive(Debug)]
 pub struct Options {
-    pub id: CobIdentifier,
+    pub id: cobs::Identifier,
     pub revision: Option<RevisionIx>,
     pub comment: Comment,
     pub verdict: Verdict,
@@ -57,7 +56,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut id: Option<CobIdentifier> = None;
+        let mut id: Option<cobs::Identifier> = None;
         let mut revision: Option<RevisionIx> = None;
         let mut comment = Comment::default();
         let mut verdict = Verdict::Pass;
@@ -93,7 +92,7 @@ impl Args for Options {
                         .ok_or_else(|| anyhow!("patch id specified is not UTF-8"))?;
 
                     id = Some(
-                        CobIdentifier::from_str(val)
+                        cobs::Identifier::from_str(val)
                             .map_err(|_| anyhow!("invalid patch id '{}'", val))?,
                     );
                 }

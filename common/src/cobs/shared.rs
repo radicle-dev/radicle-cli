@@ -48,27 +48,27 @@ pub enum ResolveError {
 
 /// A generic COB identifier.
 #[derive(Debug, Clone)]
-pub enum CobIdentifier {
+pub enum Identifier {
     /// Regular, full object id.
     Full(ObjectId),
     /// A prefix of a full id.
     Prefix(String),
 }
 
-impl FromStr for CobIdentifier {
+impl FromStr for Identifier {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(id) = ObjectId::from_str(s) {
-            Ok(CobIdentifier::Full(id))
+            Ok(Identifier::Full(id))
         } else {
             // TODO: Do some validation here.
-            Ok(CobIdentifier::Prefix(s.to_owned()))
+            Ok(Identifier::Prefix(s.to_owned()))
         }
     }
 }
 
-impl fmt::Display for CobIdentifier {
+impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Full(id) => write!(f, "{}", id),
@@ -151,7 +151,7 @@ impl<'a> Store<'a> {
     pub fn resolve<T: Cob>(
         &self,
         namespace: &Urn,
-        id: &CobIdentifier,
+        id: &Identifier,
     ) -> anyhow::Result<Option<(ObjectId, T)>> {
         let id = self.resolve_id::<T>(namespace, id)?;
         let obj = self.get(namespace, &id)?;
@@ -162,11 +162,11 @@ impl<'a> Store<'a> {
     pub fn resolve_id<T: Cob>(
         &self,
         project: &Urn,
-        identifier: &CobIdentifier,
+        identifier: &Identifier,
     ) -> anyhow::Result<ObjectId> {
         match identifier {
-            CobIdentifier::Full(id) => Ok(*id),
-            CobIdentifier::Prefix(prefix) => {
+            Identifier::Full(id) => Ok(*id),
+            Identifier::Prefix(prefix) => {
                 let cobs = self
                     .store
                     .list(project, T::type_name())

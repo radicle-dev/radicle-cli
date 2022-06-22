@@ -6,7 +6,7 @@ use anyhow::anyhow;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{
-    cobs::{self, issue, patch, CobIdentifier, CommentId},
+    cobs::{self, issue, patch, CommentId},
     keys, profile, project,
 };
 use radicle_terminal as term;
@@ -30,7 +30,7 @@ Options
 
 #[derive(Debug)]
 pub struct Options {
-    pub id: CobIdentifier,
+    pub id: cobs::Identifier,
     pub description: Option<String>,
     pub reply_index: Option<CommentId>,
 }
@@ -40,7 +40,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut id: Option<CobIdentifier> = None;
+        let mut id: Option<cobs::Identifier> = None;
         let mut description: Option<String> = None;
         let mut reply_index: Option<CommentId> = None;
 
@@ -66,7 +66,7 @@ impl Args for Options {
                         .ok_or_else(|| anyhow!("object id specified is not UTF-8"))?;
 
                     id = Some(
-                        CobIdentifier::from_str(val)
+                        cobs::Identifier::from_str(val)
                             .map_err(|_| anyhow!("invalid object id '{}'", val))?,
                     );
                 }

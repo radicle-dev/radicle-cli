@@ -17,7 +17,6 @@ use librad::profile::Profile;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, PatchStore};
-use radicle_common::cobs::CobIdentifier;
 use radicle_common::{cobs, git, keys, patch, profile, project};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
@@ -68,7 +67,7 @@ blank is also okay.
 pub enum Update {
     No,
     Any,
-    Patch(CobIdentifier),
+    Patch(cobs::Identifier),
 }
 
 impl Default for Update {
@@ -116,7 +115,7 @@ impl Args for Options {
                         let val = val
                             .to_str()
                             .ok_or_else(|| anyhow!("patch id specified is not UTF-8"))?;
-                        let id = CobIdentifier::from_str(val)
+                        let id = cobs::Identifier::from_str(val)
                             .map_err(|_| anyhow!("invalid patch id '{}'", val))?;
 
                         update = Update::Patch(id);

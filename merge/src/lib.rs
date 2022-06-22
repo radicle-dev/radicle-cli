@@ -6,7 +6,6 @@ use anyhow::{anyhow, Context};
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{Patch, PatchId};
-use radicle_common::cobs::CobIdentifier;
 use radicle_common::patch::MergeStyle;
 use radicle_common::{cobs, git, keys, profile, project};
 use radicle_terminal as term;
@@ -45,7 +44,7 @@ const MERGE_HELP_MSG: &[&str] = &[
 
 #[derive(Debug)]
 pub struct Options {
-    pub id: CobIdentifier,
+    pub id: cobs::Identifier,
     pub interactive: bool,
     pub revision: Option<RevisionIx>,
 }
@@ -55,7 +54,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut id: Option<CobIdentifier> = None;
+        let mut id: Option<cobs::Identifier> = None;
         let mut revision: Option<RevisionIx> = None;
         let mut interactive = false;
 
@@ -81,7 +80,7 @@ impl Args for Options {
                         .ok_or_else(|| anyhow!("patch id specified is not UTF-8"))?;
 
                     id = Some(
-                        CobIdentifier::from_str(val)
+                        cobs::Identifier::from_str(val)
                             .map_err(|_| anyhow!("invalid patch id '{}'", val))?,
                     );
                 }

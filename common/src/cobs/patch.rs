@@ -233,11 +233,7 @@ impl<'a> PatchStore<'a> {
         Self { store }
     }
 
-    pub fn resolve_id(
-        &self,
-        project: &Urn,
-        identifier: &CobIdentifier,
-    ) -> anyhow::Result<ObjectId> {
+    pub fn resolve_id(&self, project: &Urn, identifier: &Identifier) -> anyhow::Result<ObjectId> {
         self.store.resolve_id::<Patch>(project, identifier)
     }
 
