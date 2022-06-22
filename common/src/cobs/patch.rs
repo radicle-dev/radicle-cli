@@ -152,6 +152,16 @@ impl Patch {
     }
 }
 
+impl Cob for Patch {
+    fn type_name() -> &'static TypeName {
+        &TYPENAME
+    }
+
+    fn from_history(history: &History) -> Result<Self, anyhow::Error> {
+        Patch::try_from(history)
+    }
+}
+
 impl TryFrom<Document<'_>> for Patch {
     type Error = DocumentError;
 

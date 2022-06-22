@@ -15,7 +15,7 @@ use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use chrono::TimeZone;
 use serde::{Deserialize, Serialize};
 
-use librad::collaborative_objects::{CollaborativeObjects, ObjectId, TypeName};
+use librad::collaborative_objects::{CollaborativeObjects, History, ObjectId, TypeName};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnly;
 use librad::git::Storage;
@@ -68,6 +68,14 @@ impl FromStr for CobIdentifier {
     }
 }
 
+/// A collaborative object. Objects of this type can be turned into rust types.
+pub trait Cob: Sized {
+    /// The object type name.
+    fn type_name() -> &'static TypeName;
+    /// Create an object from a history.
+    fn from_history(history: &History) -> Result<Self, anyhow::Error>;
+}
+
 pub struct Store<'a> {
     pub whoami: LocalIdentity,
     pub peer_id: PeerId,
@@ -115,6 +123,33 @@ impl<'a> Store<'a> {
         user::UserStore::new(self)
     }
 
+    pub fn get<T: Cob>(&self, namespace: &Urn, id: &ObjectId) -> anyhow::Result<Option<T>> {
+        let cob = self
+            .store
+            .retrieve(namespace, T::type_name(), id)
+            .map_err(|e| StoreError::Retrieve(e.to_string()))?;
+
+        if let Some(cob) = cob {
+            let history = cob.history();
+            let obj = T::from_history(history)?;
+
+            Ok(Some(obj))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn resolve<T: Cob>(
+        &self,
+        namespace: &Urn,
+        id: impl Into<CobIdentifier>,
+    ) -> anyhow::Result<Option<T>> {
+        let id = id.into();
+        let id = self.resolve_id(T::type_name(), namespace, id)?;
+
+        self.get(namespace, &id)
+    }
+
     pub fn resolve_id(
         &self,
         type_name: &TypeName,
@@ -137,7 +172,7 @@ impl<'a> Store<'a> {
 
                 match matches.as_slice() {
                     [id] => Ok(*id),
-                    [_id, ..] => {
+                    [_, ..] => {
                         anyhow::bail!(
                             "object id `{}` is ambiguous; please use the fully qualified id",
                             prefix

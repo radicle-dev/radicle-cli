@@ -141,9 +141,7 @@ impl Issue {
     pub fn timestamp(&self) -> Timestamp {
         self.timestamp
     }
-}
 
-impl Issue {
     pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
         self.author.resolve(storage)?;
         self.comment.resolve(storage)?;
@@ -155,10 +153,12 @@ impl Issue {
     }
 }
 
-impl TryFrom<&History> for Issue {
-    type Error = anyhow::Error;
+impl Cob for Issue {
+    fn type_name() -> &'static TypeName {
+        &TYPENAME
+    }
 
-    fn try_from(history: &History) -> Result<Self, Self::Error> {
+    fn from_history(history: &History) -> Result<Self, anyhow::Error> {
         let doc = history.traverse(Automerge::new(), |mut doc, entry| {
             match entry.contents() {
                 EntryContents::Automerge(bytes) => {
@@ -177,6 +177,14 @@ impl TryFrom<&History> for Issue {
         let issue = Issue::try_from(doc)?;
 
         Ok(issue)
+    }
+}
+
+impl TryFrom<&History> for Issue {
+    type Error = anyhow::Error;
+
+    fn try_from(history: &History) -> Result<Self, Self::Error> {
+        Issue::from_history(history)
     }
 }
 

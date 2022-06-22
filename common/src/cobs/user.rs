@@ -59,6 +59,16 @@ pub struct User {
     pub timestamp: Timestamp,
 }
 
+impl Cob for User {
+    fn type_name() -> &'static TypeName {
+        &TYPENAME
+    }
+
+    fn from_history(history: &History) -> Result<Self, anyhow::Error> {
+        User::try_from(history)
+    }
+}
+
 impl TryFrom<Document<'_>> for User {
     type Error = DocumentError;
 
