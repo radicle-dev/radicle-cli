@@ -153,15 +153,14 @@ impl<'a> Store<'a> {
         namespace: &Urn,
         id: &CobIdentifier,
     ) -> anyhow::Result<Option<(ObjectId, T)>> {
-        let id = self.resolve_id(T::type_name(), namespace, id)?;
+        let id = self.resolve_id::<T>(namespace, id)?;
         let obj = self.get(namespace, &id)?;
 
         Ok(obj.map(|o| (id, o)))
     }
 
-    pub fn resolve_id(
+    pub fn resolve_id<T: Cob>(
         &self,
-        type_name: &TypeName,
         project: &Urn,
         identifier: &CobIdentifier,
     ) -> anyhow::Result<ObjectId> {
@@ -170,7 +169,7 @@ impl<'a> Store<'a> {
             CobIdentifier::Prefix(prefix) => {
                 let cobs = self
                     .store
-                    .list(project, type_name)
+                    .list(project, T::type_name())
                     .map_err(|e| StoreError::List(e.to_string()))?;
 
                 let matches = cobs

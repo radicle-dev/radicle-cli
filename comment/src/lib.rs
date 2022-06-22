@@ -100,7 +100,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .unwrap_or("Enter a description...".to_owned());
 
     if let Some(text) = term::Editor::new().edit(&doc)? {
-        if let Ok(id) = cobs.resolve_id(&issue::TYPENAME, &project, &cob_id) {
+        if let Ok(id) = cobs.resolve_id::<issue::Issue>(&project, &cob_id) {
             if let Some(reply_to_index) = options.reply_index {
                 cobs.issues().reply(&project, &id, reply_to_index, &text)?;
             } else {
