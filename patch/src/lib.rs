@@ -375,12 +375,10 @@ fn create(
             }
         }
         Update::Patch(identifier) => {
-            let id = patches.resolve_id(&project.urn, &identifier)?;
-
-            if let Some(patch) = patches.get(&project.urn, &id)? {
+            if let Some((id, patch)) = patches.resolve(&project.urn, identifier)? {
                 Some((id, patch))
             } else {
-                anyhow::bail!("Patch '{}' not found", id);
+                anyhow::bail!("Patch '{}' not found", identifier);
             }
         }
     };

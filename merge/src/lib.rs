@@ -112,7 +112,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
     let cobs = cobs::store(&profile, &storage)?;
     let patches = cobs.patches();
-    let patch_id = patches.resolve_id(&urn, &options.id)?;
 
     if repo.head_detached()? {
         anyhow::bail!("HEAD is in a detached state; can't merge");
@@ -121,9 +120,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     //
     // Get patch information
     //
-    let mut patch = patches
-        .get(&urn, &patch_id)?
-        .ok_or_else(|| anyhow!("couldn't find patch {} locally", patch_id))?;
+    let (patch_id, mut patch) = patches
+        .resolve::<Patch>(&urn, &options.id)?
+        .ok_or_else(|| anyhow!("couldn't find patch {} locally", &options.id))?;
     patch.author.resolve(&storage).ok();
 
     let head = repo.head()?;
