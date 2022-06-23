@@ -189,43 +189,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             }
         }
         Operation::Create { title, description } => {
-            let meta = Metadata {
-                title: title.unwrap_or("Enter a title".to_owned()),
-                labels: vec![],
-            };
-            let yaml = serde_yaml::to_string(&meta)?;
-            let doc = format!(
-                "{}---\n\n{}",
-                yaml,
-                description.unwrap_or("Enter a description...".to_owned())
-            );
-
-            if let Some(text) = term::Editor::new().edit(&doc)? {
-                let mut meta = String::new();
-                let mut frontmatter = false;
-                let mut lines = text.lines();
-
-                while let Some(line) = lines.by_ref().next() {
-                    if line.trim() == "---" {
-                        if frontmatter {
-                            break;
-                        } else {
-                            frontmatter = true;
-                            continue;
-                        }
-                    }
-                    if frontmatter {
-                        meta.push_str(line);
-                        meta.push('\n');
-                    }
-                }
-
-                let description: String = lines.collect::<Vec<&str>>().join("\n");
-                let meta: Metadata =
-                    serde_yaml::from_str(&meta).context("failed to parse yaml front-matter")?;
-
-                issues.create(&project, &meta.title, description.trim(), &meta.labels)?;
-            }
+            create(&issues, title, description)?;
         }
         Operation::List => {
             for (id, issue) in issues.all(&project)? {
@@ -235,7 +199,73 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         Operation::Delete { id } => {
             issues.remove(&project, &id)?;
         }
+        Operation::Interactive => {
+            if let Some(metadata) = project::get(&storage, &project)? {
+                let load = || -> anyhow::Result<Vec<_>> {
+                    let mut list = issues.all(&metadata.urn)?;
+                    for (_, issue) in &mut list {
+                        issue.resolve(&storage)?;
+                    }
+                    Ok(list)
+                };
+                let mut list = load()?;
+                while let Some(call) = tui::run(&metadata, list.clone())? {
+                    match call {
+                        tui::InternalCall::New => create(&issues, None, None)?,
+                    }
+                    list = load()?;
+                }
+            } else {
+                anyhow::bail!("could not load project metadata");
+            }
+        }
     }
 
+    Ok(())
+}
+
+fn create(
+    issues: &IssueStore,
+    title: Option<String>,
+    description: Option<String>,
+) -> anyhow::Result<()> {
+    let (project, _) = project::cwd()?;
+    let meta = Metadata {
+        title: title.unwrap_or("Enter a title".to_owned()),
+        labels: vec![],
+    };
+    let yaml = serde_yaml::to_string(&meta)?;
+    let doc = format!(
+        "{}---\n\n{}",
+        yaml,
+        description.unwrap_or("Enter a description...".to_owned())
+    );
+
+    if let Some(text) = term::Editor::new().edit(&doc)? {
+        let mut meta = String::new();
+        let mut frontmatter = false;
+        let mut lines = text.lines();
+
+        while let Some(line) = lines.by_ref().next() {
+            if line.trim() == "---" {
+                if frontmatter {
+                    break;
+                } else {
+                    frontmatter = true;
+                    continue;
+                }
+            }
+            if frontmatter {
+                meta.push_str(line);
+                meta.push('\n');
+            }
+        }
+
+        let description: String = lines.collect::<Vec<&str>>().join("\n");
+        let meta: Metadata =
+            serde_yaml::from_str(&meta).context("failed to parse yaml front-matter")?;
+
+        issues.create(&project, &meta.title, description.trim(), &meta.labels)?;
+    }
     Ok(())
 }
