@@ -9,18 +9,20 @@ use radicle_common::project::Metadata;
 use radicle_terminal as term;
 
 use term::tui::events::{InputEvent, Key};
-use term::tui::store::Store;
+use term::tui::store::{ListProperty, Store, TabProperty};
 use term::tui::theme::Theme;
 use term::tui::window::{PageWidget, ShortcutWidget, TitleWidget};
 use term::tui::{Application, State};
 
 pub mod state;
+pub mod store;
 pub mod window;
 
-use state::Tab;
+use state::{Tab};
 use window::{BrowserWidget, TabWidget};
 
-type IssueList = Vec<(IssueId, Issue)>;
+type TabList = TabProperty<Tab>;
+type IssueList = ListProperty<(IssueId, Issue)>;
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum InternalCall {}
@@ -45,23 +47,23 @@ lazy_static! {
     .collect();
 }
 
-pub fn run(project: &Metadata, issues: IssueList) -> Result<Option<InternalCall>, Error> {
-    let call: Option<InternalCall> = None;
+pub fn run(
+    project: &Metadata,
+    issues: Vec<(IssueId, Issue)>,
+) -> Result<Option<InternalCall>, Error> {
     let mut open = issues.clone();
     let mut closed = issues;
 
     open.retain(|(_, issue)| issue.state() == IssueState::Open);
     closed.retain(|(_, issue)| issue.state() != IssueState::Open);
 
+    let tabs = vec![Tab::Open, Tab::Closed];
     let mut app = Application::new(&update).store(vec![
         ("app.title", Box::new(project.name.clone())),
-        ("app.call.internal", Box::new(call)),
-        ("app.browser.tab.active", Box::new(Tab::Open)),
+        ("app.browser.tabs", Box::new(TabProperty::new(tabs))),
         ("app.shortcuts", Box::new(vec![String::from("q quit")])),
-        ("project.issue.open.list", Box::new(open)),
-        ("project.issue.open.active", Box::new(0_usize)),
-        ("project.issue.closed.list", Box::new(closed)),
-        ("project.issue.closed.active", Box::new(0_usize)),
+        ("project.issues.open", Box::new(ListProperty::new(open))),
+        ("project.issues.closed", Box::new(ListProperty::new(closed))),
     ]);
 
     let pages = vec![PageWidget {
@@ -115,55 +117,39 @@ pub fn quit_application(store: &mut Store) -> Result<(), Error> {
 }
 
 pub fn select_next_issue(store: &mut Store) -> Result<(), Error> {
-    let tab = store.get::<Tab>("app.browser.tab.active")?;
-    let (issues, active) = match tab {
-        Tab::Open => {
-            let issues = store.get::<IssueList>("project.issue.open.list")?;
-            let active = store.get::<usize>("project.issue.open.active")?;
-            (issues, active)
+    let tabs = store.get::<TabList>("app.browser.tabs")?;
+    match tabs.items().selected() {
+        Some(Tab::Open) => {
+            let issues = store.get_mut::<IssueList>("project.issues.open")?;
+            issues.select_next();
         }
-        Tab::Closed => {
-            let issues = store.get::<IssueList>("project.issue.closed.list")?;
-            let active = store.get::<usize>("project.issue.closed.active")?;
-            (issues, active)
+        Some(Tab::Closed) => {
+            let issues = store.get_mut::<IssueList>("project.issues.closed")?;
+            issues.select_next();
         }
+        _ => {}
     };
-    let active = match *active >= issues.len() - 1 {
-        true => issues.len() - 1,
-        false => active + 1,
-    };
-    match tab {
-        Tab::Open => store.set("project.issue.open.active", Box::new(active)),
-        Tab::Closed => store.set("project.issue.closed.active", Box::new(active)),
-    }
-
     Ok(())
 }
 
 pub fn select_previous_issue(store: &mut Store) -> Result<(), Error> {
-    let tab = store.get::<Tab>("app.browser.tab.active")?;
-    let active = match tab {
-        Tab::Open => store.get::<usize>("project.issue.open.active")?,
-        Tab::Closed => store.get::<usize>("project.issue.closed.active")?,
+    let tabs = store.get::<TabList>("app.browser.tabs")?;
+    match tabs.items().selected() {
+        Some(Tab::Open) => {
+            let issues = store.get_mut::<IssueList>("project.issues.open")?;
+            issues.select_previous();
+        }
+        Some(Tab::Closed) => {
+            let issues = store.get_mut::<IssueList>("project.issues.closed")?;
+            issues.select_previous();
+        }
+        _ => {}
     };
-
-    let active = match *active == 0 {
-        true => 0,
-        false => active - 1,
-    };
-    match tab {
-        Tab::Open => store.set("project.issue.open.active", Box::new(active)),
-        Tab::Closed => store.set("project.issue.closed.active", Box::new(active)),
-    }
-
     Ok(())
 }
 
 pub fn select_next_tab(store: &mut Store) -> Result<(), Error> {
-    let tab = store.get::<Tab>("app.browser.tab.active")?;
-    match tab {
-        Tab::Open => store.set("app.browser.tab.active", Box::new(Tab::Closed)),
-        Tab::Closed => store.set("app.browser.tab.active", Box::new(Tab::Open)),
-    }
+    let tabs = store.get_mut::<TabList>("app.browser.tabs")?;
+    tabs.select_next();
     Ok(())
 }

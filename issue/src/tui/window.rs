@@ -16,7 +16,7 @@ use radicle_terminal as term;
 
 use term::tui::layout;
 use term::tui::layout::Padding;
-use term::tui::store::Store;
+use term::tui::store::{ListProperty, Store, TabProperty};
 use term::tui::strings;
 use term::tui::template;
 use term::tui::theme::Theme;
@@ -24,7 +24,8 @@ use term::tui::window::Widget;
 
 use super::state::Tab;
 
-type IssueList = Vec<(IssueId, Issue)>;
+type IssueList = ListProperty<(IssueId, Issue)>;
+type TabList = TabProperty<Tab>;
 
 #[derive(Clone)]
 pub struct BrowserWidget<B: Backend> {
@@ -72,24 +73,21 @@ where
         area: Rect,
         theme: &Theme,
     ) -> Result<(), Error> {
-        let open = store.get::<IssueList>("project.issue.open.list")?;
-        let closed = store.get::<IssueList>("project.issue.closed.list")?;
+        let open = store.get::<IssueList>("project.issues.open")?;
+        let closed = store.get::<IssueList>("project.issues.closed")?;
         let (block, inner) = template::block(theme, area, Padding { top: 0, left: 2 }, true);
         frame.render_widget(block, area);
 
-        if !open.is_empty() || !closed.is_empty() {
-            let tab = store.get::<Tab>("app.browser.tab.active")?;
-            let (issues, active) = match tab {
-                Tab::Open => {
-                    let active = store.get::<usize>("project.issue.open.active")?;
-                    (open, active)
-                }
-                Tab::Closed => {
-                    let active = store.get::<usize>("project.issue.closed.active")?;
-                    (closed, active)
-                }
+        if !open.items().is_empty() || !closed.items().is_empty() {
+            let tabs = store.get::<TabList>("app.browser.tabs")?;
+            let issues = match tabs.items().selected() {
+                Some(Tab::Open) => open,
+                Some(Tab::Closed) => closed,
+                None => open,
             };
             let items: Vec<ListItem> = issues
+                .items()
+                .all()
                 .iter()
                 .map(|(id, issue)| self.items(id, issue, theme))
                 .collect();
@@ -100,7 +98,7 @@ where
 
             self.tabs.draw(store, frame, areas[0], theme)?;
 
-            let (list, mut state) = template::list(items, *active, theme);
+            let (list, mut state) = template::list(items, issues.items().selected_index(), theme);
             frame.render_stateful_widget(list, areas[1], &mut state);
         } else {
             let message = String::from("No issues found");
@@ -131,29 +129,28 @@ where
         area: Rect,
         theme: &Theme,
     ) -> Result<(), Error> {
-        let open = store.get::<IssueList>("project.issue.open.list")?;
-        let closed = store.get::<IssueList>("project.issue.closed.list")?;
-        let active = store.get::<Tab>("app.browser.tab.active")?;
-        let active = *active as usize;
+        let open = store.get::<IssueList>("project.issues.open")?;
+        let closed = store.get::<IssueList>("project.issues.closed")?;
+        let tabs = store.get::<TabList>("app.browser.tabs")?;
 
-        let tabs = vec![
-            format!("{} open", open.len()),
-            format!("{} closed", closed.len()),
+        let items = vec![
+            format!("{} open", open.items().count()),
+            format!("{} closed", closed.items().count()),
         ];
         let divider = "|";
 
         let (_, inner) = template::block(theme, area, Padding { top: 1, left: 0 }, false);
-        let tabs = tabs
+        let items = items
             .iter()
             .map(|t| Spans::from(Span::styled(t, Style::default())))
             .collect();
 
-        let tabs = Tabs::new(tabs)
+        let items = Tabs::new(items)
             .style(theme.ternary_dim)
             .highlight_style(theme.ternary)
             .divider(divider)
-            .select(active);
-        frame.render_widget(tabs, inner);
+            .select(tabs.items().selected_index());
+        frame.render_widget(items, inner);
 
         Ok(())
     }
