@@ -8,7 +8,7 @@ use tui::backend::Backend;
 use tui::layout::{Alignment, Direction, Rect};
 use tui::style::{Modifier, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{ListItem, Tabs};
+use tui::widgets::{ListItem, Paragraph, Tabs};
 use tui::Frame;
 
 use radicle_common::cobs::issue::{Issue, IssueId};
@@ -23,6 +23,7 @@ use term::tui::theme::Theme;
 use term::tui::window::Widget;
 
 use super::state::Tab;
+use super::store::ToogleProperty;
 
 type IssueList = ListProperty<(IssueId, Issue)>;
 type TabList = TabProperty<Tab>;
@@ -30,6 +31,7 @@ type TabList = TabProperty<Tab>;
 #[derive(Clone)]
 pub struct BrowserWidget<B: Backend> {
     pub tabs: Rc<dyn Widget<B>>,
+    pub info: Rc<dyn Widget<B>>,
 }
 
 impl<B> BrowserWidget<B>
@@ -93,13 +95,18 @@ where
                 .collect();
 
             let tab_h = self.tabs.height(inner);
-            let heights = vec![tab_h, inner.height.saturating_sub(tab_h)];
+            let info_h = self.info.height(inner);
+            let area_h = inner.height.saturating_sub(tab_h + info_h);
+            let heights = vec![tab_h, area_h, info_h];
             let areas = layout::split_area(inner, heights, Direction::Vertical);
 
+            // Render widgets
             self.tabs.draw(store, frame, areas[0], theme)?;
 
             let (list, mut state) = template::list(items, issues.items().selected_index(), theme);
             frame.render_stateful_widget(list, areas[1], &mut state);
+
+            self.info.draw(store, frame, areas[2], theme)?;
         } else {
             let message = String::from("No issues found");
             let message =
@@ -157,5 +164,72 @@ where
 
     fn height(&self, _area: Rect) -> u16 {
         3_u16
+    }
+}
+
+#[derive(Clone)]
+pub struct InfoWidget;
+
+impl<B> Widget<B> for InfoWidget
+where
+    B: Backend,
+{
+    fn draw(
+        &self,
+        store: &Store,
+        frame: &mut Frame<B>,
+        area: Rect,
+        theme: &Theme,
+    ) -> Result<(), Error> {
+        let info = store.get::<ToogleProperty>("app.browser.info")?;
+        if info.is_on() {
+            let title = String::from("Issue");
+            let tabs = store.get::<TabList>("app.browser.tabs")?;
+            let issues = match tabs.items().selected() {
+                Some(Tab::Open) => store.get::<IssueList>("project.issues.open")?,
+                Some(Tab::Closed) => store.get::<IssueList>("project.issues.closed")?,
+                None => store.get::<IssueList>("project.issues.open")?,
+            };
+
+            let (block, _) = template::block(theme, area, Padding { top: 0, left: 0 }, false);
+            frame.render_widget(block, area);
+            if let Some((id, issue)) = issues.items().selected() {
+                let author = issue.author().name();
+                let id = format!(" {} ", id);
+
+                let project_w = title.len() as u16 + 2;
+                let id_w = id.len() as u16;
+                let author_w = author.len() as u16 + 2;
+                let comments_w = issue.comments().len().to_string().len() as u16 + 2;
+                let title_w = area
+                    .width
+                    .checked_sub(project_w + id_w + comments_w + author_w)
+                    .unwrap_or(0);
+
+                let widths = vec![project_w, id_w, title_w, author_w, comments_w];
+                let areas = layout::split_area(area, widths, Direction::Horizontal);
+
+                let title = template::paragraph_styled(&title, theme.highlight_invert);
+                frame.render_widget(title, areas[0]);
+
+                let id = Paragraph::new(vec![Spans::from(id)]).style(theme.bg_bright_primary);
+                frame.render_widget(id, areas[1]);
+
+                let title = template::paragraph_styled(&issue.title, theme.bg_bright_ternary);
+                frame.render_widget(title, areas[2]);
+
+                let author = template::paragraph_styled(&author, theme.bg_bright_primary);
+                frame.render_widget(author, areas[3]);
+
+                let count = &issue.comments().len().to_string();
+                let comments = template::paragraph(count, theme.bg_dark_secondary);
+                frame.render_widget(comments, areas[4]);
+            }
+        }
+        Ok(())
+    }
+
+    fn height(&self, _area: Rect) -> u16 {
+        1_u16
     }
 }

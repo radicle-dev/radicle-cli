@@ -18,8 +18,9 @@ pub mod state;
 pub mod store;
 pub mod window;
 
-use state::{Tab};
-use window::{BrowserWidget, TabWidget};
+use state::Tab;
+use store::ToogleProperty;
+use window::{BrowserWidget, InfoWidget, TabWidget};
 
 type TabList = TabProperty<Tab>;
 type IssueList = ListProperty<(IssueId, Issue)>;
@@ -32,6 +33,7 @@ pub enum Action {
     Up,
     Down,
     NextTab,
+    ToogleInfo,
     Quit,
 }
 
@@ -40,7 +42,8 @@ lazy_static! {
         (Key::Up, Action::Up),
         (Key::Down, Action::Down),
         (Key::Tab, Action::NextTab),
-        (Key::Char('q'), Action::Quit)
+        (Key::Char('q'), Action::Quit),
+        (Key::Char('i'), Action::ToogleInfo),
     ]
     .iter()
     .cloned()
@@ -61,15 +64,20 @@ pub fn run(
     let mut app = Application::new(&update).store(vec![
         ("app.title", Box::new(project.name.clone())),
         ("app.browser.tabs", Box::new(TabProperty::new(tabs))),
-        ("app.shortcuts", Box::new(vec![String::from("q quit")])),
-        ("project.issues.open", Box::new(ListProperty::new(open))),
-        ("project.issues.closed", Box::new(ListProperty::new(closed))),
+        (
+            "app.shortcuts",
+            Box::new(vec![String::from("i info"), String::from("q quit")]),
+        ),
+        ("app.browser.info", Box::new(ToogleProperty::new(false))),
+        ("project.issues.open", Box::new(IssueList::new(open))),
+        ("project.issues.closed", Box::new(IssueList::new(closed))),
     ]);
 
     let pages = vec![PageWidget {
         title: Rc::new(TitleWidget),
         widgets: vec![Rc::new(BrowserWidget {
             tabs: Rc::new(TabWidget),
+            info: Rc::new(InfoWidget),
         })],
         shortcuts: Rc::new(ShortcutWidget),
     }];
@@ -105,6 +113,9 @@ pub fn on_action(store: &mut Store, key: Key) -> Result<(), Error> {
             }
             Action::NextTab => {
                 select_next_tab(store)?;
+            }
+            Action::ToogleInfo => {
+                toogle_info(store)?;
             }
         }
     }
@@ -151,5 +162,11 @@ pub fn select_previous_issue(store: &mut Store) -> Result<(), Error> {
 pub fn select_next_tab(store: &mut Store) -> Result<(), Error> {
     let tabs = store.get_mut::<TabList>("app.browser.tabs")?;
     tabs.select_next();
+    Ok(())
+}
+
+pub fn toogle_info(store: &mut Store) -> Result<(), Error> {
+    let info = store.get_mut::<ToogleProperty>("app.browser.info")?;
+    info.toggle();
     Ok(())
 }
