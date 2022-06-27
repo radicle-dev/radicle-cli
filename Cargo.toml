@@ -11,6 +11,12 @@ inherits = "dev"
 debug = 0
 incremental = false
 
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [features]
 default = ["ethereum"]
 ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "rad-reward", "ethers", "futures"]
