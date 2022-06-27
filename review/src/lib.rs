@@ -49,7 +49,7 @@ pub struct Options {
     pub id: cobs::Identifier,
     pub revision: Option<RevisionIx>,
     pub comment: Comment,
-    pub verdict: Verdict,
+    pub verdict: Option<Verdict>,
 }
 
 impl Args for Options {
@@ -60,7 +60,7 @@ impl Args for Options {
         let mut id: Option<cobs::Identifier> = None;
         let mut revision: Option<RevisionIx> = None;
         let mut comment = Comment::default();
-        let mut verdict = Verdict::Pass;
+        let mut verdict = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -81,11 +81,11 @@ impl Args for Options {
                 Long("no-comment") => {
                     comment = Comment::Blank;
                 }
-                Long("accept") if verdict == Verdict::Pass => {
-                    verdict = Verdict::Accept;
+                Long("accept") if verdict.is_none() => {
+                    verdict = Some(Verdict::Accept);
                 }
-                Long("reject") if verdict == Verdict::Pass => {
-                    verdict = Verdict::Reject;
+                Long("reject") if verdict.is_none() => {
+                    verdict = Some(Verdict::Reject);
                 }
                 Value(val) => {
                     let val = val
@@ -136,9 +136,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     patch.author.resolve(&storage).ok();
 
     let verdict_pretty = match options.verdict {
-        Verdict::Accept => term::format::highlight("Accept"),
-        Verdict::Reject => term::format::negative("Reject"),
-        Verdict::Pass => term::format::dim("Review"),
+        Some(Verdict::Accept) => term::format::highlight("Accept"),
+        Some(Verdict::Reject) => term::format::negative("Reject"),
+        None => term::format::dim("Review"),
     };
     if !term::confirm(format!(
         "{} {} {} by {}?",
@@ -160,21 +160,21 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     )?;
 
     match options.verdict {
-        Verdict::Accept => {
+        Some(Verdict::Accept) => {
             term::success!(
                 "Patch {} {}",
                 patch_id_pretty,
                 term::format::highlight("accepted")
             );
         }
-        Verdict::Reject => {
+        Some(Verdict::Reject) => {
             term::success!(
                 "Patch {} {}",
                 patch_id_pretty,
                 term::format::negative("rejected")
             );
         }
-        Verdict::Pass => {
+        None => {
             term::success!("Patch {} reviewed", patch_id_pretty);
         }
     }

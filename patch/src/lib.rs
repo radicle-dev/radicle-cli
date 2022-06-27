@@ -583,9 +583,9 @@ pub fn print(
     }
     for (_, review) in &revision.reviews {
         let verdict = match review.verdict {
-            Verdict::Accept => term::format::positive(term::format::dim("✓ accepted")),
-            Verdict::Reject => term::format::negative(term::format::dim("✗ rejected")),
-            Verdict::Pass => term::format::negative(term::format::dim("⋄ reviewed")),
+            Some(Verdict::Accept) => term::format::positive(term::format::dim("✓ accepted")),
+            Some(Verdict::Reject) => term::format::negative(term::format::dim("✗ rejected")),
+            None => term::format::negative(term::format::dim("⋄ reviewed")),
         };
         let peer = project::PeerInfo::get(&review.author.peer, project, storage);
         let mut badges = Vec::new();

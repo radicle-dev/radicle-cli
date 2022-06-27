@@ -365,7 +365,7 @@ impl<'a> PatchStore<'a> {
         project: &Urn,
         patch_id: &PatchId,
         revision_ix: RevisionIx,
-        verdict: Verdict,
+        verdict: Option<Verdict>,
         comment: impl Into<String>,
         inline: Vec<CodeComment>,
     ) -> Result<(), Error> {
@@ -630,8 +630,6 @@ pub enum Verdict {
     Accept,
     /// Reject patch.
     Reject,
-    /// Don't give a verdict.
-    Pass,
 }
 
 impl fmt::Display for Verdict {
@@ -639,7 +637,6 @@ impl fmt::Display for Verdict {
         match self {
             Self::Accept => write!(f, "accept"),
             Self::Reject => write!(f, "reject"),
-            Self::Pass => write!(f, "pass"),
         }
     }
 }
@@ -684,7 +681,7 @@ pub struct Review {
     /// Review author.
     pub author: Author,
     /// Review verdict.
-    pub verdict: Verdict,
+    pub verdict: Option<Verdict>,
     /// Review general comment.
     pub comment: Comment<Replies>,
     /// Review inline code comments.
@@ -696,7 +693,7 @@ pub struct Review {
 impl Review {
     pub fn new(
         author: Author,
-        verdict: Verdict,
+        verdict: Option<Verdict>,
         comment: impl Into<String>,
         inline: Vec<CodeComment>,
         timestamp: Timestamp,
@@ -725,7 +722,15 @@ impl Review {
 
         tx.put(&id, "author", self.author.urn().to_string())?;
         tx.put(&id, "peer", self.author.peer.default_encoding())?;
-        tx.put(&id, "verdict", self.verdict)?;
+        tx.put(
+            &id,
+            "verdict",
+            if let Some(v) = self.verdict {
+                v.into()
+            } else {
+                ScalarValue::Null
+            },
+        )?;
 
         self.comment.put(tx, id)?;
 
@@ -1169,7 +1174,7 @@ mod test {
             .unwrap();
 
         patches
-            .review(project, &patch_id, 0, Verdict::Accept, "LGTM", vec![])
+            .review(project, &patch_id, 0, Some(Verdict::Accept), "LGTM", vec![])
             .unwrap();
         let patch = patches.get(project, &patch_id).unwrap().unwrap();
         let reviews = patch.revisions.head.reviews;
@@ -1177,7 +1182,7 @@ mod test {
 
         let review = reviews.get(&whoami.urn()).unwrap();
         assert_eq!(review.author.urn(), &whoami.urn());
-        assert_eq!(review.verdict, Verdict::Accept);
+        assert_eq!(review.verdict, Some(Verdict::Accept));
         assert_eq!(review.comment.body.as_str(), "LGTM");
     }
 

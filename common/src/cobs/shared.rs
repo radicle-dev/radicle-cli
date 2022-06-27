@@ -602,6 +602,18 @@ pub trait FromValue<'a>: Sized {
     fn from_value(val: Value<'a>) -> Result<Self, ValueError>;
 }
 
+impl<'a, T> FromValue<'a> for Option<T>
+where
+    T: FromValue<'a>,
+{
+    fn from_value(val: Value<'a>) -> Result<Option<T>, ValueError> {
+        match val {
+            Value::Scalar(s) if s.is_null() => Ok(None),
+            _ => Ok(Some(T::from_value(val)?)),
+        }
+    }
+}
+
 impl<'a> FromValue<'a> for PeerId {
     fn from_value(val: Value<'a>) -> Result<PeerId, ValueError> {
         let peer = String::from_value(val)?;
