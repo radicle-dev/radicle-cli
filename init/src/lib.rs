@@ -124,7 +124,7 @@ impl Args for Options {
 pub fn run(options: Options) -> anyhow::Result<()> {
     if git::check_version().is_err() {
         term::warning(&format!(
-            "Warning: Your git version is unsupported, please upgrade to {} or later",
+            "Your git version is unsupported, please upgrade to {} or later",
             git::VERSION_REQUIRED,
         ));
         term::blank();

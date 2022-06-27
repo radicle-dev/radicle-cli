@@ -76,7 +76,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if project::get(&storage, &options.urn)?.is_none() {
         anyhow::bail!("project {} does not exist", options.urn);
     }
-    term::warning("Warning: experimental tool; use at your own risk!");
+    term::warning("Experimental tool; use at your own risk!");
 
     let monorepo = profile.paths().git_dir();
     let namespace = monorepo

@@ -114,7 +114,11 @@ pub fn subcommand(msg: impl fmt::Display) {
 }
 
 pub fn warning(warning: &str) {
-    eprintln!("{} {}", style("**").yellow(), style(warning).yellow());
+    eprintln!(
+        "{} Warning: {}",
+        style("**").yellow(),
+        style(warning).yellow()
+    );
 }
 
 pub fn error(error: impl fmt::Display) {

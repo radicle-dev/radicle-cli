@@ -315,7 +315,7 @@ async fn setup(
             term::format::highlight(name)
         );
     } else {
-        term::warning("Warning: Skipping local ENS setup");
+        term::warning("Skipping local ENS setup");
     }
 
     term::blank();
