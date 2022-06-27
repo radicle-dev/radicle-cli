@@ -521,7 +521,7 @@ impl<'a> FromValue<'a> for State {
 
 /// A patch revision.
 #[derive(Debug, Clone, Serialize)]
-pub struct Revision {
+pub struct Revision<T = ()> {
     /// Unique revision ID. This is useful in case of conflicts, eg.
     /// a user published a revision from two devices by mistake.
     pub id: RevisionId,
@@ -537,6 +537,8 @@ pub struct Revision {
     pub reviews: HashMap<Urn, Review>,
     /// Merges of this revision into other repositories.
     pub merges: Vec<Merge>,
+    /// Code changeset for this revision.
+    pub changeset: T,
     /// When this revision was created.
     pub timestamp: Timestamp,
 }
@@ -557,6 +559,7 @@ impl Revision {
             discussion: Discussion::default(),
             reviews: HashMap::default(),
             merges: Vec::default(),
+            changeset: (),
             timestamp,
         }
     }
@@ -613,9 +616,9 @@ impl Revision {
 
 /// A merged patch revision.
 #[derive(Debug, Clone, Serialize)]
-pub struct Merge {
+pub struct Merge<P = PeerId> {
     /// Peer id of repository that this patch was merged into.
-    pub peer: PeerId,
+    pub peer: P,
     /// Base branch commit that contains the revision.
     pub commit: git::Oid,
     /// When this merged was performed.
@@ -781,6 +784,7 @@ mod lookup {
             discussion,
             reviews,
             merges,
+            changeset: (),
             timestamp,
         })
     }
