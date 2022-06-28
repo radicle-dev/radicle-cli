@@ -95,7 +95,11 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Patch {
+pub struct Patch<T = (), P = PeerId>
+where
+    T: Clone,
+    P: Clone,
+{
     /// Author of the patch.
     pub author: Author,
     /// Title of the patch.
@@ -108,7 +112,7 @@ pub struct Patch {
     pub labels: HashSet<Label>,
     /// List of patch revisions. The initial changeset is part of the
     /// first revision.
-    pub revisions: NonEmpty<Revision>,
+    pub revisions: NonEmpty<Revision<T, P>>,
     /// Patch creation time.
     pub timestamp: Timestamp,
 }
@@ -521,7 +525,7 @@ impl<'a> FromValue<'a> for State {
 
 /// A patch revision.
 #[derive(Debug, Clone, Serialize)]
-pub struct Revision<T = ()> {
+pub struct Revision<T = (), P = PeerId> {
     /// Unique revision ID. This is useful in case of conflicts, eg.
     /// a user published a revision from two devices by mistake.
     pub id: RevisionId,
@@ -536,7 +540,7 @@ pub struct Revision<T = ()> {
     /// Reviews (one per user) of the changes.
     pub reviews: HashMap<Urn, Review>,
     /// Merges of this revision into other repositories.
-    pub merges: Vec<Merge>,
+    pub merges: Vec<Merge<P>>,
     /// Code changeset for this revision.
     pub changeset: T,
     /// When this revision was created.
