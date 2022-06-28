@@ -32,15 +32,15 @@ Usage
 
 Create options
 
-    -u, --update [<id>]      Update an existing patch (default: no)
-        --[no-]sync          Sync patch to seed (default: sync)
-        --comment [<string>] Provide a comment to the patch or revision (default: prompt)
-        --no-comment         Leave the patch or revision comment blank
+    -u, --update [<id>]        Update an existing patch (default: no)
+        --[no-]sync            Sync patch to seed (default: sync)
+    -m, --message [<string>]   Provide a comment message to the patch or revision (default: prompt)
+        --no-message           Leave the patch or revision comment message blank
 
 Options
 
-    -l, --list               List all patches (default: false)
-        --help               Print help
+    -l, --list                 List all patches (default: false)
+        --help                 Print help
 "#,
 };
 
@@ -58,7 +58,7 @@ and description.
 
 pub const REVISION_MSG: &str = r#"
 <!--
-Please enter a comment for your patch update. Leaving this
+Please enter a comment message for your patch update. Leaving this
 blank is also okay.
 -->
 "#;
@@ -82,7 +82,7 @@ pub struct Options {
     pub verbose: bool,
     pub sync: bool,
     pub update: Update,
-    pub comment: Comment,
+    pub message: Comment,
 }
 
 impl Args for Options {
@@ -93,7 +93,7 @@ impl Args for Options {
         let mut list = false;
         let mut verbose = false;
         let mut sync = true;
-        let mut comment = Comment::default();
+        let mut message = Comment::default();
         let mut update = Update::default();
 
         while let Some(arg) = parser.next()? {
@@ -104,11 +104,11 @@ impl Args for Options {
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
-                Long("comment") => {
-                    comment = Comment::Text(parser.value()?.to_string_lossy().into());
+                Long("message") | Short('m') => {
+                    message = Comment::Text(parser.value()?.to_string_lossy().into());
                 }
-                Long("no-comment") => {
-                    comment = Comment::Blank;
+                Long("no-message") => {
+                    message = Comment::Blank;
                 }
                 Long("update") | Short('u') => {
                     if let Ok(val) = parser.value() {
@@ -140,7 +140,7 @@ impl Args for Options {
             Options {
                 list,
                 sync,
-                comment,
+                message,
                 update,
                 verbose,
             },
@@ -245,7 +245,7 @@ fn update(
         term::format::dim(format!("R{}", current + 1)),
         term::format::secondary(common::fmt::oid(head)),
     );
-    let comment = options.comment.get(REVISION_MSG);
+    let message = options.message.get(REVISION_MSG);
 
     // Difference between the two revisions.
     term::patch::print_commits_ahead_behind(repo, *head, *current_revision.oid)?;
@@ -255,7 +255,7 @@ fn update(
         anyhow::bail!("patch update aborted by user");
     }
 
-    let new = patches.update(&project.urn, &patch_id, comment, *head)?;
+    let new = patches.update(&project.urn, &patch_id, message, *head)?;
     assert_eq!(new, current + 1);
 
     term::blank();

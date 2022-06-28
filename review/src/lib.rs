@@ -20,7 +20,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad review [<id>] [--accept|--reject] [--comment [<string>]] [<option>...]
+    rad review [<id>] [--accept|--reject] [-m [<string>]] [<option>...]
 
     To specify a patch to review, use the fully qualified patch id
     or an unambiguous prefix of it.
@@ -28,8 +28,8 @@ Usage
 Options
 
     -r, --revision <number>   Revision number to review, defaults to the latest
-        --comment [<string>]  Provide a comment with the review
-        --no-comment          Don't provide a comment with the review
+    -m, --message [<string>]  Provide a comment with the review
+        --no-wmessage         Don't provide a comment with the review
         --help                Print help
 "#,
 };
@@ -48,7 +48,7 @@ Markdown supported.
 pub struct Options {
     pub id: cobs::Identifier,
     pub revision: Option<RevisionIx>,
-    pub comment: Comment,
+    pub message: Comment,
     pub verdict: Option<Verdict>,
 }
 
@@ -59,7 +59,7 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut id: Option<cobs::Identifier> = None;
         let mut revision: Option<RevisionIx> = None;
-        let mut comment = Comment::default();
+        let mut message = Comment::default();
         let mut verdict = None;
 
         while let Some(arg) = parser.next()? {
@@ -75,11 +75,11 @@ impl Args for Options {
                         })?;
                     revision = Some(id);
                 }
-                Long("comment") => {
-                    comment = Comment::Text(parser.value()?.to_string_lossy().into());
+                Long("message") | Short('m') => {
+                    message = Comment::Text(parser.value()?.to_string_lossy().into());
                 }
-                Long("no-comment") => {
-                    comment = Comment::Blank;
+                Long("no-message") => {
+                    message = Comment::Blank;
                 }
                 Long("accept") if verdict.is_none() => {
                     verdict = Some(Verdict::Accept);
@@ -104,7 +104,7 @@ impl Args for Options {
         Ok((
             Options {
                 id: id.ok_or_else(|| anyhow!("a patch id to review must be provided"))?,
-                comment,
+                message,
                 revision,
                 verdict,
             },
@@ -131,7 +131,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .revisions
         .get(revision_ix)
         .ok_or_else(|| anyhow!("revision R{} does not exist", revision_ix))?;
-    let comment = options.comment.get(REVIEW_HELP_MSG);
+    let message = options.message.get(REVIEW_HELP_MSG);
 
     patch.author.resolve(&storage).ok();
 
@@ -155,7 +155,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         &patch_id,
         revision_ix,
         options.verdict,
-        comment,
+        message,
         vec![],
     )?;
 

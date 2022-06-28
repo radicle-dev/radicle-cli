@@ -18,20 +18,20 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad comment <id> [--description <text>] [--reply-to <index>]
+    rad comment <id> [-m <text>] [--reply-to <index>]
 
 Options
 
-    --description <text>    Comment text
-    --reply-to <index>      Index of comment writing a reply for
-    --help                  Print help
+    -m, --message               Comment message
+        --reply-to <index>      Index of comment writing a reply for
+        --help                  Print help
 "#,
 };
 
 #[derive(Debug)]
 pub struct Options {
     pub id: cobs::Identifier,
-    pub description: Option<String>,
+    pub message: Option<String>,
     pub reply_index: Option<CommentId>,
 }
 
@@ -41,7 +41,7 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut id: Option<cobs::Identifier> = None;
-        let mut description: Option<String> = None;
+        let mut message: Option<String> = None;
         let mut reply_index: Option<CommentId> = None;
 
         while let Some(arg) = parser.next()? {
@@ -49,8 +49,8 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Long("description") => {
-                    description = Some(parser.value()?.to_string_lossy().into());
+                Long("message") | Short('m') => {
+                    message = Some(parser.value()?.to_string_lossy().into());
                 }
                 Long("reply-to") => {
                     let idx = parser
@@ -79,7 +79,7 @@ impl Args for Options {
         Ok((
             Options {
                 id: id.ok_or_else(|| anyhow!("an object id must be provided"))?,
-                description,
+                message,
                 reply_index,
             },
             vec![],
@@ -96,8 +96,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let cob_id = options.id;
 
     let doc = options
-        .description
-        .unwrap_or("Enter a description...".to_owned());
+        .message
+        .unwrap_or("Enter a comment message...".to_owned());
 
     if let Some(text) = term::Editor::new().edit(&doc)? {
         if let Some(id) = cobs.resolve_id::<issue::Issue>(&project, &cob_id)? {
