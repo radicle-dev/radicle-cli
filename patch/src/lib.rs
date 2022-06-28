@@ -3,6 +3,7 @@
 #![allow(clippy::for_kv_map)]
 use std::convert::TryFrom;
 use std::ffi::OsString;
+use std::path::Path;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -34,6 +35,7 @@ Create options
 
     -u, --update [<id>]        Update an existing patch (default: no)
         --[no-]sync            Sync patch to seed (default: sync)
+        --[no-]push            Push patch head to storage (default: true)
     -m, --message [<string>]   Provide a comment message to the patch or revision (default: prompt)
         --no-message           Leave the patch or revision comment message blank
 
@@ -81,6 +83,7 @@ pub struct Options {
     pub list: bool,
     pub verbose: bool,
     pub sync: bool,
+    pub push: bool,
     pub update: Update,
     pub message: Comment,
 }
@@ -94,6 +97,7 @@ impl Args for Options {
         let mut verbose = false;
         let mut sync = true;
         let mut message = Comment::default();
+        let mut push = true;
         let mut update = Update::default();
 
         while let Some(arg) = parser.next()? {
@@ -129,6 +133,12 @@ impl Args for Options {
                 Long("no-sync") => {
                     sync = false;
                 }
+                Long("push") => {
+                    push = true;
+                }
+                Long("no-push") => {
+                    push = false;
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -141,6 +151,7 @@ impl Args for Options {
                 list,
                 sync,
                 message,
+                push,
                 update,
                 verbose,
             },
@@ -298,19 +309,27 @@ fn create(
 
     // Make sure the `HEAD` commit can be found in the monorepo. Otherwise there
     // is no way for anyone to merge this patch.
-    let spinner = term::spinner(format!(
+    let mut spinner = term::spinner(format!(
         "Looking for HEAD ({}) in storage...",
         term::format::secondary(common::fmt::oid(&head_oid))
     ));
     if storage.find_object(Oid::from(head_oid))?.is_none() {
-        spinner.failed();
-        term::blank();
+        if !options.push {
+            spinner.failed();
+            term::blank();
 
-        return Err(Error::WithHint {
-            err: anyhow!("Current branch head was not found in storage"),
-            hint: "hint: run `git push rad` and try again",
+            return Err(Error::WithHint {
+                err: anyhow!("Current branch head was not found in storage"),
+                hint: "hint: run `git push rad` and try again",
+            }
+            .into());
         }
-        .into());
+        spinner.message("Pushing HEAD to storage...");
+
+        let output = git::git(Path::new("."), ["push", "rad"])?;
+        if options.verbose {
+            term::blob(output);
+        }
     }
     spinner.finish();
 
