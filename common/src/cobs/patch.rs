@@ -606,7 +606,7 @@ impl Revision {
     }
 
     pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
-        self.comment.author.resolve(storage)?;
+        self.comment.resolve(storage)?;
         for comment in &mut self.discussion {
             comment.resolve(storage)?;
         }
@@ -618,6 +618,24 @@ impl Revision {
     }
 }
 
+impl Revision<(), Author> {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.comment.resolve(storage)?;
+        for comment in &mut self.discussion {
+            comment.resolve(storage)?;
+        }
+        for (_urn, review) in &mut self.reviews.iter_mut() {
+            review.resolve(storage)?;
+        }
+        for merge in &mut self.merges.iter_mut() {
+            merge.resolve(storage)?;
+        }
+
+        Ok(())
+    }
+
+}
+
 /// A merged patch revision.
 #[derive(Debug, Clone, Serialize)]
 pub struct Merge<P = PeerId> {
@@ -627,6 +645,12 @@ pub struct Merge<P = PeerId> {
     pub commit: git::Oid,
     /// When this merged was performed.
     pub timestamp: Timestamp,
+}
+
+impl Merge<Author> {
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
+        self.peer.resolve(storage)
+    }
 }
 
 /// A patch review verdict.
