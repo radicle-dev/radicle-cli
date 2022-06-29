@@ -2,6 +2,7 @@ use std::ffi::OsString;
 use std::{io::ErrorKind, iter, process};
 
 use anyhow::anyhow;
+use radicle_common::profile;
 
 pub const NAME: &str = "rad";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -67,7 +68,7 @@ fn print_help() -> anyhow::Result<()> {
     println!("{}", DESCRIPTION);
     println!();
 
-    rad_help::run(Default::default())
+    rad_help::run(Default::default(), profile::default)
 }
 
 fn run(command: Command) -> Result<(), Option<anyhow::Error>> {

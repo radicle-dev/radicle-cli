@@ -1,7 +1,6 @@
 use std::ffi::OsString;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::profile;
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -37,8 +36,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(_options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(_options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
 
     term::info!("{}", profile.paths().git_dir().display());
 

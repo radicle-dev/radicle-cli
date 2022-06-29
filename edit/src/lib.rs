@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::str::FromStr;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{keys, profile};
+use radicle_common::keys;
 use radicle_terminal as term;
 
 use librad::git::identities::{any, person, project, SomeIdentity};
@@ -64,8 +64,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
 

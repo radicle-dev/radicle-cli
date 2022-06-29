@@ -13,7 +13,7 @@ use librad::PeerId;
 use radicle_common::args::Help;
 use radicle_common::project::PeerInfo;
 use radicle_common::Url;
-use radicle_common::{git, keys, profile, project, seed};
+use radicle_common::{git, keys, project, seed};
 use radicle_terminal as term;
 
 mod options;
@@ -64,8 +64,8 @@ Options
 "#,
 };
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer.clone())?;
 

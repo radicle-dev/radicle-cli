@@ -67,8 +67,9 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let path = execute(options)?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
+    let path = execute(options, &profile)?;
 
     term::headline(&format!(
         "🌱 Project checkout successful under ./{}",
@@ -78,10 +79,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
-    let profile = profile::default()?;
-    let signer = term::signer(&profile)?;
-    let storage = keys::storage(&profile, signer.clone())?;
+pub fn execute(options: Options, profile: &profile::Profile) -> anyhow::Result<PathBuf> {
+    let signer = term::signer(profile)?;
+    let storage = keys::storage(profile, signer.clone())?;
     let project = project::get(&storage, &options.urn)?
         .context("project could not be found in local storage")?;
     let path = PathBuf::from(project.name.clone());
@@ -152,7 +152,7 @@ pub fn execute(options: Options) -> anyhow::Result<PathBuf> {
             };
             for peer in &project.remotes {
                 if peer != storage.peer_id() {
-                    if let Some(upstream) = setup.run(peer, &profile, &storage)? {
+                    if let Some(upstream) = setup.run(peer, profile, &storage)? {
                         term::success!(
                             "Remote-tracking branch {} created for {}",
                             term::format::highlight(&upstream),

@@ -54,10 +54,10 @@ impl Args for Options {
     }
 }
 
-pub fn run(_options: Options) -> anyhow::Result<()> {
+pub fn run(_options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     println!("Usage: rad <command> [--help]");
 
-    if radicle_common::profile::default().is_err() {
+    if ctx.profile().is_err() {
         println!();
         println!(
             "{}",

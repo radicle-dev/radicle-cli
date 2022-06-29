@@ -106,13 +106,14 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     match options.origin {
         Origin::Radicle(origin) => {
-            clone_project(origin.urn, origin.seed, options.interactive)?;
+            clone_project(origin.urn, origin.seed, options.interactive, ctx)?;
         }
         Origin::Git(url) => {
-            clone_repository(url)?;
+            let profile = ctx.profile()?;
+            clone_repository(url, &profile)?;
         }
     }
     Ok(())
@@ -122,23 +123,32 @@ pub fn clone_project(
     urn: Urn,
     seed: Option<seed::Address>,
     interactive: Interactive,
+    ctx: impl term::Context,
 ) -> anyhow::Result<()> {
-    rad_sync::run(rad_sync::Options {
-        fetch: true,
-        refs: rad_sync::Refs::All,
-        origin: Some(identity::Origin {
+    let profile = ctx.profile()?;
+
+    rad_sync::run(
+        rad_sync::Options {
+            fetch: true,
+            refs: rad_sync::Refs::All,
+            origin: Some(identity::Origin {
+                urn: urn.clone(),
+                seed: seed.clone(),
+            }),
+            seed: None,
+            identity: true,
+            push_self: false,
+            verbose: true,
+        },
+        profile.clone(),
+    )?;
+    let path = rad_checkout::execute(
+        rad_checkout::Options {
             urn: urn.clone(),
-            seed: seed.clone(),
-        }),
-        seed: None,
-        identity: true,
-        push_self: false,
-        verbose: true,
-    })?;
-    let path = rad_checkout::execute(rad_checkout::Options {
-        urn: urn.clone(),
-        interactive,
-    })?;
+            interactive,
+        },
+        &profile,
+    )?;
 
     if let Some(seed_url) = seed.map(|s| s.url()) {
         seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
@@ -149,7 +159,6 @@ pub fn clone_project(
         );
     }
 
-    let profile = profile::default()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let cfg = tracking::config::Config::default();
@@ -176,7 +185,7 @@ pub fn clone_project(
     Ok(())
 }
 
-pub fn clone_repository(url: Url) -> anyhow::Result<()> {
+pub fn clone_repository(url: Url, profile: &profile::Profile) -> anyhow::Result<()> {
     let proj = url
         .path_segments()
         .ok_or(anyhow!("couldn't get segments of URL"))?
@@ -202,7 +211,7 @@ pub fn clone_repository(url: Url) -> anyhow::Result<()> {
         };
 
         term::blank();
-        rad_init::init(options)?;
+        rad_init::init(options, profile)?;
     }
     Ok(())
 }

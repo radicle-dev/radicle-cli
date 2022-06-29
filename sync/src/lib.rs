@@ -10,7 +10,7 @@ use librad::PeerId;
 use radicle_common::args;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::seed::SeedOptions;
-use radicle_common::{git, identity, keys, person, profile, project, seed, seed::Scope};
+use radicle_common::{git, identity, keys, person, project, seed, seed::Scope};
 use radicle_terminal as term;
 
 use anyhow::anyhow;
@@ -204,8 +204,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
 

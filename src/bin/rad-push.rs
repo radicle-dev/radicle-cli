@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use rad_push::HELP;
-use radicle_common::{git, profile};
+use radicle_common::git;
 use radicle_terminal as term;
 
 // TODO: Pass all options after `--` to git.
@@ -9,8 +9,8 @@ fn main() {
     radicle_terminal::run_command::<rad_push::Options, _>(HELP, "Push", run);
 }
 
-fn run(options: rad_push::Options) -> anyhow::Result<()> {
-    profile::default()?;
+fn run(options: rad_push::Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    ctx.profile()?;
 
     term::info!("Pushing 🌱 to remote `rad`");
 
@@ -46,22 +46,25 @@ fn run(options: rad_push::Options) -> anyhow::Result<()> {
 
     if options.sync {
         // Sync monorepo to seed.
-        rad_sync::run(rad_sync::Options {
-            refs: if options.all {
-                rad_sync::Refs::All
-            } else if let Some(head) = head {
-                rad_sync::Refs::Branch(head)
-            } else {
-                anyhow::bail!("You must be on a branch in order to push");
-            },
-            seed: options.seed,
-            identity: options.identity,
-            verbose: options.verbose,
+        rad_sync::run(
+            rad_sync::Options {
+                refs: if options.all {
+                    rad_sync::Refs::All
+                } else if let Some(head) = head {
+                    rad_sync::Refs::Branch(head)
+                } else {
+                    anyhow::bail!("You must be on a branch in order to push");
+                },
+                seed: options.seed,
+                identity: options.identity,
+                verbose: options.verbose,
 
-            fetch: false,
-            origin: None,
-            push_self: false,
-        })?;
+                fetch: false,
+                origin: None,
+                push_self: false,
+            },
+            ctx,
+        )?;
     }
 
     Ok(())

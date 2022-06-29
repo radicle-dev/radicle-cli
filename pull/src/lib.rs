@@ -54,7 +54,7 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let (urn, repo) = project::cwd()
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
 
@@ -64,18 +64,21 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .ok_or(anyhow!("you must be on a branch to pull"))?;
 
-    rad_sync::run(rad_sync::Options {
-        fetch: true,
-        origin: Some(identity::Origin {
-            urn,
-            seed: options.seed,
-        }),
-        seed: None,
-        identity: false,
-        refs: rad_sync::Refs::All,
-        push_self: false,
-        verbose: false,
-    })?;
+    rad_sync::run(
+        rad_sync::Options {
+            fetch: true,
+            origin: Some(identity::Origin {
+                urn,
+                seed: options.seed,
+            }),
+            seed: None,
+            identity: false,
+            refs: rad_sync::Refs::All,
+            push_self: false,
+            verbose: false,
+        },
+        ctx,
+    )?;
 
     term::blank();
     term::subcommand("git pull");

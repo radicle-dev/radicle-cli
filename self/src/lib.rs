@@ -76,8 +76,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let storage = profile::read_only(&profile)?;
 
     match options.show {

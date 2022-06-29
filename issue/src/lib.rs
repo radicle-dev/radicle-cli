@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context};
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::issue::*;
-use radicle_common::{cobs, keys, profile, project};
+use radicle_common::{cobs, keys, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -164,8 +164,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let (project, _) = project::cwd()?;

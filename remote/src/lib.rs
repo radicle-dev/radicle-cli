@@ -8,7 +8,7 @@ use librad::git::tracking;
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{git, keys, profile, project, seed};
+use radicle_common::{git, keys, project, seed};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -106,8 +106,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer.clone())?;
     let (urn, repo) = project::cwd()?;

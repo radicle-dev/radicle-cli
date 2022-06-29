@@ -7,7 +7,7 @@ use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{Patch, PatchId};
 use radicle_common::patch::MergeStyle;
-use radicle_common::{cobs, git, keys, profile, project};
+use radicle_common::{cobs, git, keys, project};
 use radicle_terminal as term;
 
 use cobs::patch::RevisionIx;
@@ -99,13 +99,13 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     //
     // Setup
     //
     let (urn, repo) = project::cwd()
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
-    let profile = profile::default()?;
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let _project = project::get(&storage, &urn)?

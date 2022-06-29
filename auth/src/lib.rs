@@ -116,7 +116,7 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let profiles = match profile::list() {
         Ok(profiles) => profiles,
         _ => vec![],
@@ -128,7 +128,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         }
         init(options)
     } else {
-        authenticate(&profiles, options)
+        authenticate(&profiles, options, ctx)
     }
 }
 
@@ -208,8 +208,12 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn authenticate(profiles: &[profile::Profile], options: Options) -> anyhow::Result<()> {
-    let profile = match profile::default() {
+pub fn authenticate(
+    profiles: &[profile::Profile],
+    options: Options,
+    ctx: impl term::Context,
+) -> anyhow::Result<()> {
+    let profile = match ctx.profile() {
         Ok(profile) => profile,
         Err(_) => {
             anyhow::bail!(

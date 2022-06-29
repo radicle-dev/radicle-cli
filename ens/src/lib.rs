@@ -12,7 +12,7 @@ use radicle_common::ethereum::{
     resolver::{self, PublicResolver},
     ProviderOptions, SignerOptions,
 };
-use radicle_common::{keys, person, profile, seed};
+use radicle_common::{keys, person, seed};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -123,8 +123,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let rt = radicle_common::tokio::runtime::Runtime::new()?;

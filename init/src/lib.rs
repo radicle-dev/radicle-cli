@@ -121,7 +121,9 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
+
     if git::check_version().is_err() {
         term::warning(&format!(
             "Your git version is unsupported, please upgrade to {} or later",
@@ -129,10 +131,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         ));
         term::blank();
     }
-    init(options)
+    init(options, &profile)
 }
 
-pub fn init(options: Options) -> anyhow::Result<()> {
+pub fn init(options: Options, profile: &profile::Profile) -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
     let path = options.path.unwrap_or_else(|| cwd.clone());
     let path = path.as_path().canonicalize()?;
@@ -155,9 +157,8 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         );
     }
 
-    let profile = profile::default()?;
-    let signer = term::signer(&profile)?;
-    let storage = keys::storage(&profile, signer.clone())?;
+    let signer = term::signer(profile)?;
+    let storage = keys::storage(profile, signer.clone())?;
 
     let head: String = repo
         .head()

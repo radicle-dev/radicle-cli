@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{
     cobs::{self, issue, patch, CommentId},
-    keys, profile, project,
+    keys, project,
 };
 use radicle_terminal as term;
 
@@ -87,8 +87,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let (project, _) = project::cwd()?;

@@ -9,7 +9,8 @@ use librad::git::Urn;
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{keys, profile, project};
+use radicle_common::profile::Profile;
+use radicle_common::{keys, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -74,14 +75,15 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let (urn, _) =
         project::cwd().context("this command must be run in the context of a project")?;
+    let profile = ctx.profile()?;
 
-    execute(&urn, options)
+    execute(&urn, options, &profile)
 }
 
-pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
+pub fn execute(urn: &Urn, options: Options, profile: &Profile) -> anyhow::Result<()> {
     term::info!(
         "Removing tracking relationship for {}...",
         term::format::dim(urn)
@@ -90,9 +92,8 @@ pub fn execute(urn: &Urn, options: Options) -> anyhow::Result<()> {
     // TODO: Remove remote
     // TODO: Remove tracking branch
 
-    let profile = profile::default()?;
-    let signer = term::signer(&profile)?;
-    let storage = keys::storage(&profile, signer)?;
+    let signer = term::signer(profile)?;
+    let storage = keys::storage(profile, signer)?;
 
     if let Some(peer) = options.peer {
         tracking::untrack(

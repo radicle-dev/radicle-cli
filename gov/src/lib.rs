@@ -124,7 +124,7 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, _ctx: impl term::Context) -> anyhow::Result<()> {
     let rt = radicle_common::tokio::runtime::Runtime::new()?;
     let provider = ethereum::provider(options.provider)?;
     let signer_opts = options.signer;

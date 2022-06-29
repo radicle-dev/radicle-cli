@@ -69,8 +69,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let storage = profile::read_only(&profile)?;
 
     if project::get(&storage, &options.urn)?.is_none() {
@@ -90,7 +90,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             term::format::dim(namespace.display())
         ))
     {
-        rad_untrack::execute(&options.urn, rad_untrack::Options { peer: None })?;
+        rad_untrack::execute(&options.urn, rad_untrack::Options { peer: None }, &profile)?;
         fs::remove_dir_all(namespace)?;
         term::success!("Successfully removed project {}", options.urn);
     }

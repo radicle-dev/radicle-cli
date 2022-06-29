@@ -53,7 +53,7 @@ impl Args for Options {
     }
 }
 
-pub async fn run(opts: Options) -> anyhow::Result<()> {
+pub async fn run(opts: Options, _ctx: impl term::Context) -> anyhow::Result<()> {
     let chain_id: u64 = if opts.testnet {
         Chain::Rinkeby.into()
     } else {

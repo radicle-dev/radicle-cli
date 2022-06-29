@@ -40,8 +40,8 @@ impl Args for Options {
     }
 }
 
-pub fn run(_options: Options) -> anyhow::Result<()> {
-    let profile = profile::default()?;
+pub fn run(_options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
+    let profile = ctx.profile()?;
     let storage = profile::read_only(&profile)?;
     let projs = project::list(&storage)?;
     let mut table = term::Table::default();

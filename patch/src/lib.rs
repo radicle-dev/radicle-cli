@@ -18,7 +18,7 @@ use librad::profile::Profile;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, PatchStore};
-use radicle_common::{cobs, git, keys, patch, profile, project};
+use radicle_common::{cobs, git, keys, patch, project};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
 
@@ -160,11 +160,11 @@ impl Args for Options {
     }
 }
 
-pub fn run(options: Options) -> anyhow::Result<()> {
+pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let (urn, repo) = project::cwd()
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
 
-    let profile = profile::default()?;
+    let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let project = project::get(&storage, &urn)?
@@ -240,6 +240,7 @@ fn update(
     project: &project::Metadata,
     repo: &git::Repository,
     options: Options,
+    profile: &Profile,
 ) -> anyhow::Result<()> {
     let (current, current_revision) = patch.latest();
 
@@ -274,11 +275,14 @@ fn update(
     term::blank();
 
     if options.sync {
-        rad_sync::run(rad_sync::Options {
-            refs: rad_sync::Refs::Branch(branch.to_string()),
-            verbose: options.verbose,
-            ..rad_sync::Options::default()
-        })?;
+        rad_sync::run(
+            rad_sync::Options {
+                refs: rad_sync::Refs::Branch(branch.to_string()),
+                verbose: options.verbose,
+                ..rad_sync::Options::default()
+            },
+            profile.clone(),
+        )?;
     }
 
     Ok(())
@@ -415,6 +419,7 @@ fn create(
                 project,
                 repo,
                 options,
+                profile,
             );
         } else {
             anyhow::bail!("Patch update aborted by user");
@@ -490,11 +495,14 @@ fn create(
 
     // TODO: Don't show "Project synced, you can find your project at ... etc."
     if options.sync {
-        rad_sync::run(rad_sync::Options {
-            refs: rad_sync::Refs::Branch(head_branch.to_string()),
-            verbose: options.verbose,
-            ..rad_sync::Options::default()
-        })?;
+        rad_sync::run(
+            rad_sync::Options {
+                refs: rad_sync::Refs::Branch(head_branch.to_string()),
+                verbose: options.verbose,
+                ..rad_sync::Options::default()
+            },
+            profile.clone(),
+        )?;
     }
 
     Ok(())
