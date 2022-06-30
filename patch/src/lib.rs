@@ -237,6 +237,7 @@ fn list(
 fn update(
     patch: Patch,
     patch_id: PatchId,
+    base: &git::Oid,
     head: &git::Oid,
     branch: &RefLike,
     patches: &PatchStore,
@@ -270,7 +271,7 @@ fn update(
         anyhow::bail!("patch update aborted by user");
     }
 
-    let new = patches.update(&project.urn, &patch_id, message, *head)?;
+    let new = patches.update(&project.urn, &patch_id, message, *base, *head)?;
     assert_eq!(new, current + 1);
 
     term::blank();
@@ -358,11 +359,17 @@ fn create(
             todo!();
         }
     };
+    // TODO: Tell user how many peers don't have this change.
     spinner.finish();
 
+    // TODO: Handle case where `rad/master` isn't up to date with the target.
+    // In that case we should warn the user that their master branch is not up
+    // to date, and error out, unless the user specifies manually the merge
+    // base.
+
     // The merge base is basically the commit at which the histories diverge.
-    let merge_base_oid = repo.merge_base((*target_oid).into(), head_oid)?;
-    let commits = patch::patch_commits(repo, &merge_base_oid, &head_oid)?;
+    let base_oid = repo.merge_base((*target_oid).into(), head_oid)?;
+    let commits = patch::patch_commits(repo, &base_oid, &head_oid)?;
 
     let patch = match &options.update {
         Update::No => None,
@@ -371,7 +378,7 @@ fn create(
             let mut result = find_unmerged_with_base(
                 head_oid,
                 **target_oid,
-                merge_base_oid,
+                base_oid,
                 &patches,
                 &project.urn,
                 repo,
@@ -415,6 +422,7 @@ fn create(
             return update(
                 patch,
                 id,
+                &base_oid,
                 &head_oid,
                 &head_branch,
                 &patches,
@@ -488,6 +496,7 @@ fn create(
         &title,
         &description,
         MergeTarget::default(),
+        base_oid,
         head_oid,
         &[],
     )?;

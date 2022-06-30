@@ -251,6 +251,7 @@ impl<'a> PatchStore<'a> {
         title: &str,
         description: &str,
         target: MergeTarget,
+        base: impl Into<git::Oid>,
         oid: impl Into<git::Oid>,
         labels: &[Label],
     ) -> Result<PatchId, Error> {
@@ -259,6 +260,7 @@ impl<'a> PatchStore<'a> {
         let revision = Revision::new(
             author.clone(),
             self.peer_id,
+            base.into(),
             oid.into(),
             description.to_owned(),
             timestamp,
@@ -301,6 +303,7 @@ impl<'a> PatchStore<'a> {
         project: &Urn,
         patch_id: &PatchId,
         comment: impl ToString,
+        base: impl Into<git::Oid>,
         oid: impl Into<git::Oid>,
     ) -> Result<RevisionIx, Error> {
         let author = self.author();
@@ -308,6 +311,7 @@ impl<'a> PatchStore<'a> {
         let revision = Revision::new(
             author,
             self.peer_id,
+            base.into(),
             oid.into(),
             comment.to_string(),
             timestamp,
@@ -531,7 +535,9 @@ pub struct Revision<T = (), P = PeerId> {
     pub id: RevisionId,
     /// Peer who published this revision.
     pub peer: PeerId,
-    /// Reference to the Git object containing the code.
+    /// Base branch commit (merge base).
+    pub base: git::Oid,
+    /// Reference to the Git object containing the code (revision head).
     pub oid: git::Oid,
     /// "Cover letter" for this changeset.
     pub comment: Comment,
@@ -551,6 +557,7 @@ impl Revision {
     pub fn new(
         author: Author,
         peer: PeerId,
+        base: git::Oid,
         oid: git::Oid,
         comment: String,
         timestamp: Timestamp,
@@ -558,6 +565,7 @@ impl Revision {
         Self {
             id: uuid::Uuid::new_v4(),
             peer,
+            base,
             oid,
             comment: Comment::new(author, comment, timestamp),
             discussion: Discussion::default(),
@@ -594,6 +602,7 @@ impl Revision {
         tx.put(&id, "id", self.id.to_string())?;
         tx.put(&id, "peer", self.peer.to_string())?;
         tx.put(&id, "oid", self.oid.to_string())?;
+        tx.put(&id, "base", self.base.to_string())?;
 
         self.comment.put(tx, id)?;
 
@@ -763,6 +772,7 @@ mod lookup {
         let (_, reviews_id) = doc.get(&revision_id, "reviews")?;
         let id = doc.val(&revision_id, "id")?;
         let peer = doc.val(&revision_id, "peer")?;
+        let base = doc.val(&revision_id, "base")?;
         let oid = doc.val(&revision_id, "oid")?;
         let timestamp = doc.val(&revision_id, "timestamp")?;
 
@@ -783,6 +793,7 @@ mod lookup {
         Ok(Revision {
             id,
             peer,
+            base,
             oid,
             comment,
             discussion,
@@ -1106,12 +1117,14 @@ mod test {
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let oid = git::Oid::from(git2::Oid::zero());
+        let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
         let patch_id = patches
             .create(
                 &project.urn(),
                 "My first patch",
                 "Blah blah blah.",
                 target,
+                base,
                 oid,
                 &[],
             )
@@ -1130,6 +1143,7 @@ mod test {
         assert_eq!(revision.comment.body, "Blah blah blah.");
         assert_eq!(revision.discussion.len(), 0);
         assert_eq!(revision.oid, oid);
+        assert_eq!(revision.base, base);
         assert!(revision.reviews.is_empty());
         assert!(revision.merges.is_empty());
     }
@@ -1148,6 +1162,7 @@ mod test {
                 "My first patch",
                 "Blah blah blah.",
                 target,
+                base,
                 oid,
                 &[],
             )
@@ -1168,6 +1183,7 @@ mod test {
         let cobs = Store::new(whoami.clone(), profile.paths(), &storage).unwrap();
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
+        let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
         let rev_oid = git::Oid::from_str("518d5069f94c03427f694bb494ac1cd7d1339380").unwrap();
         let project = &project.urn();
         let patch_id = patches
@@ -1176,6 +1192,7 @@ mod test {
                 "My first patch",
                 "Blah blah blah.",
                 target,
+                base,
                 rev_oid,
                 &[],
             )
@@ -1200,6 +1217,7 @@ mod test {
         let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
+        let base = git::Oid::from_str("af08e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
         let rev0_oid = git::Oid::from_str("518d5069f94c03427f694bb494ac1cd7d1339380").unwrap();
         let rev1_oid = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
         let project = &project.urn();
@@ -1209,6 +1227,7 @@ mod test {
                 "My first patch",
                 "Blah blah blah.",
                 target,
+                base,
                 rev0_oid,
                 &[],
             )
@@ -1219,7 +1238,7 @@ mod test {
         assert_eq!(patch.version(), 0);
 
         let revision_id = patches
-            .update(project, &patch_id, "I've made changes.", rev1_oid)
+            .update(project, &patch_id, "I've made changes.", base, rev1_oid)
             .unwrap();
 
         assert_eq!(revision_id, 1);
