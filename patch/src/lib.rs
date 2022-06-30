@@ -335,6 +335,7 @@ fn create(
 
         let output = git::git(Path::new("."), ["push", "rad"])?;
         if options.verbose {
+            spinner.finish();
             term::blob(output);
         }
     }
@@ -357,6 +358,7 @@ fn create(
             todo!();
         }
     };
+    spinner.finish();
 
     // The merge base is basically the commit at which the histories diverge.
     let merge_base_oid = repo.merge_base((*target_oid).into(), head_oid)?;
@@ -382,6 +384,7 @@ fn create(
                         term::format::tertiary(common::fmt::cob(&id)),
                         term::format::italic(&patch.title)
                     ));
+                    spinner.finish();
                     term::blank();
 
                     Some((id, patch))
