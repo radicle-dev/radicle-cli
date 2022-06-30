@@ -342,19 +342,15 @@ fn create(
 
     // Determine the merge target for this patch. This can ben any tracked remote's "default"
     // branch, as well as your own (eg. `rad/master`).
+    let mut spinner = term::spinner("Analyzing remotes...");
     let targets = patch::find_merge_targets(&head_oid, storage, project)?;
 
-    // Show which peers have merged the patch.
-    for peer in &targets.merged {
-        term::info!(
-            "{} {}",
-            peer.name(),
-            term::format::badge_secondary("merged")
-        );
-    }
     // eg. `refs/namespaces/<proj>/refs/remotes/<peer>/heads/master`
     let (target_peer, target_oid) = match targets.not_merged.as_slice() {
-        [] => anyhow::bail!("no merge targets found for patch"),
+        [] => {
+            spinner.message("All tracked peers are up to date.");
+            return Ok(());
+        }
         [target] => target,
         _ => {
             // TODO: Let user select which branch to use as a target.
