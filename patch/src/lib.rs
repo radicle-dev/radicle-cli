@@ -203,6 +203,7 @@ fn list(
             other.push((id, patch));
         }
     }
+    term::blank();
     term::print(&term::format::badge_positive("YOU PROPOSED"));
 
     if own.is_empty() {
@@ -217,12 +218,14 @@ fn list(
     }
     term::blank();
     term::print(&term::format::badge_secondary("OTHERS PROPOSED"));
-    term::blank();
 
     if other.is_empty() {
+        term::blank();
         term::print(&term::format::italic("Nothing to show."));
     } else {
         for (id, patch) in &mut other {
+            term::blank();
+
             print(&cobs.whoami, id, patch, project, &head, repo, storage)?;
         }
     }
