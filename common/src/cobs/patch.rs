@@ -756,8 +756,11 @@ impl Review {
         Ok(())
     }
 
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
-        self.author.resolve(storage)
+    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<(), ResolveError> {
+        self.author.resolve(storage)?;
+        self.comment.resolve(storage)?;
+
+        Ok(())
     }
 }
 
