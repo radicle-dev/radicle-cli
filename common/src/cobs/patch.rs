@@ -1049,7 +1049,7 @@ mod events {
         revision_ix: RevisionIx,
         review: Review,
     ) -> Result<((), EntryContents), AutomergeError> {
-        let success = patch
+        patch
             .transact_with::<_, _, AutomergeError, _, ()>(
                 |_| CommitOptions::default().with_message("Review patch".to_owned()),
                 |tx| {
@@ -1068,10 +1068,9 @@ mod events {
             )
             .map_err(|failure| failure.error)?;
 
-        let revision_ix = success.result;
         let change = patch.get_last_local_change().unwrap().raw_bytes().to_vec();
 
-        Ok((revision_ix, EntryContents::Automerge(change)))
+        Ok(((), EntryContents::Automerge(change)))
     }
 
     pub fn merge(

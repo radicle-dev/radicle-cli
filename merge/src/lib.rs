@@ -1,4 +1,5 @@
 use std::ffi::OsString;
+use std::fmt::Write;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
@@ -265,26 +266,27 @@ fn merge_commit(
 ) -> anyhow::Result<()> {
     let description = patch.description().trim();
     let mut merge_opts = git::MergeOptions::new();
-
     let mut merge_msg = format!(
         "Merge patch '{}' from {}",
         common::fmt::cob(&patch_id),
         patch.author.name()
     );
-    merge_msg.push_str("\n\n");
+    write!(&mut merge_msg, "\n\n")?;
 
     if !description.is_empty() {
-        merge_msg.push_str(patch.description().trim());
-        merge_msg.push_str("\n\n");
+        write!(&mut merge_msg, "{}", patch.description().trim())?;
+        write!(&mut merge_msg, "\n\n")?;
     }
-    merge_msg.push_str(&format!("Rad-Patch: {}\n", patch_id));
-    merge_msg.push_str(&format!("Rad-Author: {}\n", patch.author.urn()));
-    merge_msg.push_str(&format!(
-        "Rad-Peer: {}\n",
+    writeln!(&mut merge_msg, "Rad-Patch: {}", patch_id)?;
+    writeln!(&mut merge_msg, "Rad-Author: {}", patch.author.urn())?;
+    writeln!(
+        &mut merge_msg,
+        "Rad-Peer: {}",
         patch.author.peer.default_encoding()
-    ));
-    merge_msg.push_str(&format!("Rad-Committer: {}\n\n", whoami));
-    merge_msg.push_str(MERGE_HELP_MSG.join("\n").as_str());
+    )?;
+    writeln!(&mut merge_msg, "Rad-Committer: {}", whoami)?;
+    writeln!(&mut merge_msg)?;
+    writeln!(&mut merge_msg, "{}", MERGE_HELP_MSG.join("\n").as_str())?;
 
     // Offer user the chance to edit the message before committing.
     let merge_msg = match term::Editor::new()

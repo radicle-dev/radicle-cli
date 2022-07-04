@@ -1,3 +1,4 @@
+#![allow(clippy::extra_unused_lifetimes)]
 use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::profile::{LnkHome, LNK_HOME};
 use link_identities::git::Urn;
