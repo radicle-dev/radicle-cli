@@ -8,11 +8,9 @@ use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::issue::*;
 use radicle_common::{cobs, keys, project};
 use radicle_terminal as term;
-use radicle_terminal_tui::Window;
 
+#[cfg(feature = "tui")]
 mod tui;
-
-use tui::app;
 
 pub const HELP: Help = Help {
     name: "issue",
@@ -253,9 +251,19 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "tui")]
 fn tui() -> anyhow::Result<()> {
+    use radicle_terminal_tui::Window;
+    use tui::app;
+
     let mut window = Window::default();
     window.run(&mut app::IssueTui::default())?;
 
+    Ok(())
+}
+
+#[cfg(not(feature = "tui"))]
+fn tui() -> anyhow::Result<()> {
+    term::warning("Could not run tui. Please activate feature 'tui'.");
     Ok(())
 }
