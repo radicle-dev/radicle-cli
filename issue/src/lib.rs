@@ -8,6 +8,11 @@ use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::issue::*;
 use radicle_common::{cobs, keys, project};
 use radicle_terminal as term;
+use radicle_terminal_tui::Window;
+
+mod tui;
+
+use tui::app;
 
 pub const HELP: Help = Help {
     name: "issue",
@@ -21,6 +26,7 @@ Usage
     rad issue delete <id>
     rad issue react <id> [--emoji <char>]
     rad issue list
+    rad issue interactive
 
 Options
 
@@ -41,6 +47,7 @@ pub enum OperationName {
     React,
     Delete,
     List,
+    Interactive,
 }
 
 impl Default for OperationName {
@@ -67,6 +74,7 @@ pub enum Operation {
         reaction: cobs::Reaction,
     },
     List,
+    Interactive,
 }
 
 /// Tool options.
@@ -125,6 +133,7 @@ impl Args for Options {
                     "d" | "delete" => op = Some(OperationName::Delete),
                     "l" | "list" => op = Some(OperationName::List),
                     "r" | "react" => op = Some(OperationName::React),
+                    "i" | "interactive" => op = Some(OperationName::Interactive),
 
                     unknown => anyhow::bail!("unknown operation '{}'", unknown),
                 },
@@ -158,6 +167,7 @@ impl Args for Options {
                 id: id.ok_or_else(|| anyhow!("an issue id to remove must be provided"))?,
             },
             OperationName::List => Operation::List,
+            OperationName::Interactive => Operation::Interactive,
         };
 
         Ok((Options { op }, vec![]))
@@ -235,7 +245,17 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         Operation::Delete { id } => {
             issues.remove(&project, &id)?;
         }
+        Operation::Interactive => {
+            tui()?;
+        }
     }
+
+    Ok(())
+}
+
+fn tui() -> anyhow::Result<()> {
+    let mut window = Window::default();
+    window.run(&mut app::IssueTui::default())?;
 
     Ok(())
 }

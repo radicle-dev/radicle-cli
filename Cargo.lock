@@ -4697,8 +4697,12 @@ dependencies = [
  "librad",
  "radicle-common",
  "radicle-terminal",
+ "radicle-terminal-tui",
  "serde",
+ "serde_json",
  "serde_yaml",
+ "tui-realm-stdlib",
+ "tuirealm",
 ]
 
 [[package]]

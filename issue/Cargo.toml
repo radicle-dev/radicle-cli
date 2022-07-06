@@ -11,6 +11,10 @@ lexopt = { version = "0.2" }
 anyhow = { version = "1.0" }
 librad = { version = "0" }
 radicle-terminal = { path = "../terminal" }
+radicle-terminal-tui = { path = "../terminal-tui" }
 radicle-common = { path = "../common" }
+tuirealm = { version = "1.7.0" }
+tui-realm-stdlib = { version = "1.1.6" }
+serde_json = { version = "1.0" }
 serde_yaml = { version = "0.8" }
 serde = { version = "1.0" }
