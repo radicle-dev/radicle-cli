@@ -1,11 +1,13 @@
 use tuirealm::command::{Cmd, CmdResult};
 use tuirealm::props::{AttrValue, Attribute, Color, Props, Style, TextModifiers};
-use tuirealm::tui::layout::Rect;
-use tuirealm::tui::text::Span;
-
-use tuirealm::{Frame, MockComponent, State};
+use tuirealm::tui::layout::{Constraint, Direction, Layout, Rect};
+use tuirealm::tui::text::{Span, Spans};
+use tuirealm::tui::widgets::Tabs;
+use tuirealm::{Frame, MockComponent, State, StateValue};
 
 use crate::layout::{ComponentLayout, HorizontalLayout};
+
+type BoxedComponent = Box<dyn MockComponent>;
 
 const WHITESPACE: char = ' ';
 
@@ -423,5 +425,213 @@ impl MockComponent for ShortcutBar {
 
     fn perform(&mut self, _cmd: Cmd) -> CmdResult {
         CmdResult::None
+    }
+}
+
+/// A tab header that displays all labels horizontally aligned and separated
+/// by a divider. Highlights the label defined by the current tab index.
+#[derive(Clone)]
+pub struct TabHeader {
+    attributes: Props,
+    tabs: Vec<Label>,
+    divider: Label,
+    state: TabState,
+}
+
+impl TabHeader {
+    pub fn child(mut self, tab: Label) -> Self {
+        self.tabs = [self.tabs, vec![tab]].concat();
+        self.state.len = self.tabs.len() as u16;
+        self
+    }
+
+    pub fn foreground(mut self, fg: Color) -> Self {
+        self.attr(Attribute::Foreground, AttrValue::Color(fg));
+        self
+    }
+
+    pub fn highlight(mut self, fg: Color) -> Self {
+        self.attr(Attribute::HighlightedColor, AttrValue::Color(fg));
+        self
+    }
+
+    fn height(mut self, h: u16) -> Self {
+        self.attr(Attribute::Height, AttrValue::Size(h));
+        self
+    }
+}
+
+impl Default for TabHeader {
+    fn default() -> Self {
+        Self {
+            attributes: Props::default(),
+            tabs: vec![],
+            divider: Label::new("|").foreground(Color::Rgb(70, 70, 70)),
+            state: TabState::default(),
+        }
+        .height(1)
+        .foreground(Color::Rgb(70, 70, 70))
+        .highlight(Color::Rgb(100, 100, 100))
+    }
+}
+
+impl MockComponent for TabHeader {
+    fn view(&mut self, frame: &mut Frame, area: Rect) {
+        let selected = self.state().unwrap_one().unwrap_u16();
+        let display = self
+            .attributes
+            .get_or(Attribute::Display, AttrValue::Flag(true))
+            .unwrap_flag();
+        let foreground = self
+            .attributes
+            .get_or(Attribute::Foreground, AttrValue::Color(Color::Reset))
+            .unwrap_color();
+        let highlight = self
+            .attributes
+            .get_or(Attribute::HighlightedColor, AttrValue::Color(Color::Reset))
+            .unwrap_color();
+
+        if display {
+            let spans = self
+                .tabs
+                .iter()
+                .map(|tab| Spans::from(vec![Span::from(tab)]))
+                .collect::<Vec<_>>();
+
+            let tabs = Tabs::new(spans)
+                .style(Style::default().fg(foreground))
+                .highlight_style(Style::default().fg(highlight))
+                .divider(Span::from(&self.divider))
+                .select(selected as usize);
+
+            frame.render_widget(tabs, area);
+        }
+    }
+
+    fn query(&self, attr: Attribute) -> Option<AttrValue> {
+        self.attributes.get(attr)
+    }
+
+    fn attr(&mut self, attr: Attribute, value: AttrValue) {
+        self.attributes.set(attr, value)
+    }
+
+    fn state(&self) -> State {
+        State::One(StateValue::U16(self.state.selected))
+    }
+
+    fn perform(&mut self, cmd: Cmd) -> CmdResult {
+        use tuirealm::command::Direction;
+
+        match cmd {
+            Cmd::Move(Direction::Right) => {
+                let prev = self.state.selected;
+                self.state.incr_tab_index(true);
+                if prev != self.state.selected {
+                    CmdResult::Changed(self.state())
+                } else {
+                    CmdResult::None
+                }
+            }
+            _ => CmdResult::None,
+        }
+    }
+}
+
+/// A container with a tab header. Displays the component selected by the index
+/// held in the header state.
+#[derive(Default)]
+pub struct TabContainer {
+    attributes: Props,
+    header: TabHeader,
+    children: Vec<BoxedComponent>,
+}
+
+impl TabContainer {
+    pub fn height(mut self, h: u16) -> Self {
+        self.attr(Attribute::Height, AttrValue::Size(h));
+        self
+    }
+
+    pub fn child(mut self, title: String, component: impl MockComponent + 'static) -> Self {
+        self.header = self
+            .header
+            .child(Label::new(&title).foreground(Color::Rgb(70, 70, 70)));
+        self.children.push(Box::new(component));
+        self
+    }
+}
+
+impl MockComponent for TabContainer {
+    fn view(&mut self, frame: &mut Frame, area: Rect) {
+        let display = self
+            .attributes
+            .get_or(Attribute::Display, AttrValue::Flag(true))
+            .unwrap_flag();
+        let tab_header_height = self
+            .header
+            .query(Attribute::Height)
+            .unwrap_or(AttrValue::Size(1))
+            .unwrap_size();
+        let selected = self.header.state().unwrap_one().unwrap_u16();
+
+        if display {
+            let layout = Layout::default()
+                .direction(Direction::Vertical)
+                .vertical_margin(1)
+                .constraints(
+                    [Constraint::Length(tab_header_height), Constraint::Length(0)].as_ref(),
+                )
+                .split(area);
+
+            self.header.view(frame, layout[0]);
+
+            if let Some(child) = self.children.get_mut(selected as usize) {
+                child.view(frame, layout[1]);
+            }
+        }
+    }
+
+    fn query(&self, attr: Attribute) -> Option<AttrValue> {
+        self.attributes.get(attr)
+    }
+
+    fn attr(&mut self, attr: Attribute, value: AttrValue) {
+        self.attributes.set(attr, value)
+    }
+
+    fn state(&self) -> State {
+        State::None
+    }
+
+    fn perform(&mut self, cmd: Cmd) -> CmdResult {
+        CmdResult::Batch(
+            [
+                self.children
+                    .iter_mut()
+                    .map(|child| child.perform(cmd))
+                    .collect(),
+                vec![self.header.perform(cmd)],
+            ]
+            .concat(),
+        )
+    }
+}
+
+/// State that holds the index of a selected tab item and the count of all tab items.
+/// The index can be increased and will start at 0, if length was reached.
+#[derive(Clone, Default)]
+pub struct TabState {
+    pub selected: u16,
+    pub len: u16,
+}
+
+impl TabState {
+    pub fn incr_tab_index(&mut self, rewind: bool) {
+        if self.selected + 1 < self.len {
+            self.selected += 1;
+        } else if rewind {
+            self.selected = 0;
+        }
     }
 }
