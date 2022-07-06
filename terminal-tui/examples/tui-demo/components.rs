@@ -1,10 +1,11 @@
 use tui_realm_stdlib::Textarea;
 
+use tuirealm::command::{Cmd, CmdResult, Direction};
 use tuirealm::event::{Event, Key, KeyEvent};
-use tuirealm::{Component, NoUserEvent};
+use tuirealm::{Component, MockComponent, NoUserEvent};
 
 use radicle_terminal_tui as tui;
-use tui::components::{ApplicationTitle, ShortcutBar};
+use tui::components::{ApplicationTitle, ShortcutBar, TabContainer};
 
 use super::app::Message;
 
@@ -44,5 +45,21 @@ impl Component<Message, NoUserEvent> for ShortcutBar {
             }) => Some(Message::Quit),
             _ => None,
         }
+    }
+}
+
+impl Component<Message, NoUserEvent> for TabContainer {
+    fn on(&mut self, event: Event<NoUserEvent>) -> Option<Message> {
+        let _ = match event {
+            Event::Keyboard(KeyEvent { code: Key::Tab, .. }) => {
+                self.perform(Cmd::Move(Direction::Right))
+            }
+            Event::Keyboard(KeyEvent {
+                code: Key::Char('q'),
+                ..
+            }) => return Some(Message::Quit),
+            _ => CmdResult::None,
+        };
+        None
     }
 }

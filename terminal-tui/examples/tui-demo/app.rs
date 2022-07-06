@@ -6,8 +6,7 @@ use tuirealm::tui::layout::{Constraint, Direction, Layout, Rect};
 use tuirealm::Frame;
 
 use radicle_terminal_tui as tui;
-// use tui::components::{ShortcutItem, Shortcuts, Title};
-use tui::components::{ApplicationTitle, Shortcut, ShortcutBar};
+use tui::components::{ApplicationTitle, Shortcut, ShortcutBar, TabContainer};
 use tui::{App, Tui};
 
 /// Messages handled by this tui-application.
@@ -32,13 +31,19 @@ pub struct Demo {
 /// Creates a new application using a tui-realm-application, mounts all
 /// components and sets focus to a default one.
 impl Demo {
-    pub fn demo_content() -> Vec<TextSpan> {
+    pub fn welcome_content() -> Vec<TextSpan> {
         vec![
-            TextSpan::new("# Getting started")
-                .underlined()
-                .fg(Color::Cyan),
+            TextSpan::new("# Welcome").fg(Color::Cyan),
             TextSpan::new(String::new()),
             TextSpan::from("This is a basic Radicle TUI application."),
+        ]
+    }
+
+    pub fn help_content() -> Vec<TextSpan> {
+        vec![
+            TextSpan::new("# Help").fg(Color::Cyan),
+            TextSpan::new(String::new()),
+            TextSpan::from("Please see https://radicle.xyz for further information."),
         ]
     }
 
@@ -80,18 +85,28 @@ impl Tui<Id, Message> for Demo {
         app.mount(Id::Title, ApplicationTitle::new("my-project"))?;
         app.mount(
             Id::Content,
-            Textarea::default()
-                .borders(Borders::default().sides(BorderSides::NONE))
-                .text_rows(&Self::demo_content()),
+            TabContainer::default()
+                .child(
+                    String::from("Welcome"),
+                    Textarea::default()
+                        .borders(Borders::default().sides(BorderSides::NONE))
+                        .text_rows(&Self::welcome_content()),
+                )
+                .child(
+                    String::from("Help"),
+                    Textarea::default()
+                        .borders(Borders::default().sides(BorderSides::NONE))
+                        .text_rows(&Self::help_content()),
+                ),
         )?;
         app.mount(
             Id::Shortcuts,
             ShortcutBar::default()
                 .child(Shortcut::new("q", "quit"))
-                .child(Shortcut::new("p", "print")),
+                .child(Shortcut::new("?", "help")),
         )?;
         // We need to give focus to a component then
-        app.activate(Id::Title)?;
+        app.activate(Id::Content)?;
 
         Ok(())
     }
