@@ -2,9 +2,10 @@ use anyhow::Result;
 
 use tui_realm_stdlib::Textarea;
 
+use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 use tuirealm::props::{AttrValue, Attribute, BorderSides, Borders};
 use tuirealm::tui::layout::{Constraint, Direction, Layout, Rect};
-use tuirealm::Frame;
+use tuirealm::{Frame, Sub, SubClause, SubEventClause};
 
 use librad::git::storage::ReadOnly;
 
@@ -15,6 +16,8 @@ use radicle_terminal_tui as tui;
 use tui::components::{ApplicationTitle, Shortcut, ShortcutBar, TabContainer};
 use tui::{App, Tui};
 
+use super::components::GlobalListener;
+
 /// Messages handled by this tui-application.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Message {
@@ -23,6 +26,7 @@ pub enum Message {
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum Id {
+    Global,
     Title,
     Content,
     Shortcuts,
@@ -142,6 +146,18 @@ impl Tui<Id, Message> for IssueTui {
             Id::Shortcuts,
             ShortcutBar::default().child(Shortcut::new("q", "quit")),
             vec![],
+        )?;
+
+        app.mount(
+            Id::Global,
+            GlobalListener::default(),
+            vec![Sub::new(
+                SubEventClause::Keyboard(KeyEvent {
+                    code: Key::Char('q'),
+                    modifiers: KeyModifiers::NONE,
+                }),
+                SubClause::Always,
+            )],
         )?;
 
         // We need to give focus to a component then
