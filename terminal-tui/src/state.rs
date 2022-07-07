@@ -54,15 +54,15 @@ impl<T> ListState<T> {
     pub fn select_previous(&mut self) {
         let index = match self.items.selected_index() == 0 {
             true => 0,
-            false => self.items.selected_index() - 1,
+            false => self.items.selected_index().saturating_sub(1),
         };
         self.items.select_index(index);
     }
 
     pub fn select_next(&mut self) {
         let len = self.items.all().len();
-        let index = match self.items.selected_index() >= len - 1 {
-            true => len - 1,
+        let index = match self.items.selected_index() >= len.saturating_sub(1) {
+            true => len.saturating_sub(1),
             false => self.items.selected_index() + 1,
         };
         self.items.select_index(index);

@@ -568,20 +568,13 @@ impl MockComponent for TabContainer {
             .attributes
             .get_or(Attribute::Display, AttrValue::Flag(true))
             .unwrap_flag();
-        let tab_header_height = self
-            .header
-            .query(Attribute::Height)
-            .unwrap_or(AttrValue::Size(1))
-            .unwrap_size();
         let selected = self.header.state().unwrap_one().unwrap_u16();
 
         if display {
             let layout = Layout::default()
                 .direction(Direction::Vertical)
                 .vertical_margin(1)
-                .constraints(
-                    [Constraint::Length(tab_header_height), Constraint::Length(0)].as_ref(),
-                )
+                .constraints([Constraint::Length(2), Constraint::Length(0)].as_ref())
                 .split(area);
 
             self.header.view(frame, layout[0]);
@@ -605,16 +598,10 @@ impl MockComponent for TabContainer {
     }
 
     fn perform(&mut self, cmd: Cmd) -> CmdResult {
-        CmdResult::Batch(
-            [
-                self.children
-                    .iter_mut()
-                    .map(|child| child.perform(cmd))
-                    .collect(),
-                vec![self.header.perform(cmd)],
-            ]
-            .concat(),
-        )
+        let selected = self.header.state().unwrap_one().unwrap_u16();
+        let child = self.children.get_mut(selected as usize).unwrap();
+
+        CmdResult::Batch(vec![self.header.perform(cmd), child.perform(cmd)])
     }
 }
 

@@ -1,14 +1,13 @@
 use anyhow::Result;
 
-use tui_realm_stdlib::Textarea;
-
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
-use tuirealm::props::{AttrValue, Attribute, BorderSides, Borders};
+use tuirealm::props::{AttrValue, Attribute};
 use tuirealm::tui::layout::{Constraint, Direction, Layout, Rect};
 use tuirealm::{Frame, Sub, SubClause, SubEventClause};
 
 use librad::git::storage::ReadOnly;
 
+use radicle_common::cobs::issue::State as IssueState;
 use radicle_common::cobs::issue::*;
 use radicle_common::project;
 
@@ -16,20 +15,28 @@ use radicle_terminal_tui as tui;
 use tui::components::{ApplicationTitle, Shortcut, ShortcutBar, TabContainer};
 use tui::{App, Tui};
 
-use super::components::GlobalListener;
+use super::components::{GlobalListener, IssueList};
 
 /// Messages handled by this tui-application.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Message {
+    TabChanged(usize),
     Quit,
 }
 
+/// All components known to this tui-application.
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum Id {
     Global,
     Title,
     Content,
     Shortcuts,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]
+pub enum Group {
+    Open,
+    Closed,
 }
 
 #[derive(Default)]
@@ -43,6 +50,8 @@ pub struct IssueGroups {
 pub struct IssueTui {
     /// Issues currently displayed by this tui.
     issues: IssueGroups,
+    /// Current issue.
+    active: Option<(Group, IssueId)>,
     /// True if application should quit.
     quit: bool,
 }
@@ -60,6 +69,7 @@ impl IssueTui {
 
         Self {
             issues: Self::group_issues(&issues),
+            active: None,
             quit: false,
         }
     }
@@ -115,8 +125,8 @@ impl IssueTui {
         let mut open = issues.clone();
         let mut closed = issues.clone();
 
-        open.retain(|(_, issue)| issue.state() == State::Open);
-        closed.retain(|(_, issue)| issue.state() != State::Open);
+        open.retain(|(_, issue)| issue.state() == IssueState::Open);
+        closed.retain(|(_, issue)| issue.state() != IssueState::Open);
 
         IssueGroups {
             open: open,
@@ -133,13 +143,35 @@ impl Tui<Id, Message> for IssueTui {
             TabContainer::default()
                 .child(
                     format!("{} Open", self.issues.open.len()),
-                    Textarea::default().borders(Borders::default().sides(BorderSides::NONE)),
+                    IssueList::new(self.issues.open.clone(), Group::Open),
                 )
                 .child(
                     format!("{} Closed", self.issues.closed.len()),
-                    Textarea::default().borders(Borders::default().sides(BorderSides::NONE)),
+                    IssueList::new(self.issues.closed.clone(), Group::Closed),
                 ),
-            vec![],
+            vec![
+                Sub::new(
+                    SubEventClause::Keyboard(KeyEvent {
+                        code: Key::Tab,
+                        modifiers: KeyModifiers::NONE,
+                    }),
+                    SubClause::Always,
+                ),
+                Sub::new(
+                    SubEventClause::Keyboard(KeyEvent {
+                        code: Key::Up,
+                        modifiers: KeyModifiers::NONE,
+                    }),
+                    SubClause::Always,
+                ),
+                Sub::new(
+                    SubEventClause::Keyboard(KeyEvent {
+                        code: Key::Down,
+                        modifiers: KeyModifiers::NONE,
+                    }),
+                    SubClause::Always,
+                ),
+            ],
         )?;
 
         app.mount(
@@ -178,6 +210,7 @@ impl Tui<Id, Message> for IssueTui {
         for message in app.poll() {
             match message {
                 Message::Quit => self.quit = true,
+                _ => {}
             }
         }
     }

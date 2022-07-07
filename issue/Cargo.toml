@@ -13,8 +13,9 @@ librad = { version = "0" }
 radicle-common = { path = "../common" }
 radicle-terminal = { path = "../terminal" }
 radicle-terminal-tui = { path = "../terminal-tui", optional = true }
-tuirealm = { version = "1.7.0", optional = true  }
-tui-realm-stdlib = { version = "1.1.6", optional = true  }
+timeago = { version = "0.3.1" }
+tuirealm = { version = "1.7.0", optional = true }
+tui-realm-stdlib = { version = "1.1.6", optional = true }
 serde_json = { version = "1.0" }
 serde_yaml = { version = "0.8" }
 serde = { version = "1.0" }
