@@ -4,8 +4,12 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
 
+use librad::git::storage::ReadOnly;
+use librad::git::Urn;
+
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::issue::*;
+// use radicle_common::cobs::shared::*;
 use radicle_common::{cobs, keys, project};
 use radicle_terminal as term;
 
@@ -244,7 +248,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
             issues.remove(&project, &id)?;
         }
         Operation::Interactive => {
-            tui()?;
+            tui(&storage, &project, &issues)?;
         }
     }
 
@@ -252,18 +256,26 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 }
 
 #[cfg(feature = "tui")]
-fn tui() -> anyhow::Result<()> {
+fn tui<S: AsRef<ReadOnly>>(storage: &S, project: &Urn, store: &IssueStore) -> anyhow::Result<()> {
     use radicle_terminal_tui::Window;
     use tui::app;
 
-    let mut window = Window::default();
-    window.run(&mut app::IssueTui::default())?;
+    if let Some(metadata) = project::get(&storage, &project)? {
+        let mut window = Window::default();
+        window.run(&mut app::IssueTui::new(&storage, &metadata, &store))?;
+    } else {
+        anyhow::bail!("Could not load project metadata.");
+    }
 
     Ok(())
 }
 
 #[cfg(not(feature = "tui"))]
-fn tui() -> anyhow::Result<()> {
+fn tui<S: AsRef<ReadOnly>>(
+    _storage: &S,
+    _project: &Urn,
+    _store: &IssueStore,
+) -> anyhow::Result<()> {
     term::warning("Could not run tui. Please activate feature 'tui'.");
     Ok(())
 }
