@@ -7,12 +7,12 @@ use tuirealm::terminal::TerminalBridge;
 
 use tuirealm::application::PollStrategy;
 use tuirealm::props::{AttrValue, Attribute};
-// use tuirealm::terminal::TerminalBridge;
 use tuirealm::tui::layout::Rect;
 use tuirealm::{Application, EventListenerCfg, NoUserEvent};
 use tuirealm::{Component, Frame};
 
 pub mod components;
+pub mod state;
 pub mod layout;
 pub mod theme;
 
