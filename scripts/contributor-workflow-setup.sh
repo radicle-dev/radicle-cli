@@ -94,7 +94,7 @@ git commit -m "Update README" --no-gpg-sign
 # Push commit to monorepo
 rad push
 # Create patch
-rad patch --sync
+rad patch --sync --message "Update README" --message "Reflect the recent positive news"
 # Sync identity
 rad sync --self
 

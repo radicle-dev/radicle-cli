@@ -109,7 +109,12 @@ impl Args for Options {
                     verbose = true;
                 }
                 Long("message") | Short('m') => {
-                    message = Comment::Text(parser.value()?.to_string_lossy().into());
+                    let txt: String = parser.value()?.to_string_lossy().into();
+                    if let Comment::Text(msg) = message {
+                        message = Comment::Text(msg + "\n\n" + &txt);
+                    } else {
+                        message = Comment::Text(txt.to_string());
+                    }
                 }
                 Long("no-message") => {
                     message = Comment::Blank;
@@ -312,7 +317,7 @@ fn create(
     let head_commit = repo.find_commit(head_oid)?;
     let head_branch = head
         .shorthand()
-        .ok_or(anyhow!("cannot create patch from detatched head; aborting"))?;
+        .ok_or(anyhow!("cannot create patch from detached head; aborting"))?;
     let head_branch = RefLike::try_from(head_branch)?;
 
     // Make sure the `HEAD` commit can be found in the monorepo. Otherwise there
@@ -467,7 +472,15 @@ fn create(
     let message = head_commit
         .message()
         .ok_or(anyhow!("commit summary is not valid UTF-8; aborting"))?;
-    let (title, description) = edit_message(message)?;
+    let message = options.message.get(&format!("{}{}", message, PATCH_MSG));
+    let (title, description) = message.split_once("\n\n").unwrap_or((&message, ""));
+    let (title, description) = (title.trim(), description.trim());
+    let description = description.replace(PATCH_MSG.trim(), ""); // Delete help message.
+
+    if title.is_empty() {
+        anyhow::bail!("a title must be given");
+    }
+
     let title_pretty = &term::format::dim(format!("╭─ {} ───────", title));
 
     term::blank();
@@ -493,7 +506,7 @@ fn create(
 
     let id = patches.create(
         &project.urn,
-        &title,
+        title,
         &description,
         MergeTarget::default(),
         base_oid,
@@ -517,26 +530,6 @@ fn create(
     }
 
     Ok(())
-}
-
-fn edit_message(message: &str) -> anyhow::Result<(String, String)> {
-    let message = match term::Editor::new()
-        .require_save(true)
-        .trim_newlines(true)
-        .extension(".markdown")
-        .edit(&format!("{}{}", message, PATCH_MSG))
-        .unwrap()
-    {
-        Some(s) => s,
-        None => anyhow::bail!("user aborted the patch"),
-    };
-    let (title, description) = message
-        .split_once("\n\n")
-        .ok_or(anyhow!("invalid title or description"))?;
-    let (title, description) = (title.trim(), description.trim());
-    let description = description.replace(PATCH_MSG.trim(), ""); // Delete help message.
-
-    Ok((title.to_owned(), description))
 }
 
 /// Adds patch details as a new row to `table` and render later.
