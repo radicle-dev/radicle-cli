@@ -2,12 +2,13 @@ use std::time;
 
 use librad::git::Urn;
 
-use crate as term;
 use radicle_common as common;
 use radicle_common::profile::Profile;
 use radicle_common::signer::ToSigner;
 use radicle_common::sync;
 use radicle_common::sync::SyncResult;
+
+use crate as term;
 
 pub fn sync(
     urn: Urn,

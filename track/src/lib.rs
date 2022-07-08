@@ -1,12 +1,10 @@
 use std::collections::HashMap;
-
 use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::crypto::BoxedSigner;
-
 use librad::git::storage::{ReadOnly, Storage};
 use librad::git::tracking;
 use librad::profile::Profile;
