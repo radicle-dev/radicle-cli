@@ -10,7 +10,7 @@ use librad::git::Urn;
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{git, keys, project, seed};
+use radicle_common::{git, keys, project, seed, sync, tokio};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -161,25 +161,10 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
             );
 
             if fetch {
-                let seed = if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
-                    seed
-                } else {
-                    anyhow::bail!("a seed node must be specified with `--seed`");
-                };
+                let rt = tokio::runtime::Runtime::new()?;
+                let seeds = seed::get_seeds(Default::default())?;
 
-                let mut spinner = term::spinner(&format!(
-                    "Syncing remotes from {}...",
-                    term::format::highlight(seed.host_str().unwrap_or("seed"))
-                ));
-
-                if let Err(e) =
-                    term::sync::fetch_remotes(&storage, &seed, &urn, [&peer], &mut spinner)
-                {
-                    spinner.failed();
-                    term::blank();
-
-                    return Err(e);
-                }
+                term::sync::sync(urn, seeds, sync::Mode::Fetch, &profile, signer.clone(), &rt)?;
                 git::fetch_remote(&mut remote, &repo, signer, &profile)?;
             }
             term::success!(

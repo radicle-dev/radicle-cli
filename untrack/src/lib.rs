@@ -10,7 +10,7 @@ use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::profile::Profile;
-use radicle_common::{keys, project};
+use radicle_common::{fmt, keys, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -84,11 +84,6 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 }
 
 pub fn execute(urn: &Urn, options: Options, profile: &Profile) -> anyhow::Result<()> {
-    term::info!(
-        "Removing tracking relationship for {}...",
-        term::format::dim(urn)
-    );
-
     // TODO: Remove remote
     // TODO: Remove tracking branch
 
@@ -107,7 +102,7 @@ pub fn execute(urn: &Urn, options: Options, profile: &Profile) -> anyhow::Result
         )??;
         term::success!(
             "Tracking relationship {} removed for {}",
-            peer,
+            term::format::dim(fmt::peer(&peer)),
             term::format::highlight(urn)
         );
     } else {

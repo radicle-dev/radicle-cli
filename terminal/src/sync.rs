@@ -1,43 +1,33 @@
-use librad::git::{refs, Storage, Urn};
-use librad::PeerId;
+use std::time;
+
+use librad::git::Urn;
 
 use crate as term;
 use radicle_common as common;
+use radicle_common::profile::Profile;
+use radicle_common::signer::ToSigner;
+use radicle_common::sync;
+use radicle_common::sync::SyncResult;
 
-/// Fetch remotes and verify signatures.
-pub fn fetch_remotes<'a>(
-    storage: &Storage,
-    seed: &common::Url,
-    project: &Urn,
-    remotes: impl IntoIterator<Item = &'a PeerId>,
-    spinner: &mut term::Spinner,
-) -> Result<String, anyhow::Error> {
-    let remotes = remotes.into_iter().copied().collect::<Vec<_>>();
-    let output = common::seed::fetch_remotes(storage.path(), seed, project, &remotes)?;
+pub fn sync(
+    urn: Urn,
+    seeds: Vec<sync::Seed<String>>,
+    mode: sync::Mode,
+    profile: &Profile,
+    signer: impl ToSigner,
+    rt: &common::tokio::runtime::Runtime,
+) -> anyhow::Result<Vec<SyncResult>> {
+    let signer = signer.to_signer(profile)?;
+    let timeout = time::Duration::from_secs(9);
+    let spinner = term::spinner("Syncing...");
+    let result = rt.block_on(async {
+        let (seeds, _errors) = sync::Seeds::resolve(seeds.iter()).await;
+        let client = sync::client(signer, profile).await?;
+        let result = sync::sync(&client, urn, seeds, mode, timeout).await;
 
-    verify_signed_refs(storage, project, &remotes, spinner)?;
+        Ok::<Vec<SyncResult>, anyhow::Error>(result)
+    })?;
+    spinner.finish();
 
-    Ok(output)
-}
-
-/// Verify signed refs for the given remotes.
-pub fn verify_signed_refs<'a>(
-    storage: &Storage,
-    project: &Urn,
-    remotes: impl IntoIterator<Item = &'a PeerId>,
-    spinner: &mut term::Spinner,
-) -> Result<(), anyhow::Error> {
-    spinner.message("Verifying signed refs...".to_owned());
-
-    for remote in remotes.into_iter() {
-        spinner.message(format!(
-            "Verifying signed refs for {}...",
-            common::fmt::peer(remote)
-        ));
-        if let Err(err) = refs::Refs::load(&storage, project, Some(*remote)) {
-            return Err(err.into());
-        }
-    }
-
-    Ok(())
+    Ok(result)
 }

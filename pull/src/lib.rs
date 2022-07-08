@@ -6,7 +6,8 @@ use anyhow::anyhow;
 use radicle_common::{
     args::{Args, Error, Help},
     git, identity, project,
-    seed::{self, SeedOptions},
+    seed::{self},
+    sync,
 };
 use radicle_terminal as term;
 
@@ -17,13 +18,13 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad pull [--seed <host>] [<option>...]
+    rad pull [--seed <addr>]... [<option>...]
 
-    Pulls changes into the current branch.
+    Pulls changes into the current branch after optionally syncing.
 
 Options
 
-    --seed <host>   Seed to clone from
+    --seed <addr>   Seed to sync from (may be specified multiple times)
     --help          Print help
 
 "#,
@@ -31,18 +32,22 @@ Options
 
 #[derive(Debug)]
 pub struct Options {
-    seed: Option<seed::Address>,
+    seeds: Vec<sync::Seed<String>>,
 }
 
 impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
-        let mut parser = lexopt::Parser::from_args(unparsed);
+        let mut parser = lexopt::Parser::from_args(args);
+        let mut seeds = Vec::new();
 
         if let Some(arg) = parser.next()? {
             match arg {
+                Long("seed") => {
+                    let seed = seed::parse_value(&mut parser)?;
+                    seeds.push(seed);
+                }
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
@@ -50,7 +55,7 @@ impl Args for Options {
             }
         }
 
-        Ok((Options { seed }, vec![]))
+        Ok((Options { seeds }, vec![]))
     }
 }
 
@@ -66,16 +71,10 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
     rad_sync::run(
         rad_sync::Options {
-            fetch: true,
-            origin: Some(identity::Origin {
-                urn,
-                seed: options.seed,
-            }),
-            seed: None,
-            identity: false,
-            refs: rad_sync::Refs::All,
-            push_self: false,
-            verbose: false,
+            origin: Some(identity::Origin::from_urn(urn)),
+            seeds: options.seeds,
+            mode: sync::Mode::Fetch,
+            ..rad_sync::Options::default()
         },
         ctx,
     )?;

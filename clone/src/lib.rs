@@ -9,9 +9,9 @@ use librad::git::Urn;
 use url::Url;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::seed::{self, SeedOptions};
+use radicle_common::seed::{self};
 use radicle_common::Interactive;
-use radicle_common::{git, identity, keys, profile, project};
+use radicle_common::{git, identity, keys, profile, project, sync};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -21,12 +21,12 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad clone <urn | url> [--seed <host>] [<option>...]
+    rad clone <urn | url> [--seed <addr>] [<option>...]
 
 Options
 
     --no-confirm    Don't ask for confirmation during clone
-    --seed <host>   Seed to clone from
+    --seed <addr>   Seed to clone from
     --help          Print help
 
 "#,
@@ -48,13 +48,16 @@ impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
-        let mut parser = lexopt::Parser::from_args(unparsed);
+        let mut parser = lexopt::Parser::from_args(args);
         let mut origin: Option<Origin> = None;
         let mut interactive = Interactive::Yes;
+        let mut seed = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
+                Long("seed") if seed.is_none() => {
+                    seed = Some(seed::parse_value(&mut parser)?);
+                }
                 Long("no-confirm") => {
                     interactive = Interactive::No;
                 }
@@ -65,10 +68,7 @@ impl Args for Options {
                     let val = val.to_string_lossy();
                     match Urn::from_str(&val) {
                         Ok(urn) => {
-                            origin = Some(Origin::Radicle(identity::Origin {
-                                urn,
-                                seed: seed.clone(),
-                            }));
+                            origin = Some(Origin::Radicle(identity::Origin::from_urn(urn)));
                         }
                         Err(_) => {
                             match Url::parse(&val) {
@@ -96,6 +96,12 @@ impl Args for Options {
             anyhow!("to clone, a URN or URL must be provided; see `rad clone --help`")
         })?;
 
+        let origin = if let Origin::Radicle(identity::Origin { urn, seed: None }) = origin {
+            Origin::Radicle(identity::Origin { urn, seed })
+        } else {
+            origin
+        };
+
         Ok((
             Options {
                 origin,
@@ -121,7 +127,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
 pub fn clone_project(
     urn: Urn,
-    seed: Option<seed::Address>,
+    seed: Option<sync::Seed<String>>,
     interactive: Interactive,
     ctx: impl term::Context,
 ) -> anyhow::Result<()> {
@@ -129,16 +135,12 @@ pub fn clone_project(
 
     rad_sync::run(
         rad_sync::Options {
-            fetch: true,
-            refs: rad_sync::Refs::All,
             origin: Some(identity::Origin {
                 urn: urn.clone(),
                 seed: seed.clone(),
             }),
-            seed: None,
-            identity: true,
-            push_self: false,
             verbose: true,
+            ..rad_sync::Options::default()
         },
         profile.clone(),
     )?;
@@ -150,12 +152,12 @@ pub fn clone_project(
         &profile,
     )?;
 
-    if let Some(seed_url) = seed.map(|s| s.url()) {
-        seed::set_seed(&seed_url, seed::Scope::Local(&path))?;
+    if let Some(seed) = seed {
+        seed::set_seed(&seed, seed::Scope::Local(&path))?;
         term::success!(
             "Local repository seed for {} set to {}",
             term::format::highlight(path.display()),
-            term::format::highlight(seed_url)
+            term::format::highlight(seed)
         );
     }
 
@@ -219,16 +221,16 @@ pub fn clone_repository(url: Url, profile: &profile::Profile) -> anyhow::Result<
 #[cfg(test)]
 mod test {
     use super::*;
-    use radicle_common::seed;
+    use librad::PeerId;
 
     #[test]
     fn test_args_ok() {
         let tests = vec![
-            vec!["rad://willow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y"],
+            vec!["rad://hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y"],
             vec![
                 "rad:git:hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y",
                 "--seed",
-                "willow.radicle.garden",
+                "hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden:8776",
             ],
         ];
 
@@ -245,9 +247,13 @@ mod test {
                 );
                 assert_eq!(
                     origin.seed.unwrap(),
-                    seed::Address {
-                        host: url::Host::Domain("willow.radicle.garden".to_owned()),
-                        port: None
+                    sync::Seed {
+                        peer: PeerId::from_str(
+                            "hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa"
+                        )
+                        .unwrap(),
+                        addrs: "pine.radicle.garden:8776".to_owned(),
+                        label: None
                     }
                 );
             } else {
@@ -260,14 +266,14 @@ mod test {
     fn test_args_error() {
         let tests = vec![
             vec![
-                "rad://willow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y",
+                "rad://whyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@illow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y",
                 "--seed",
-                "willow.radicle.garden",
+                "whyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@illow.radicle.garden",
             ],
             vec![
                 "https://willow.radicle.garden/hnrkfbrd7y9674d8ow8uioki16fniwcyoz67y.git",
                 "--seed",
-                "willow.radicle.garden",
+                "whyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@illow.radicle.garden",
             ],
         ];
 

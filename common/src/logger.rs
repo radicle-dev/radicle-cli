@@ -1,7 +1,7 @@
 //! Logging module.
 use std::io;
 
-use log::{Level, Log, Metadata, Record, SetLoggerError};
+pub use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 struct Logger {
     level: Level,

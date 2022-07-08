@@ -5,9 +5,10 @@ use anyhow::anyhow;
 use url::Url;
 
 use librad::git::Urn;
+use librad::PeerId;
 
 use crate::project::URL_SCHEME;
-use crate::seed;
+use crate::{seed, sync};
 
 /// Identity origin.
 ///
@@ -19,18 +20,13 @@ pub struct Origin {
     /// URN.
     pub urn: Urn,
     /// If available, the address of a seed which has this project.
-    pub seed: Option<seed::Address>,
+    pub seed: Option<sync::Seed<String>>,
 }
 
 impl Origin {
     /// Create an origin from a URN.
     pub fn from_urn(urn: Urn) -> Self {
         Self { urn, seed: None }
-    }
-
-    /// Get the seed URL, if any, of this origin.
-    pub fn seed_url(&self) -> Option<Url> {
-        self.seed.as_ref().map(|s| s.url())
     }
 }
 
@@ -63,10 +59,12 @@ impl TryFrom<Url> for Origin {
         }
 
         let host = url.host();
-        let port = url.port();
-        let seed = host.map(|host| seed::Address {
-            host: host.to_owned(),
-            port,
+        let port = url.port().unwrap_or(seed::DEFAULT_SEED_P2P_PORT);
+        let peer = PeerId::from_str(url.username())?;
+        let seed = host.map(|h| sync::Seed {
+            peer,
+            addrs: format!("{}:{}", h, port),
+            label: None,
         });
 
         let urn = if let Some(id) = segments.next() {
@@ -91,20 +89,38 @@ mod test {
     fn test_origin_from_url() {
         let url = Url::parse("rad://willow.radicle.garden/hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y")
             .unwrap();
+        Origin::try_from(url).unwrap_err();
 
+        let expected_urn = Urn::try_from_id("hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap();
+        let url = Url::parse("rad://hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden:8776/hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y")
+            .unwrap();
         let origin = Origin::try_from(url).unwrap();
 
         assert_eq!(
-            origin.urn,
-            Urn::try_from_id("hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y").unwrap()
-        );
-        assert_eq!(
             origin.seed,
-            Some(seed::Address {
-                host: url::Host::Domain("willow.radicle.garden".to_owned()),
-                port: None
+            Some(sync::Seed {
+                peer: PeerId::from_str("hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa")
+                    .unwrap(),
+                addrs: String::from("pine.radicle.garden:8776"),
+                label: None,
             })
         );
+        assert_eq!(origin.urn, expected_urn);
+
+        let url = Url::parse("rad://hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden/hnrkbjg7r54q48sqsaho1n4qfxhi4nbmdh51y")
+            .unwrap();
+        let origin = Origin::try_from(url).unwrap();
+
+        assert_eq!(
+            origin.seed,
+            Some(sync::Seed {
+                peer: PeerId::from_str("hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa")
+                    .unwrap(),
+                addrs: String::from("pine.radicle.garden:8776"),
+                label: None,
+            })
+        );
+        assert_eq!(origin.urn, expected_urn);
     }
 
     #[test]

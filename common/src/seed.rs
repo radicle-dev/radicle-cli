@@ -1,5 +1,5 @@
 //! Seed-related functionality.
-use std::ffi::OsString;
+
 use std::path::Path;
 use std::str::FromStr;
 
@@ -8,26 +8,29 @@ use librad::crypto::peer::PeerId;
 use librad::git::Urn;
 use url::{Host, Url};
 
-use crate::args::{self, Args};
+use crate::args::Error;
+use crate::sync::Seed;
 use crate::{git, project};
 
 pub const CONFIG_SEED_KEY: &str = "rad.seed";
 pub const CONFIG_PEER_KEY: &str = "rad.peer";
 pub const DEFAULT_SEEDS: &[&str] = &[
-    "pine.radicle.garden",
-    "willow.radicle.garden",
-    "maple.radicle.garden",
+    "hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden:8776",
+    "hyd7wpd8p5aqnm9htsfoatxkckmw6ingnsdudns9code5xq17h1rhw@willow.radicle.garden:8776",
+    "hyd1to75dyfpizchxp43rdwhisp8nbr76g5pxa5f4y7jh4pa6jjzns@maple.radicle.garden:8776",
 ];
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
+pub const DEFAULT_SEED_P2P_PORT: u16 = 8776;
 
 /// Git configuration scope.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub enum Scope<'a> {
     /// Local repository scope.
     Local(&'a Path),
     /// Global (user) scope.
     Global,
     /// Any (default) scope.
+    #[default]
     Any,
 }
 
@@ -100,34 +103,54 @@ impl FromStr for Address {
     }
 }
 
-/// Seed command-line options.
-#[derive(Default, Debug, Clone)]
-pub struct SeedOptions(pub Option<Address>);
+/// Parse a seed value from an options parser.
+pub fn parse_value(parser: &mut lexopt::Parser) -> anyhow::Result<Seed<String>> {
+    let value = parser.value()?;
+    let value = value.to_string_lossy();
+    let value = value.as_ref();
+    let seed = Seed::from_str(value).map_err(|_| Error::WithHint {
+        err: anyhow!("invalid seed address specified: '{}'", value),
+        hint: "hint: valid seed addresses have the format <peer-id>@<addr>, eg. hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden:8776",
+    })?;
 
-impl Args for SeedOptions {
-    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
-        use lexopt::prelude::*;
+    Ok(seed)
+}
 
-        let mut parser = lexopt::Parser::from_args(args);
-        let mut seed: Option<Address> = None;
-        let mut unparsed = Vec::new();
+/// Get the configured seed within a scope.
+pub fn get_seeds(scope: Scope) -> Result<Vec<Seed<String>>, anyhow::Error> {
+    let seed_regexp = "^rad.seed.*.address$";
+    let (path, args) = match scope {
+        Scope::Any => (Path::new("."), vec!["config", "--get-regexp", seed_regexp]),
+        Scope::Local(path) => (path, vec!["config", "--local", "--get-regexp", seed_regexp]),
+        Scope::Global => (
+            Path::new("."),
+            vec!["config", "--global", "--get-regexp", seed_regexp],
+        ),
+    };
+    let output = git::git(path, args).context("failed to lookup seed configuration")?;
 
-        while let Some(arg) = parser.next()? {
-            match arg {
-                Long("seed") if seed.is_none() => {
-                    let value = parser.value()?;
-                    let value = value.to_string_lossy();
-                    let value = value.as_ref();
-                    let addr =
-                        Address::from_str(value).context("invalid host specified for `--seed`")?;
+    // Output looks like:
+    //
+    //      rad.seed.<peer-id>.address <address>
+    //      rad.seed.<peer-id>.address <address>
+    //      rad.seed.<peer-id>.address <address>
+    //
+    let mut seeds = Vec::new();
+    for line in output.lines() {
+        if let Some((_, val)) = line.split_once(' ') {
+            let seed =
+                Seed::from_str(val).context(format!("`{}` is not a valid seed address", val))?;
 
-                    seed = Some(addr);
-                }
-                _ => unparsed.push(args::format(arg)),
-            }
+            seeds.push(seed);
+        } else {
+            return Err(anyhow!(
+                "failed to parse seed configuration; malformed output: `{}`",
+                line
+            ));
         }
-        Ok((SeedOptions(seed), unparsed))
     }
+
+    Ok(seeds)
 }
 
 /// Get the configured seed within a scope.
@@ -145,14 +168,20 @@ pub fn get_seed(scope: Scope) -> Result<Url, anyhow::Error> {
 }
 
 /// Set the configured seed within a scope.
-pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
-    let seed = seed.as_str();
+pub fn set_seed(seed: &Seed<String>, scope: Scope) -> Result<(), anyhow::Error> {
+    let seed = seed.to_string();
     let (path, args) = match scope {
-        Scope::Any => (Path::new("."), vec!["config", CONFIG_SEED_KEY, seed]),
-        Scope::Local(path) => (path, vec!["config", "--local", CONFIG_SEED_KEY, seed]),
+        Scope::Any => (
+            Path::new("."),
+            vec!["config", CONFIG_SEED_KEY, seed.as_str()],
+        ),
+        Scope::Local(path) => (
+            path,
+            vec!["config", "--local", CONFIG_SEED_KEY, seed.as_str()],
+        ),
         Scope::Global => (
             Path::new("."),
-            vec!["config", "--global", CONFIG_SEED_KEY, seed],
+            vec!["config", "--global", CONFIG_SEED_KEY, seed.as_str()],
         ),
     };
 
@@ -162,11 +191,11 @@ pub fn set_seed(seed: &Url, scope: Scope) -> Result<(), anyhow::Error> {
 }
 
 /// Set the configured "peer" seed within the local repository.
-pub fn set_peer_seed(seed: &Url, peer_id: &PeerId) -> Result<(), anyhow::Error> {
-    let seed = seed.as_str();
+pub fn set_peer_seed(seed: &Seed<String>, peer_id: &PeerId) -> Result<(), anyhow::Error> {
+    let seed = seed.to_string();
     let path = Path::new(".");
     let key = format!("{}.{}.seed", CONFIG_PEER_KEY, peer_id.default_encoding());
-    let args = ["config", "--local", &key, seed];
+    let args = ["config", "--local", &key, seed.as_str()];
 
     git::git(path, args)
         .map(|_| ())
@@ -229,170 +258,4 @@ pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo
     let response = serde_json::from_value(val)?;
 
     Ok(response)
-}
-
-/// Push a project delegate to a seed's remote scope.
-pub fn push_delegate(
-    repo: &Path,
-    seed: &Url,
-    delegate: &Urn,
-    remote: &PeerId,
-) -> Result<String, anyhow::Error> {
-    let delegate_id = delegate.encode_id();
-    let url = seed.join(&delegate_id)?;
-
-    git::git(
-        repo,
-        [
-            "push",
-            "--signed",
-            "--atomic",
-            url.as_str(),
-            &format!(
-                "refs/namespaces/{}/refs/rad/*:refs/remotes/{}/rad/*",
-                delegate_id,
-                remote.default_encoding()
-            ),
-        ],
-    )
-}
-
-/// Push a project identity to a seed's remote scope.
-pub fn push_identity(
-    repo: &Path,
-    seed: &Url,
-    urn: &Urn,
-    remote: &PeerId,
-) -> Result<String, anyhow::Error> {
-    let id = urn.encode_id();
-    let url = seed.join(&id)?;
-
-    git::git(
-        repo,
-        [
-            "push",
-            "--signed",
-            "--atomic",
-            url.as_str(),
-            &format!(
-                "refs/namespaces/{}/refs/rad/id:refs/remotes/{}/rad/id",
-                id,
-                remote.default_encoding()
-            ),
-        ],
-    )
-}
-
-/// Push options.
-#[derive(Debug)]
-pub struct PushOptions {
-    /// Push a specific head.
-    pub head: Option<String>,
-    /// Push all heads.
-    pub all: bool,
-    /// Push tags.
-    pub tags: bool,
-}
-
-/// Push project refs to a seed's remote scope.
-pub fn push_refs(
-    repo: &Path,
-    seed: &Url,
-    project: &Urn,
-    remote: &PeerId,
-    options: PushOptions,
-) -> Result<String, anyhow::Error> {
-    let project_id = project.encode_id();
-    let url = seed.join(&project_id)?;
-
-    let mut args = vec![
-        "push".to_owned(),
-        "--signed".to_owned(),
-        "--atomic".to_owned(),
-        url.to_string(),
-        format!(
-            "refs/namespaces/{}/refs/rad/ids/*:refs/remotes/{}/rad/ids/*",
-            project_id, remote
-        ),
-        format!(
-            "refs/namespaces/{}/refs/rad/self:refs/remotes/{}/rad/self",
-            project_id, remote
-        ),
-        format!(
-            "refs/namespaces/{}/refs/rad/signed_refs:refs/remotes/{}/rad/signed_refs",
-            project_id, remote
-        ),
-        format!(
-            "refs/namespaces/{}/refs/cobs/*:refs/remotes/{}/cobs/*",
-            project_id, remote
-        ),
-        format!(
-            "refs/namespaces/{}/refs/patches/*:refs/remotes/{}/patches/*",
-            project_id, remote
-        ),
-    ];
-
-    if let Some(head) = options.head {
-        args.push(format!(
-            "+refs/namespaces/{}/refs/heads/{head}:refs/remotes/{}/heads/{head}",
-            project_id, remote,
-        ));
-    } else if options.all {
-        args.push(format!(
-            "+refs/namespaces/{}/refs/heads/*:refs/remotes/{}/heads/*",
-            project_id, remote
-        ));
-    }
-
-    if options.tags {
-        args.push(format!(
-            "+refs/namespaces/{}/refs/tags/*:refs/remotes/{}/tags/*",
-            project_id, remote
-        ));
-    }
-
-    git::git(repo, args)
-}
-
-/// Fetch a project or person from a seed.
-pub fn fetch_identity(repo: &Path, seed: &Url, urn: &Urn) -> Result<String, anyhow::Error> {
-    let id = urn.encode_id();
-    let url = seed.join(&id)?;
-
-    git::git(
-        repo,
-        [
-            "fetch",
-            "--verbose",
-            "--atomic",
-            url.as_str(),
-            &format!("refs/rad/id:refs/namespaces/{}/refs/rad/id", id),
-            &format!("refs/rad/ids/*:refs/namespaces/{}/refs/rad/ids/*", id),
-        ],
-    )
-}
-
-/// Fetch project remotes from a seed.
-///
-/// *This is a low-level function that does not perform verification*.
-///
-pub fn fetch_remotes<'a>(
-    repo: &Path,
-    seed: &Url,
-    project: &Urn,
-    remotes: impl IntoIterator<Item = &'a PeerId>,
-) -> Result<String, anyhow::Error> {
-    let project_id = project.encode_id();
-    let url = seed.join(&project_id)?;
-    let mut args = Vec::new();
-
-    args.extend(["fetch", "--verbose", "--force", "--atomic", url.as_str()].map(|s| s.to_string()));
-    args.extend(remotes.into_iter().map(|remote| {
-        format!(
-            "refs/remotes/{}/*:refs/namespaces/{}/refs/remotes/{}/*",
-            remote, project_id, remote
-        )
-    }));
-
-    git::git(repo, args)
 }

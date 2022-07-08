@@ -48,6 +48,10 @@ banner() {
 
 BASE=$(pwd)
 
+# Nb. change ID to whatever your seed "Peer ID" is.
+SEED_ID="hybiuzf4onqwszanr47qbd9g6ok7ypghtaq7rp9cey561oxtbksn7c"
+SEED_ADDR="$SEED_ID@127.0.0.1:8776"
+
 rm -rf tmp/
 mkdir -p tmp/root
 
@@ -65,10 +69,11 @@ echo "ACME" > README
 git init -b master
 git add .
 git commit -m "Initial commit" --no-gpg-sign
+git config rad.seed.$SEED_ID.address $SEED_ADDR
 
 # Initialize
 rad init --name acme --description 'Acme Monorepo' --no-confirm
-rad sync --seed '127.0.0.1:8778' -v
+rad push
 
 PROJECT=$(rad inspect)
 
@@ -80,23 +85,28 @@ mkdir -p $BASE/tmp/contributor
 cd $BASE/tmp/contributor
 
 rad auth --init --name scooby --passphrase scooby
-rad clone $PROJECT --seed '127.0.0.1:8778' --no-confirm
+rad clone $PROJECT --seed $SEED_ADDR --no-confirm
+
 CONTRIBUTOR=$(rad self --profile)
 CONTRIBUTOR_PEER=$(rad self --peer)
 
-# Add commit
+# Change into project directory
 cd acme
+
+# Setup seed
+git config rad.seed.$SEED_ID.address $SEED_ADDR
+
+# Create change
 echo >> README
 echo "Acme is such a great company!" >> README
 git add .
 git commit -m "Update README" --no-gpg-sign
 
 # Push commit to monorepo
-rad push
+# (rad-push)
+git push rad
 # Create patch
 rad patch --sync --message "Update README" --message "Reflect the recent positive news"
-# Sync identity
-rad sync --self
 
 ###################
 banner "MAINTAINER"
@@ -105,7 +115,7 @@ banner "MAINTAINER"
 cd $BASE/tmp/maintainer/acme
 
 rad auth $MAINTAINER
-rad track $CONTRIBUTOR_PEER --sync
+rad track $CONTRIBUTOR_PEER
 rad patch --list
 
 rm .gitignore

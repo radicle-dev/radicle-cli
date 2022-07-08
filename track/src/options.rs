@@ -7,7 +7,9 @@ use anyhow::Context as _;
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error};
-use radicle_common::seed::{Address, SeedOptions};
+use radicle_common::seed;
+
+use radicle_common::sync::Seed;
 
 /// Tool options.
 #[derive(Debug)]
@@ -17,7 +19,7 @@ pub struct Options {
     pub sync: bool,
     pub fetch: bool,
     pub local: bool,
-    pub seed: Option<Address>,
+    pub seed: Option<Seed<String>>,
     pub verbose: bool,
 }
 
@@ -25,14 +27,14 @@ impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
-        let mut parser = lexopt::Parser::from_args(unparsed);
+        let mut parser = lexopt::Parser::from_args(args);
         let mut peer: Option<PeerId> = None;
         let mut local: Option<bool> = None;
         let mut upstream = true;
         let mut sync = true;
         let mut fetch = true;
         let mut verbose = false;
+        let mut seed = None;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -43,6 +45,9 @@ impl Args for Options {
                             .parse()
                             .context("invalid value specified for '--peer'")?,
                     );
+                }
+                Long("seed") if seed.is_none() => {
+                    seed = Some(seed::parse_value(&mut parser)?);
                 }
                 Long("sync") => sync = true,
                 Long("local") => local = Some(true),

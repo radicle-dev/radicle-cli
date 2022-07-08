@@ -82,14 +82,19 @@ where
                     process::exit(1);
                 }
                 _ => {}
-            }
+            };
             eprintln!(
                 "{} {} {} {}",
                 style("==").red(),
                 style("Error:").red(),
                 style(format!("rad-{}:", help.name)).red(),
-                style(err).red()
+                style(&err).red()
             );
+
+            if let Some(Error::WithHint { hint, .. }) = err.downcast_ref::<Error>() {
+                eprintln!("{}", style(hint).yellow());
+            }
+
             process::exit(1);
         }
     };

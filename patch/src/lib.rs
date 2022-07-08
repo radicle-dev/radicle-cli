@@ -244,7 +244,6 @@ fn update(
     patch_id: PatchId,
     base: &git::Oid,
     head: &git::Oid,
-    branch: &RefLike,
     patches: &PatchStore,
     project: &project::Metadata,
     repo: &git::Repository,
@@ -286,7 +285,6 @@ fn update(
     if options.sync {
         rad_sync::run(
             rad_sync::Options {
-                refs: rad_sync::Refs::Branch(branch.to_string()),
                 verbose: options.verbose,
                 ..rad_sync::Options::default()
             },
@@ -425,16 +423,7 @@ fn create(
             term::blank();
 
             return update(
-                patch,
-                id,
-                &base_oid,
-                &head_oid,
-                &head_branch,
-                &patches,
-                project,
-                repo,
-                options,
-                profile,
+                patch, id, &base_oid, &head_oid, &patches, project, repo, options, profile,
             );
         } else {
             anyhow::bail!("Patch update aborted by user");
@@ -521,7 +510,6 @@ fn create(
     if options.sync {
         rad_sync::run(
             rad_sync::Options {
-                refs: rad_sync::Refs::Branch(head_branch.to_string()),
                 verbose: options.verbose,
                 ..rad_sync::Options::default()
             },

@@ -3,8 +3,9 @@ use std::path::Path;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::git;
-use radicle_common::seed;
-use radicle_common::seed::SeedOptions;
+
+use radicle_common::sync::Mode;
+use radicle_common::{seed, sync};
 use radicle_terminal as term;
 
 use anyhow::anyhow;
@@ -23,7 +24,7 @@ Usage
 Options
 
     --seed <host>       Use the given seed node for syncing
-    --all               Push and sync all branches (default: false)
+    --all               Push all branches (default: false)
     --sync              Sync after pushing to the "rad" remote (default: true)
     --no-sync           Do not sync after pushing to the "rad" remote
     --help              Print help
@@ -36,16 +37,12 @@ Git options
 "#,
 };
 
-// TODO: 'self' is not pushed when user pushes to seed node,
-// they have to manually `rad sync --self`.
-
 #[derive(Default, Debug)]
 pub struct Options {
-    pub seed: Option<seed::Address>,
+    pub seed: Option<sync::Seed<String>>,
     pub verbose: bool,
     pub force: bool,
     pub all: bool,
-    pub identity: bool,
     pub set_upstream: bool,
     pub sync: bool,
 }
@@ -54,17 +51,19 @@ impl Args for Options {
     fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let (SeedOptions(seed), unparsed) = SeedOptions::from_args(args)?;
-        let mut parser = lexopt::Parser::from_args(unparsed);
+        let mut parser = lexopt::Parser::from_args(args);
         let mut verbose = false;
         let mut force = false;
-        let mut identity = true;
         let mut all = false;
         let mut sync = true;
+        let mut seed = None;
         let mut set_upstream = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
+                Long("seed") => {
+                    seed = Some(seed::parse_value(&mut parser)?);
+                }
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
@@ -83,12 +82,6 @@ impl Args for Options {
                 Long("no-sync") => {
                     sync = false;
                 }
-                Long("identity") => {
-                    identity = true;
-                }
-                Long("no-identity") => {
-                    identity = false;
-                }
                 Long("force") | Short('f') => {
                     force = true;
                 }
@@ -104,7 +97,6 @@ impl Args for Options {
                 force,
                 all,
                 set_upstream,
-                identity,
                 sync,
                 verbose,
             },
@@ -117,12 +109,6 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     ctx.profile()?;
 
     term::info!("Pushing 🌱 to remote `rad`");
-
-    let repo = git::Repository::open(Path::new("."))?;
-    let head: Option<String> = repo
-        .head()
-        .ok()
-        .and_then(|head| head.shorthand().map(|h| h.to_owned()));
 
     let mut args = vec!["push"];
 
@@ -152,20 +138,11 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         // Sync monorepo to seed.
         rad_sync::run(
             rad_sync::Options {
-                refs: if options.all {
-                    rad_sync::Refs::All
-                } else if let Some(head) = head {
-                    rad_sync::Refs::Branch(head)
-                } else {
-                    anyhow::bail!("You must be on a branch in order to push");
-                },
-                seed: options.seed,
-                identity: options.identity,
+                seeds: options.seed.into_iter().collect(),
                 verbose: options.verbose,
-
-                fetch: false,
+                mode: Mode::Push,
                 origin: None,
-                push_self: false,
+                sync_self: false,
             },
             ctx,
         )?;
