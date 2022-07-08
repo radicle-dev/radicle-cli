@@ -15,12 +15,14 @@ use radicle_terminal_tui as tui;
 use tui::components::{ApplicationTitle, Shortcut, ShortcutBar, TabContainer};
 use tui::{App, Tui};
 
-use super::components::{GlobalListener, IssueList};
+use super::components::{CommentList, GlobalListener, IssueList};
 
 /// Messages handled by this tui-application.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Message {
     TabChanged(usize),
+    EnterDetail(IssueId),
+    LeaveDetail,
     Quit,
 }
 
@@ -29,14 +31,21 @@ pub enum Message {
 pub enum Id {
     Global,
     Title,
-    Content,
+    Browser,
+    Detail,
     Shortcuts,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]
-pub enum Group {
-    Open,
-    Closed,
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum Mode {
+    Browser,
+    Detail,
+}
+
+impl Default for Mode {
+    fn default() -> Self {
+        Mode::Browser
+    }
 }
 
 #[derive(Default)]
@@ -45,13 +54,19 @@ pub struct IssueGroups {
     closed: Vec<(IssueId, Issue)>,
 }
 
+impl From<&IssueGroups> for Vec<(IssueId, Issue)> {
+    fn from(groups: &IssueGroups) -> Self {
+        [groups.open.clone(), groups.closed.clone()].concat()
+    }
+}
+
 /// App-window used by this application.
 #[derive(Default)]
 pub struct IssueTui {
     /// Issues currently displayed by this tui.
     issues: IssueGroups,
-    /// Current issue.
-    active: Option<(Group, IssueId)>,
+    /// Represents the active view
+    mode: Mode,
     /// True if application should quit.
     quit: bool,
 }
@@ -69,7 +84,7 @@ impl IssueTui {
 
         Self {
             issues: Self::group_issues(&issues),
-            active: None,
+            mode: Mode::Browser,
             quit: false,
         }
     }
@@ -139,15 +154,15 @@ impl Tui<Id, Message> for IssueTui {
     fn init(&mut self, app: &mut App<Id, Message>) -> Result<()> {
         app.mount(Id::Title, ApplicationTitle::new("my-project"), vec![])?;
         app.mount(
-            Id::Content,
+            Id::Browser,
             TabContainer::default()
                 .child(
                     format!("{} Open", self.issues.open.len()),
-                    IssueList::new(self.issues.open.clone(), Group::Open),
+                    IssueList::new(self.issues.open.clone()),
                 )
                 .child(
                     format!("{} Closed", self.issues.closed.len()),
-                    IssueList::new(self.issues.closed.clone(), Group::Closed),
+                    IssueList::new(self.issues.closed.clone()),
                 ),
             vec![
                 Sub::new(
@@ -174,6 +189,8 @@ impl Tui<Id, Message> for IssueTui {
             ],
         )?;
 
+        app.mount(Id::Detail, CommentList::<()>::new(vec![]), vec![])?;
+
         app.mount(
             Id::Shortcuts,
             ShortcutBar::default().child(Shortcut::new("q", "quit")),
@@ -193,7 +210,7 @@ impl Tui<Id, Message> for IssueTui {
         )?;
 
         // We need to give focus to a component then
-        app.activate(Id::Content)?;
+        app.activate(Id::Browser)?;
 
         Ok(())
     }
@@ -201,8 +218,15 @@ impl Tui<Id, Message> for IssueTui {
     fn view(&mut self, app: &mut App<Id, Message>, frame: &mut Frame) {
         let layout = Self::layout(app, frame);
 
-        app.view(Id::Title, frame, layout[0]);
-        app.view(Id::Content, frame, layout[1]);
+        match self.mode {
+            Mode::Browser => {
+                app.view(Id::Title, frame, layout[0]);
+                app.view(Id::Browser, frame, layout[1]);
+            }
+            Mode::Detail => {
+                app.view(Id::Detail, frame, layout[1]);
+            }
+        }
         app.view(Id::Shortcuts, frame, layout[2]);
     }
 
@@ -210,6 +234,26 @@ impl Tui<Id, Message> for IssueTui {
         for message in app.poll() {
             match message {
                 Message::Quit => self.quit = true,
+                Message::EnterDetail(issue_id) => {
+                    let issues = Vec::<(IssueId, Issue)>::from(&self.issues);
+                    if let Some((_, issue)) = issues.iter().find(|(id, _)| *id == issue_id) {
+                        let comments = issue
+                            .comments()
+                            .iter()
+                            .map(|comment| comment.clone())
+                            .collect::<Vec<_>>();
+
+                        self.mode = Mode::Detail;
+
+                        app.remount(Id::Detail, CommentList::new(comments), vec![])
+                            .ok();
+                        app.activate(Id::Detail).ok();
+                    }
+                }
+                Message::LeaveDetail => {
+                    self.mode = Mode::Browser;
+                    app.blur().ok();
+                }
                 _ => {}
             }
         }

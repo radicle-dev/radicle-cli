@@ -1,6 +1,9 @@
+use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use timeago;
+
+use librad::collaborative_objects::ObjectId;
 
 use tui_realm_stdlib::Phantom;
 
@@ -14,11 +17,11 @@ use tuirealm::tui::widgets::{List as TuiList, ListItem, ListState as TuiListStat
 use tuirealm::{Component, Frame, MockComponent, NoUserEvent, State, StateValue};
 
 use radicle_common::cobs::issue::*;
+use radicle_common::cobs::Comment;
 use radicle_terminal_tui as tui;
 use tui::components::{ApplicationTitle, ShortcutBar, TabContainer};
 use tui::state::ListState;
 
-use super::app::Group;
 use super::app::Message;
 
 /// Since `terminal-tui` does not know the type of messages that are being
@@ -64,6 +67,20 @@ impl Component<Message, NoUserEvent> for TabContainer {
                     _ => None,
                 }
             }
+            Event::Keyboard(KeyEvent {
+                code: Key::Enter, ..
+            }) => match self.perform(Cmd::Submit) {
+                CmdResult::Batch(batch) => batch.iter().fold(None, |_, result| match result {
+                    CmdResult::Submit(State::One(StateValue::String(id))) => {
+                        match ObjectId::from_str(&id) {
+                            Ok(id) => Some(Message::EnterDetail(id)),
+                            Err(_) => None,
+                        }
+                    }
+                    _ => None,
+                }),
+                _ => None,
+            },
             Event::Keyboard(KeyEvent { code: Key::Up, .. }) => {
                 self.perform(Cmd::Move(Direction::Up));
                 None
@@ -80,16 +97,14 @@ impl Component<Message, NoUserEvent> for TabContainer {
 }
 
 pub struct IssueList {
-    props: Props,
-    group: Group,
+    attributes: Props,
     issues: ListState<(IssueId, Issue)>,
 }
 
 impl IssueList {
-    pub fn new(issues: Vec<(IssueId, Issue)>, group: Group) -> Self {
+    pub fn new(issues: Vec<(IssueId, Issue)>) -> Self {
         Self {
-            props: Props::default(),
-            group: group,
+            attributes: Props::default(),
             issues: ListState::new(issues),
         }
     }
@@ -150,11 +165,11 @@ impl MockComponent for IssueList {
     }
 
     fn query(&self, attr: Attribute) -> Option<AttrValue> {
-        self.props.get(attr)
+        self.attributes.get(attr)
     }
 
     fn attr(&mut self, attr: Attribute, value: AttrValue) {
-        self.props.set(attr, value);
+        self.attributes.set(attr, value);
     }
 
     fn state(&self) -> State {
@@ -165,9 +180,91 @@ impl MockComponent for IssueList {
         match cmd {
             Cmd::Move(Direction::Up) => {
                 self.issues.select_previous();
+                let selected = self.issues.items().selected_index();
+                CmdResult::Changed(State::One(StateValue::Usize(selected)))
             }
             Cmd::Move(Direction::Down) => {
                 self.issues.select_next();
+                let selected = self.issues.items().selected_index();
+                CmdResult::Changed(State::One(StateValue::Usize(selected)))
+            }
+            Cmd::Submit => {
+                let (id, _) = self.issues.items().selected().unwrap();
+                CmdResult::Submit(State::One(StateValue::String(id.to_string())))
+            }
+            _ => CmdResult::None,
+        }
+    }
+}
+
+impl Component<Message, NoUserEvent> for IssueList {
+    fn on(&mut self, _event: Event<NoUserEvent>) -> Option<Message> {
+        None
+    }
+}
+
+pub struct CommentList<R> {
+    attributes: Props,
+    comments: ListState<Comment<R>>,
+}
+
+impl<R> CommentList<R> {
+    pub fn new(comments: Vec<Comment<R>>) -> Self {
+        Self {
+            attributes: Props::default(),
+            comments: ListState::new(comments),
+        }
+    }
+
+    fn items(&self, comment: &Comment<R>) -> ListItem {
+        let lines = vec![Spans::from(Span::styled(
+            comment.body.clone(),
+            Style::default().fg(Color::Rgb(117, 113, 249)),
+        ))];
+        ListItem::new(lines)
+    }
+}
+
+impl<R> MockComponent for CommentList<R> {
+    fn view(&mut self, render: &mut Frame, area: Rect) {
+        let items = self
+            .comments
+            .items()
+            .all()
+            .iter()
+            .map(|comment| self.items(comment))
+            .collect::<Vec<_>>();
+
+        let list = TuiList::new(items)
+            .style(Style::default().fg(Color::White))
+            .highlight_style(Style::default().fg(Color::Rgb(238, 111, 248)))
+            .highlight_symbol("│ ")
+            .repeat_highlight_symbol(true);
+
+        let mut state: TuiListState = TuiListState::default();
+        state.select(Some(self.comments.items().selected_index()));
+        render.render_stateful_widget(list, area, &mut state);
+    }
+
+    fn query(&self, attr: Attribute) -> Option<AttrValue> {
+        self.attributes.get(attr)
+    }
+
+    fn attr(&mut self, attr: Attribute, value: AttrValue) {
+        self.attributes.set(attr, value);
+    }
+
+    fn state(&self) -> State {
+        State::One(StateValue::Usize(self.comments.items().selected_index()))
+    }
+
+    fn perform(&mut self, cmd: Cmd) -> CmdResult {
+        match cmd {
+            Cmd::Move(Direction::Up) => {
+                self.comments.select_previous();
+            }
+            Cmd::Move(Direction::Down) => {
+                self.comments.select_next();
             }
             _ => {}
         }
@@ -175,8 +272,21 @@ impl MockComponent for IssueList {
     }
 }
 
-impl Component<Message, NoUserEvent> for IssueList {
-    fn on(&mut self, ev: Event<NoUserEvent>) -> Option<Message> {
-        None
+impl<R> Component<Message, NoUserEvent> for CommentList<R> {
+    fn on(&mut self, event: Event<NoUserEvent>) -> Option<Message> {
+        match event {
+            Event::Keyboard(KeyEvent {
+                code: Key::Down, ..
+            }) => {
+                self.perform(Cmd::Move(Direction::Down));
+                None
+            }
+            Event::Keyboard(KeyEvent { code: Key::Up, .. }) => {
+                self.perform(Cmd::Move(Direction::Up));
+                None
+            }
+            Event::Keyboard(KeyEvent { code: Key::Esc, .. }) => Some(Message::LeaveDetail),
+            _ => None,
+        }
     }
 }

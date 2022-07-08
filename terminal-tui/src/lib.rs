@@ -60,6 +60,24 @@ where
         Ok(())
     }
 
+    pub fn remount<C>(
+        &mut self,
+        id: Id,
+        component: C,
+        subs: Vec<Sub<Id, NoUserEvent>>,
+    ) -> Result<(), Error>
+    where
+        C: Component<Message, NoUserEvent> + 'static,
+    {
+        self.backend.remount(id, Box::new(component), subs)?;
+        Ok(())
+    }
+
+    pub fn blur(&mut self) -> Result<(), Error> {
+        self.backend.blur()?;
+        Ok(())
+    }
+
     pub fn activate(&mut self, id: Id) -> Result<(), Error> {
         self.backend.active(&id)?;
         Ok(())
