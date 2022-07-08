@@ -259,7 +259,7 @@ fn create(
         let meta: Metadata =
             serde_yaml::from_str(&meta).context("failed to parse yaml front-matter")?;
 
-        store.create(&project, &meta.title, description.trim(), &meta.labels)?;
+        store.create(project, &meta.title, description.trim(), &meta.labels)?;
     }
     Ok(())
 }

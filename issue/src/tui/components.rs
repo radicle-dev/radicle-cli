@@ -5,24 +5,27 @@ use timeago;
 
 use librad::collaborative_objects::ObjectId;
 
-use tui_realm_stdlib::Phantom;
+use tui_realm_stdlib::{utils, Phantom};
 
 use tuirealm::command::{Cmd, CmdResult, Direction};
 use tuirealm::event::{Event, Key, KeyEvent};
-use tuirealm::props::{AttrValue, Attribute, Color, Props, Style};
-use tuirealm::tui::layout::Rect;
+use tuirealm::props::{AttrValue, Attribute, Color, Props, Style, TextSpan};
+use tuirealm::tui::layout::{Constraint, Layout, Rect};
 use tuirealm::tui::style::Modifier;
 use tuirealm::tui::text::{Span, Spans};
 use tuirealm::tui::widgets::{List as TuiList, ListItem, ListState as TuiListState};
 use tuirealm::{Component, Frame, MockComponent, NoUserEvent, State, StateValue};
 
 use radicle_common::cobs::issue::*;
-use radicle_common::cobs::Comment;
+use radicle_common::cobs::Timestamp;
+
 use radicle_terminal_tui as tui;
-use tui::components::{ApplicationTitle, ShortcutBar, TabContainer};
+
+use tui::components::{ApplicationTitle, ContextBar, ShortcutBar, TabContainer};
 use tui::state::ListState;
 
 use super::app::Message;
+use super::issue::WrappedComment;
 
 /// Since `terminal-tui` does not know the type of messages that are being
 /// passed around in the app, the following handlers need to be implemented for
@@ -143,7 +146,7 @@ impl IssueList {
 }
 
 impl MockComponent for IssueList {
-    fn view(&mut self, render: &mut Frame, area: Rect) {
+    fn view(&mut self, frame: &mut Frame, area: Rect) {
         let items = self
             .issues
             .items()
@@ -161,7 +164,7 @@ impl MockComponent for IssueList {
         let mut state: TuiListState = TuiListState::default();
 
         state.select(Some(self.issues.items().selected_index()));
-        render.render_stateful_widget(list, area, &mut state);
+        frame.render_stateful_widget(list, area, &mut state);
     }
 
     fn query(&self, attr: Attribute) -> Option<AttrValue> {
@@ -205,34 +208,119 @@ impl Component<Message, NoUserEvent> for IssueList {
 
 pub struct CommentList<R> {
     attributes: Props,
-    comments: ListState<Comment<R>>,
+    comments: ListState<WrappedComment<R>>,
+    issue: Option<(IssueId, Issue)>,
 }
 
 impl<R> CommentList<R> {
-    pub fn new(comments: Vec<Comment<R>>) -> Self {
+    pub fn new(issue: Option<(IssueId, Issue)>, comments: Vec<WrappedComment<R>>) -> Self {
         Self {
             attributes: Props::default(),
             comments: ListState::new(comments),
+            issue: issue,
         }
     }
 
-    fn items(&self, comment: &Comment<R>) -> ListItem {
-        let lines = vec![Spans::from(Span::styled(
-            comment.body.clone(),
-            Style::default().fg(Color::Rgb(117, 113, 249)),
-        ))];
+    fn items(&self, comment: &WrappedComment<R>, width: u16) -> ListItem {
+        let (author, body, reactions, timestamp, indent) = comment.author_info();
+        let reactions = reactions
+            .iter()
+            .map(|(r, _)| format!("{} ", r.emoji))
+            .collect::<String>();
+
+        let lines = [
+            Self::body(body, indent, width),
+            vec![
+                Spans::from(String::new()),
+                Spans::from(Self::meta(author, reactions, timestamp, indent)),
+                Spans::from(String::new()),
+            ],
+        ]
+        .concat();
         ListItem::new(lines)
+    }
+
+    fn body<'a>(body: String, indent: u16, width: u16) -> Vec<Spans<'a>> {
+        let props = Props::default();
+        let body = TextSpan::new(body).fg(Color::Rgb(150, 150, 150));
+
+        let lines = utils::wrap_spans(&[body], (width - indent) as usize, &props)
+            .iter()
+            .map(|line| Spans::from(format!("{}{}", whitespaces(indent), line.0[0].content)))
+            .collect::<Vec<_>>();
+        lines
+    }
+
+    fn meta<'a>(
+        author: String,
+        reactions: String,
+        timestamp: Timestamp,
+        indent: u16,
+    ) -> Vec<Span<'a>> {
+        let fmt = timeago::Formatter::new();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let timeago = Duration::from_secs(now - timestamp.as_secs());
+
+        vec![
+            Span::raw(whitespaces(indent)),
+            Span::styled(
+                author,
+                Style::default()
+                    .fg(Color::Rgb(79, 75, 187))
+                    .add_modifier(Modifier::ITALIC),
+            ),
+            Span::raw(whitespaces(1)),
+            Span::styled(
+                fmt.convert(timeago),
+                Style::default()
+                    .fg(Color::Rgb(70, 70, 70))
+                    .add_modifier(Modifier::ITALIC),
+            ),
+            Span::raw(whitespaces(1)),
+            Span::raw(reactions),
+        ]
     }
 }
 
 impl<R> MockComponent for CommentList<R> {
-    fn view(&mut self, render: &mut Frame, area: Rect) {
+    fn view(&mut self, frame: &mut Frame, area: Rect) {
+        use tuirealm::tui::layout::Direction;
+
+        let mut context = match &self.issue {
+            Some((id, issue)) => ContextBar::new(
+                "Issue",
+                &format!("{}", id),
+                issue.title(),
+                &issue.author().name(),
+                &format!("{}", self.comments.items().count()),
+            ),
+            None => ContextBar::new("Issue", "", "", "", ""),
+        };
+        let context_h = context.query(Attribute::Height).unwrap().unwrap_size();
+        let spacer_h = 1;
+
+        let list_h = area.height.saturating_sub(context_h);
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Length(list_h.saturating_sub(spacer_h)),
+                    Constraint::Length(context_h),
+                    Constraint::Length(spacer_h),
+                ]
+                .as_ref(),
+            )
+            .split(area);
+
         let items = self
             .comments
             .items()
             .all()
             .iter()
-            .map(|comment| self.items(comment))
+            .map(|comment| self.items(comment, area.width))
             .collect::<Vec<_>>();
 
         let list = TuiList::new(items)
@@ -243,7 +331,9 @@ impl<R> MockComponent for CommentList<R> {
 
         let mut state: TuiListState = TuiListState::default();
         state.select(Some(self.comments.items().selected_index()));
-        render.render_stateful_widget(list, area, &mut state);
+        frame.render_stateful_widget(list, layout[0], &mut state);
+
+        context.view(frame, layout[1]);
     }
 
     fn query(&self, attr: Attribute) -> Option<AttrValue> {
@@ -288,5 +378,12 @@ impl<R> Component<Message, NoUserEvent> for CommentList<R> {
             Event::Keyboard(KeyEvent { code: Key::Esc, .. }) => Some(Message::LeaveDetail),
             _ => None,
         }
+    }
+}
+
+pub fn whitespaces(indent: u16) -> String {
+    match String::from_utf8(vec![b' '; indent as usize]) {
+        Ok(spaces) => spaces,
+        Err(_) => String::new(),
     }
 }

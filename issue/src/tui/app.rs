@@ -1,21 +1,24 @@
 use anyhow::Result;
 
+use librad::git::storage::ReadOnly;
+
 use tuirealm::event::{Key, KeyEvent, KeyModifiers};
 use tuirealm::props::{AttrValue, Attribute};
 use tuirealm::tui::layout::{Constraint, Direction, Layout, Rect};
 use tuirealm::{Frame, Sub, SubClause, SubEventClause};
 
-use librad::git::storage::ReadOnly;
-
-use radicle_common::cobs::issue::State as IssueState;
 use radicle_common::cobs::issue::*;
 use radicle_common::project;
 
 use radicle_terminal_tui as tui;
+
 use tui::components::{ApplicationTitle, Shortcut, ShortcutBar, TabContainer};
 use tui::{App, Tui};
 
 use super::components::{CommentList, GlobalListener, IssueList};
+
+use super::issue;
+use super::issue::{GroupedIssues, WrappedComment};
 
 /// Messages handled by this tui-application.
 #[derive(Debug, Eq, PartialEq)]
@@ -48,23 +51,11 @@ impl Default for Mode {
     }
 }
 
-#[derive(Default)]
-pub struct IssueGroups {
-    open: Vec<(IssueId, Issue)>,
-    closed: Vec<(IssueId, Issue)>,
-}
-
-impl From<&IssueGroups> for Vec<(IssueId, Issue)> {
-    fn from(groups: &IssueGroups) -> Self {
-        [groups.open.clone(), groups.closed.clone()].concat()
-    }
-}
-
 /// App-window used by this application.
 #[derive(Default)]
 pub struct IssueTui {
     /// Issues currently displayed by this tui.
-    issues: IssueGroups,
+    issues: GroupedIssues,
     /// Represents the active view
     mode: Mode,
     /// True if application should quit.
@@ -77,14 +68,14 @@ impl IssueTui {
         metadata: &project::Metadata,
         store: &IssueStore,
     ) -> Self {
-        let issues = match Self::load_issues(storage, metadata, store) {
+        let issues = match issue::load(storage, metadata, store) {
             Ok(issues) => issues,
             Err(_) => vec![],
         };
 
         Self {
-            issues: Self::group_issues(&issues),
-            mode: Mode::Browser,
+            issues: GroupedIssues::from(&issues),
+            mode: Mode::default(),
             quit: false,
         }
     }
@@ -111,42 +102,12 @@ impl IssueTui {
             .constraints(
                 [
                     Constraint::Length(title_h),
-                    Constraint::Length(container_h - 2),
+                    Constraint::Length(container_h.saturating_sub(2)),
                     Constraint::Length(shortcuts_h),
                 ]
                 .as_ref(),
             )
             .split(area)
-    }
-
-    fn load_issues<S: AsRef<ReadOnly>>(
-        storage: &S,
-        metadata: &project::Metadata,
-        store: &IssueStore,
-    ) -> Result<Vec<(IssueId, Issue)>> {
-        let mut issues = store.all(&metadata.urn)?;
-        Self::resolve_issues(storage, &mut issues);
-        Ok(issues)
-    }
-
-    fn resolve_issues<S: AsRef<ReadOnly>>(storage: &S, issues: &mut Vec<(IssueId, Issue)>) {
-        let _ = issues
-            .iter_mut()
-            .map(|(_, issue)| issue.resolve(&storage).ok())
-            .collect::<Vec<_>>();
-    }
-
-    fn group_issues(issues: &Vec<(IssueId, Issue)>) -> IssueGroups {
-        let mut open = issues.clone();
-        let mut closed = issues.clone();
-
-        open.retain(|(_, issue)| issue.state() == IssueState::Open);
-        closed.retain(|(_, issue)| issue.state() != IssueState::Open);
-
-        IssueGroups {
-            open: open,
-            closed: closed,
-        }
     }
 }
 
@@ -189,7 +150,7 @@ impl Tui<Id, Message> for IssueTui {
             ],
         )?;
 
-        app.mount(Id::Detail, CommentList::<()>::new(vec![]), vec![])?;
+        app.mount(Id::Detail, CommentList::<()>::new(None, vec![]), vec![])?;
 
         app.mount(
             Id::Shortcuts,
@@ -236,17 +197,31 @@ impl Tui<Id, Message> for IssueTui {
                 Message::Quit => self.quit = true,
                 Message::EnterDetail(issue_id) => {
                     let issues = Vec::<(IssueId, Issue)>::from(&self.issues);
-                    if let Some((_, issue)) = issues.iter().find(|(id, _)| *id == issue_id) {
+                    if let Some((id, issue)) = issues.iter().find(|(id, _)| *id == issue_id) {
                         let comments = issue
                             .comments()
                             .iter()
-                            .map(|comment| comment.clone())
+                            .map(|comment| WrappedComment::Reply {
+                                comment: comment.clone(),
+                            })
                             .collect::<Vec<_>>();
 
                         self.mode = Mode::Detail;
 
-                        app.remount(Id::Detail, CommentList::new(comments), vec![])
-                            .ok();
+                        let comments = [
+                            vec![WrappedComment::Root {
+                                comment: issue.comment.clone(),
+                            }],
+                            comments,
+                        ]
+                        .concat();
+
+                        app.remount(
+                            Id::Detail,
+                            CommentList::new(Some((*id, issue.clone())), comments),
+                            vec![],
+                        )
+                        .ok();
                         app.activate(Id::Detail).ok();
                     }
                 }
