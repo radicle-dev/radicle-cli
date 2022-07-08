@@ -635,3 +635,94 @@ impl TabState {
         }
     }
 }
+
+/// A single-line component, that displays multiple spans containing
+/// context information.
+pub struct ContextBar {
+    attributes: Props,
+    context: HighlightedLabel,
+    id: HighlightedLabel,
+    title: HighlightedLabel,
+    author: HighlightedLabel,
+    count: HighlightedLabel,
+}
+
+impl ContextBar {
+    pub fn new(context: &str, id: &str, title: &str, author: &str, count: &str) -> Self {
+        Self {
+            attributes: Props::default(),
+            context: HighlightedLabel::new(context).background(Color::Rgb(238, 111, 248)),
+            id: HighlightedLabel::new(id)
+                .foreground(Color::Rgb(117, 113, 249))
+                .background(Color::Rgb(40, 40, 40)),
+            title: HighlightedLabel::new(title)
+                .foreground(Color::Rgb(70, 70, 70))
+                .background(Color::Rgb(40, 40, 40)),
+            author: HighlightedLabel::new(author)
+                .foreground(Color::Rgb(117, 113, 249))
+                .background(Color::Rgb(40, 40, 40)),
+            count: HighlightedLabel::new(count)
+                .foreground(Color::Rgb(70, 70, 70))
+                .background(Color::Rgb(50, 50, 50)),
+        }
+        .height(1)
+    }
+
+    fn height(mut self, h: u16) -> Self {
+        self.attr(Attribute::Height, AttrValue::Size(h));
+        self
+    }
+}
+
+impl MockComponent for ContextBar {
+    fn view(&mut self, frame: &mut Frame, area: Rect) {
+        let display = self
+            .attributes
+            .get_or(Attribute::Display, AttrValue::Flag(true))
+            .unwrap_flag();
+
+        let context_w = self.context.query(Attribute::Width).unwrap().unwrap_size();
+        let id_w = self.id.query(Attribute::Width).unwrap().unwrap_size();
+        let author_w = self.author.query(Attribute::Width).unwrap().unwrap_size();
+        let count_w = self.count.query(Attribute::Width).unwrap().unwrap_size();
+
+        if display {
+            let layout = HorizontalLayout::new(
+                vec![
+                    Box::new(self.context.clone()),
+                    Box::new(self.id.clone()),
+                    Box::new(
+                        self.title.clone().width(
+                            area.width
+                                .saturating_sub(context_w + id_w + author_w + count_w),
+                        ),
+                    ),
+                    Box::new(self.author.clone()),
+                    Box::new(self.count.clone()),
+                ],
+                area,
+            )
+            .build();
+
+            for (mut component, area) in layout {
+                component.view(frame, area);
+            }
+        }
+    }
+
+    fn query(&self, attr: Attribute) -> Option<AttrValue> {
+        self.attributes.get(attr)
+    }
+
+    fn attr(&mut self, attr: Attribute, value: AttrValue) {
+        self.attributes.set(attr, value)
+    }
+
+    fn state(&self) -> State {
+        State::None
+    }
+
+    fn perform(&mut self, _cmd: Cmd) -> CmdResult {
+        CmdResult::None
+    }
+}
