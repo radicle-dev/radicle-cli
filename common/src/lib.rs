@@ -12,6 +12,7 @@ pub mod profile;
 pub mod project;
 pub mod seed;
 pub mod signer;
+pub mod sync;
 pub mod test;
 
 #[cfg(feature = "ethereum")]

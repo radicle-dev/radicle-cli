@@ -2268,6 +2268,7 @@ source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#5
 dependencies = [
  "bstr",
  "minicbor",
+ "serde",
  "thiserror",
 ]
 
@@ -3317,6 +3318,29 @@ dependencies = [
  "lnk-thrussh-agent",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "lnk-sync"
+version = "0.1.0"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
+dependencies = [
+ "anyhow",
+ "clap",
+ "either",
+ "futures",
+ "git-ref-format",
+ "git2",
+ "librad",
+ "link-async",
+ "link-replication",
+ "lnk-clib",
+ "lnk-identities",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -4836,14 +4860,19 @@ dependencies = [
  "coins-bip32 0.6.0",
  "either",
  "ethers",
+ "futures-lite",
+ "git-ref-format",
  "git-trailers",
  "git2",
  "hex",
  "lazy_static",
  "lexopt",
  "librad",
+ "link-async",
+ "link-replication",
  "lnk-clib",
  "lnk-identities",
+ "lnk-sync",
  "log",
  "nonempty",
  "quickcheck",
