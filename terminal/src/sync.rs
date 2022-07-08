@@ -10,6 +10,7 @@ use radicle_common::sync::SyncResult;
 
 use crate as term;
 
+// TODO: Don't return a result.
 pub fn sync(
     urn: Urn,
     seeds: Vec<sync::Seed<String>>,

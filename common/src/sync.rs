@@ -1,6 +1,7 @@
 mod push;
 
 use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::Arc;
 use std::time;
 
@@ -19,10 +20,12 @@ use librad::net::{
 use librad::profile::Profile;
 use librad::Signer;
 use link_async::Spawner;
-use lnk_clib::seed;
+use lnk_clib::seed::store::FileStore;
 
 pub use lnk_clib::seed::{Seed, Seeds};
 pub use lnk_sync::Mode;
+
+use crate::seed;
 
 /// Sync result of a seed.
 #[derive(Debug)]
@@ -95,10 +98,17 @@ pub async fn client(
 }
 
 /// Get the seeds configured for the profile.
-pub async fn seeds(profile: &Profile) -> anyhow::Result<(Seeds, Vec<lnk_clib::seed::error::Load>)> {
-    let seeds_file = profile.paths().seeds_file();
-    let store = seed::store::FileStore::<String>::new(seeds_file)?;
-    let (seeds, errors) = Seeds::load(&store, None).await?;
+/// First checks local (working copy) config, then global.
+pub fn seeds(profile: &Profile) -> anyhow::Result<Vec<Seed<String>>> {
+    let local_seeds = seed::get_seeds(seed::Scope::Local(Path::new(".")))?;
+    if !local_seeds.is_empty() {
+        return Ok(local_seeds);
+    }
 
-    Ok((seeds, errors))
+    // Fallback to global seeds if no local seeds are configured.
+    let seeds_file = profile.paths().seeds_file();
+    let store = FileStore::<String>::new(seeds_file)?;
+    let seeds = store.iter()?.collect::<Result<_, _>>()?;
+
+    Ok(seeds)
 }

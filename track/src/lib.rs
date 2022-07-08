@@ -80,7 +80,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         track(peer, proj, repo, storage, profile, signer, options)?;
     } else {
         // Show tracking graph.
-        show(proj, repo, storage.read_only(), options)?;
+        show(&profile, proj, repo, storage.read_only(), options)?;
     }
 
     Ok(())
@@ -135,7 +135,7 @@ pub fn track(
                 &rt,
             )?
         } else {
-            let seeds = seed::get_seeds(Default::default())?;
+            let seeds = sync::seeds(&profile)?;
             term::sync::sync(
                 project.urn.clone(),
                 seeds,
@@ -185,6 +185,7 @@ pub fn track(
 }
 
 pub fn show(
+    profile: &Profile,
     project: project::Metadata,
     repo: git::Repository,
     storage: &ReadOnly,
@@ -199,22 +200,25 @@ pub fn show(
         );
         show_local(&project, storage)?
     } else {
-        let seed = &if let Some(seed) = &options.seed {
-            seed::Address::from_str(&seed.addrs)?.url()
-        } else if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
+        let seed = if let Some(seed) = &options.seed {
+            seed.clone()
+        } else if let Ok(seeds) = sync::seeds(profile) {
             // TODO: Support multiple seeds.
-            seed
+            seeds
+                .first()
+                .ok_or_else(|| anyhow!("default seed list is empty"))?
+                .clone()
         } else {
             anyhow::bail!("a seed node must be specified with `--seed`");
         };
-
+        let seed = seed::Address::from_str(&seed.addrs)?.url();
         let spinner = term::spinner(&format!(
             "{} {} {}",
             term::format::highlight(&project.name),
             &project.urn,
             term::format::dim(format!("({})", seed.host_str().unwrap_or("seed"))),
         ));
-        let peers = show_remote(&project, &repo, seed)?;
+        let peers = show_remote(&project, &repo, &seed)?;
 
         spinner.done();
 

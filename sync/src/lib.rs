@@ -1,23 +1,20 @@
 #![allow(clippy::or_fun_call)]
+use std::ffi::OsString;
+use std::iter;
+use std::str::FromStr;
+
 use librad::git::Storage;
 use librad::git::Urn;
 use librad::profile::Profile;
 
 use radicle_common::args;
 use radicle_common::args::{Args, Error, Help};
-
 use radicle_common::sync::Mode;
-use radicle_common::{identity, keys, person, project, seed, seed::Scope, sync, tokio};
+use radicle_common::{identity, keys, person, project, sync, tokio};
 use radicle_terminal as term;
 
 use anyhow::anyhow;
-
 use url::Url;
-
-use std::ffi::OsString;
-use std::iter;
-
-use std::str::FromStr;
 
 pub const GATEWAY_HOST: &str = "app.radicle.network";
 pub const HELP: Help = Help {
@@ -140,15 +137,22 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;
     let rt = tokio::runtime::Runtime::new()?;
-    let seeds = rt.block_on(get_seeds(&options, &profile))?;
     let urn = if let Some(origin) = &options.origin {
         origin.urn.clone()
     } else {
         project::cwd().map(|(urn, _)| urn)?
     };
 
+    let seeds = if let Some(seed) = options.origin.as_ref().and_then(|o| o.seed.clone()) {
+        vec![seed]
+    } else if !options.seeds.is_empty() {
+        options.seeds.clone()
+    } else {
+        sync::seeds(&profile)?
+    };
+
     if seeds.is_empty() {
-        anyhow::bail!("No seeds found");
+        anyhow::bail!("No seeds configured");
     }
 
     if options.sync_self {
@@ -275,25 +279,4 @@ pub fn sync(
     }
 
     Ok(())
-}
-
-pub async fn get_seeds(
-    options: &Options,
-    _profile: &Profile,
-) -> anyhow::Result<Vec<sync::Seed<String>>> {
-    if let Some(seed) = options.origin.as_ref().and_then(|o| o.seed.clone()) {
-        return Ok(vec![seed]);
-    }
-
-    if !options.seeds.is_empty() {
-        return Ok(options.seeds.clone());
-    }
-
-    let seeds = seed::get_seeds(Scope::Any)?;
-    if !seeds.is_empty() {
-        return Ok(seeds);
-    }
-
-    // TODO: We should fallback on `sync::seeds` here.
-    Ok(vec![])
 }
