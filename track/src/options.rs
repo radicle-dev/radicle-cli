@@ -9,8 +9,6 @@ use librad::PeerId;
 use radicle_common::args::{Args, Error};
 use radicle_common::seed;
 
-use radicle_common::sync::Seed;
-
 /// Tool options.
 #[derive(Debug)]
 pub struct Options {
@@ -19,7 +17,7 @@ pub struct Options {
     pub sync: bool,
     pub fetch: bool,
     pub local: bool,
-    pub seed: Option<Seed<String>>,
+    pub seed: Option<seed::Address>,
     pub verbose: bool,
 }
 
@@ -47,7 +45,11 @@ impl Args for Options {
                     );
                 }
                 Long("seed") if seed.is_none() => {
-                    seed = Some(seed::parse_value(&mut parser)?);
+                    let value = parser.value()?;
+                    let value = value.to_string_lossy();
+                    let value = value.as_ref();
+
+                    seed = Some(seed::Address::from_str(value)?);
                 }
                 Long("sync") => sync = true,
                 Long("local") => local = Some(true),

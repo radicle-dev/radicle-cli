@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::convert::TryInto;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
@@ -43,8 +43,8 @@ pub const HELP: Help = Help {
 Usage
 
     rad track           [--local | --remote]
-    rad track           [--seed <host>]
-    rad track <peer-id> [--seed <host>] [--no-sync] [--no-upstream] [--no-fetch]
+    rad track           [--seed <url>]
+    rad track <peer-id> [--seed <url>] [--no-sync] [--no-upstream] [--no-fetch]
 
     If a peer id is supplied, track this peer in the context of the current project. By default,
     a remote is created in the repository and an upstream tracking branch is setup. If a seed
@@ -56,7 +56,7 @@ Options
 
     --local                Show the local project tracking graph
     --remote               Show the remote project tracking graph from a seed
-    --seed <host>          Seed host to fetch refs from
+    --seed <url>           Seed URL to fetch refs from
     --no-upstream          Don't setup a tracking branch for the remote
     --no-sync              Don't sync the peer's refs
     --no-fetch             Don't fetch the peer's refs into the working copy
@@ -80,7 +80,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         track(peer, proj, repo, storage, profile, signer, options)?;
     } else {
         // Show tracking graph.
-        show(&profile, proj, repo, storage.read_only(), options)?;
+        show(proj, repo, storage.read_only(), options)?;
     }
 
     Ok(())
@@ -125,10 +125,15 @@ pub fn track(
     if options.sync {
         let mode = sync::Mode::Fetch;
         let rt = tokio::runtime::Runtime::new()?;
-        let _result = if let Some(seed) = &options.seed {
+        let _result = if let Some(addr) = &options.seed {
+            let seed = addr
+                .clone()
+                .try_into()
+                .map_err(|e| anyhow!("invalid seed specified: {}", e))?;
+
             term::sync::sync(
                 project.urn.clone(),
-                vec![seed.clone()],
+                vec![seed],
                 mode,
                 &profile,
                 signer.clone(),
@@ -149,7 +154,12 @@ pub fn track(
 
     // If a seed is explicitly specified, associate it with the peer being tracked.
     if let Some(addr) = &options.seed {
-        seed::set_peer_seed(addr, &peer)?;
+        let seed = addr
+            .clone()
+            .try_into()
+            .map_err(|e| anyhow!("invalid seed specified: {}", e))?;
+
+        seed::set_peer_seed(&seed, &peer)?;
         term::success!(
             "Saving seed configuration for {} to local git config...",
             term::format::tertiary(radicle_common::fmt::peer(&peer))
@@ -185,7 +195,6 @@ pub fn track(
 }
 
 pub fn show(
-    profile: &Profile,
     project: project::Metadata,
     repo: git::Repository,
     storage: &ReadOnly,
@@ -202,23 +211,23 @@ pub fn show(
     } else {
         let seed = if let Some(seed) = &options.seed {
             seed.clone()
-        } else if let Ok(seeds) = sync::seeds(profile) {
-            // TODO: Support multiple seeds.
-            seeds
-                .first()
-                .ok_or_else(|| anyhow!("default seed list is empty"))?
-                .clone()
         } else {
             anyhow::bail!("a seed node must be specified with `--seed`");
         };
-        let seed = seed::Address::from_str(&seed.addrs)?.url();
+
+        if !matches!(seed.protocol, seed::Protocol::Git { .. }) {
+            anyhow::bail!(
+                "invalid seed specified with `--seed`: must start with `http` or `https`"
+            );
+        }
+
         let spinner = term::spinner(&format!(
             "{} {} {}",
             term::format::highlight(&project.name),
             &project.urn,
-            term::format::dim(format!("({})", seed.host_str().unwrap_or("seed"))),
+            term::format::dim(format!("({})", seed.host)),
         ));
-        let peers = show_remote(&project, &repo, &seed)?;
+        let peers = show_remote(&project, &repo, &seed.url())?;
 
         spinner.done();
 

@@ -1,5 +1,6 @@
 //! Seed-related functionality.
-
+use std::convert::TryFrom;
+use std::net;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -19,8 +20,10 @@ pub const DEFAULT_SEEDS: &[&str] = &[
     "hyd7wpd8p5aqnm9htsfoatxkckmw6ingnsdudns9code5xq17h1rhw@willow.radicle.garden:8776",
     "hyd1to75dyfpizchxp43rdwhisp8nbr76g5pxa5f4y7jh4pa6jjzns@maple.radicle.garden:8776",
 ];
+pub const DEFAULT_SEED_GIT_LOCAL_PORT: u16 = 8778;
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 pub const DEFAULT_SEED_P2P_PORT: u16 = 8776;
+pub const DEFAULT_SEED_GIT_PORT: u16 = 443;
 
 /// Git configuration scope.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -44,42 +47,157 @@ pub struct Commit {
     pub header: CommitHeader,
 }
 
-/// Seed address with optional port.
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Protocol {
+    Link { peer: Option<PeerId> },
+    Git { local: bool },
+}
+
+impl Protocol {
+    pub fn default_port(&self) -> u16 {
+        match self {
+            Self::Link { .. } => DEFAULT_SEED_P2P_PORT,
+            Self::Git { local: true } => DEFAULT_SEED_GIT_LOCAL_PORT,
+            Self::Git { local: false } => DEFAULT_SEED_GIT_PORT,
+        }
+    }
+
+    pub fn scheme(&self) -> &'static str {
+        match self {
+            Self::Link { .. } => "rad",
+            Self::Git { local: true } => "http",
+            Self::Git { local: false } => "https",
+        }
+    }
+}
+
+/// Seed address with optional port and urn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Address {
+    pub protocol: Protocol,
     pub host: Host,
     pub port: Option<u16>,
+    pub urn: Option<Urn>,
 }
 
 impl Address {
-    /// ```
-    /// use std::str::FromStr;
-    /// use radicle_common::seed as seed;
-    ///
-    /// let addr = seed::Address::from_str("willow.radicle.garden").unwrap();
-    /// assert_eq!(addr.url().to_string(), "https://willow.radicle.garden/");
-    ///
-    /// let addr = seed::Address::from_str("localhost").unwrap();
-    /// assert_eq!(addr.url().to_string(), "https://localhost/");
-    ///
-    /// let addr = seed::Address::from_str("127.0.0.1").unwrap();
-    /// assert_eq!(addr.url().to_string(), "http://127.0.0.1/");
-    /// ```
     pub fn url(&self) -> Url {
-        match self.host {
-            url::Host::Domain(_) => Url::parse(&format!("https://{}", self)).unwrap(),
-            _ => Url::parse(&format!("http://{}", self)).unwrap(),
+        Url::from(self.clone())
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port.unwrap_or(self.protocol.default_port())
+    }
+
+    pub fn peer(&self) -> Option<PeerId> {
+        if let Protocol::Link { peer } = self.protocol {
+            return peer;
         }
+        None
+    }
+}
+
+impl TryFrom<Address> for Seed<String> {
+    type Error = anyhow::Error;
+
+    fn try_from(addr: Address) -> Result<Self, Self::Error> {
+        if let Some(peer) = addr.peer() {
+            return Ok(Seed {
+                addrs: format!("{}:{}", addr.host, addr.port()),
+                peer,
+                label: None,
+            });
+        }
+        Err(anyhow::anyhow!(
+            "address is not a valid seed: peer-id missing"
+        ))
+    }
+}
+
+impl TryFrom<Url> for Address {
+    type Error = anyhow::Error;
+
+    fn try_from(url: Url) -> Result<Self, Self::Error> {
+        let peer = if url.username().is_empty() {
+            None
+        } else {
+            let peer = PeerId::from_str(url.username()).map_err(|_| {
+                anyhow::anyhow!("not a valid radicle URL '{}': invalid peer-id", url)
+            })?;
+            Some(peer)
+        };
+
+        let protocol = match url.scheme() {
+            "rad" => Protocol::Link { peer },
+            "http" => Protocol::Git { local: true },
+            "https" => Protocol::Git { local: false },
+            scheme => {
+                anyhow::bail!(
+                    "not a valid URL '{}': invalid scheme '{}'",
+                    url.to_string(),
+                    scheme
+                );
+            }
+        };
+
+        let host = url
+            .host()
+            .ok_or_else(|| anyhow::anyhow!("not a valid radicle URL '{}': missing host", url))?
+            .to_owned();
+        let port = url.port();
+
+        let urn =
+            if let Some(segment) = url.path_segments().and_then(|mut segments| segments.next()) {
+                if segment.is_empty() {
+                    None
+                } else {
+                    let urn = Urn::try_from_id(segment).map_err(|_| {
+                        anyhow!(
+                            "not a valid radicle URL '{}': invalid path '{}': not an id",
+                            url,
+                            segment
+                        )
+                    })?;
+                    Some(urn)
+                }
+            } else {
+                None
+            };
+
+        Ok(Address {
+            protocol,
+            host,
+            port,
+            urn,
+        })
+    }
+}
+
+impl From<Address> for Url {
+    fn from(addr: Address) -> Self {
+        let s = format!("{}://{}", addr.protocol.scheme(), addr.host);
+        let mut url = Url::parse(&s).unwrap();
+
+        url.set_port(addr.port).ok();
+        url.set_username(
+            addr.peer()
+                .map(|p| p.default_encoding())
+                .unwrap_or_default()
+                .as_str(),
+        )
+        .ok();
+
+        if let Some(urn) = &addr.urn {
+            url.set_path(&urn.encode_id());
+        }
+        url
     }
 }
 
 impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(port) = self.port {
-            write!(f, "{}:{}", self.host, port)
-        } else {
-            write!(f, "{}", self.host)
-        }
+        // TODO: Remove need to clone for conversion.
+        write!(f, "{}", Url::from(self.clone()))
     }
 }
 
@@ -87,19 +205,15 @@ impl FromStr for Address {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.split_once(':') {
-            Some((host, port)) => {
-                let host = Host::parse(host)?;
-                let port = Some(port.parse()?);
-
-                Ok(Self { host, port })
-            }
-            None => {
-                let host = Host::parse(s)?;
-
-                Ok(Self { host, port: None })
-            }
+        if net::SocketAddr::from_str(s).is_ok() {
+            anyhow::bail!(
+                "invalid URL '{}': protocol scheme (eg. 'https') is missing",
+                s
+            );
         }
+        let url = Url::from_str(s).map_err(|e| anyhow::anyhow!("invalid URL '{}': {}", s, e))?;
+
+        Self::try_from(url)
     }
 }
 
@@ -258,4 +372,51 @@ pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo
     let response = serde_json::from_value(val)?;
 
     Ok(response)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_address_url_roundtrip() {
+        let addr = Address::from_str("http://willow.radicle.garden").unwrap();
+        assert_eq!(Address::from_str(addr.url().as_str()).unwrap(), addr);
+
+        let addr = Address::from_str("https://willow.radicle.garden:443").unwrap();
+        assert_eq!(Address::from_str(addr.url().as_str()).unwrap(), addr);
+
+        let addr = Address::from_str("rad://hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@willow.radicle.garden:8776").unwrap();
+        assert_eq!(Address::from_str(addr.url().as_str()).unwrap(), addr);
+
+        let addr = Address::from_str("rad://hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@willow.radicle.garden:8776/hnrkmg77m8tfzj4gi4pa4mbhgysfgzwntjpao").unwrap();
+        assert_eq!(Address::from_str(addr.url().as_str()).unwrap(), addr);
+    }
+
+    #[test]
+    fn test_address_parse() {
+        let peer =
+            PeerId::from_str("hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa").unwrap();
+        let addr = Address::from_str(&format!(
+            "rad://{}@willow.radicle.garden:9999/hnrkmg77m8tfzj4gi4pa4mbhgysfgzwntjpao",
+            peer
+        ))
+        .unwrap();
+
+        assert_eq!(addr.port, Some(9999));
+        assert_eq!(addr.protocol, Protocol::Link { peer: Some(peer) });
+        assert_eq!(addr.host.to_string(), String::from("willow.radicle.garden"));
+        assert_eq!(
+            addr.urn,
+            Some(Urn::from_str("rad:git:hnrkmg77m8tfzj4gi4pa4mbhgysfgzwntjpao").unwrap())
+        );
+
+        let addr = Address::from_str("rad://willow.radicle.garden").unwrap();
+        assert_eq!(addr.port, None);
+        assert_eq!(addr.protocol, Protocol::Link { peer: None });
+        assert_eq!(addr.host.to_string(), String::from("willow.radicle.garden"));
+        assert_eq!(addr.urn, None);
+        assert_eq!(addr.port(), DEFAULT_SEED_P2P_PORT);
+    }
 }
