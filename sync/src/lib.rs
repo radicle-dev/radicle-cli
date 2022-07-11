@@ -211,6 +211,7 @@ pub fn sync(
         signer,
         &rt,
     )?;
+    term::blank();
 
     if options.verbose {
         // TODO: When sync result is usable, output should go here.

@@ -71,7 +71,7 @@ pub fn headline(headline: &str) {
 }
 
 pub fn blob(text: impl fmt::Display) {
-    println!("{}", style(text).dim());
+    println!("{}", style(text.to_string().trim()).dim());
 }
 
 pub fn blank() {
