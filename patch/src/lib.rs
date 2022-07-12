@@ -540,6 +540,29 @@ fn create(
     Ok(())
 }
 
+/// Create a human friendly message about git's sync status.
+fn pretty_sync_status(
+    repo: &git::Repository,
+    revision_oid: git::Oid,
+    head: &git::Reference,
+) -> anyhow::Result<String> {
+    let head_oid = if let Some(v) = head.target() {
+        v
+    } else {
+        return Ok(String::default());
+    };
+
+    let (a, b) = repo.graph_ahead_behind(revision_oid, head_oid)?;
+    if a == 0 && b == 0 {
+        return Ok(term::format::dim("up to date"));
+    }
+
+    let ahead = term::format::positive(a);
+    let behind = term::format::negative(b);
+
+    Ok(format!("ahead {}, behind {}", ahead, behind))
+}
+
 /// Adds patch details as a new row to `table` and render later.
 pub fn print(
     whoami: &LocalIdentity,
@@ -557,9 +580,6 @@ pub fn print(
     }
     patch.author.resolve(storage).ok();
 
-    let revision = patch.revisions.last();
-    let revision_oid = revision.oid;
-    let revision_pretty = term::format::dim(format!("R{}", patch.version()));
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";
     let mut author_info = vec![format!(
@@ -573,27 +593,14 @@ pub fn print(
     }
     author_info.push(term::format::dim(patch.timestamp));
 
-    let diff = if let Some(head_oid) = head.target() {
-        let (a, b) = repo.graph_ahead_behind(revision_oid.into(), head_oid)?;
-        if a > 0 || b > 0 {
-            let ahead = term::format::positive(a);
-            let behind = term::format::negative(b);
-
-            format!("ahead {}, behind {}", ahead, behind)
-        } else {
-            term::format::dim("up to date")
-        }
-    } else {
-        String::default()
-    };
-
+    let revision = patch.revisions.last();
     term::info!(
         "{} {} {} {} {}",
         term::format::bold(&patch.title),
         term::format::secondary(common::fmt::cob(patch_id)),
-        revision_pretty,
-        term::format::secondary(common::fmt::oid(&revision_oid)),
-        diff
+        term::format::dim(format!("R{}", patch.version())),
+        term::format::secondary(common::fmt::oid(&revision.oid)),
+        pretty_sync_status(repo, *revision.oid, head)?,
     );
     term::info!("{}", author_info.join(" "));
 
