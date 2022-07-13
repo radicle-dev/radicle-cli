@@ -347,79 +347,55 @@ impl<'a> Deserialize<'a> for Color {
     }
 }
 
-/// A user identity.
+/// An author profile.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum Identity {
-    /// Only the URN is known.
-    Unresolved { urn: Urn },
-    /// The full user identity is resolved.
-    Resolved { identity: project::PeerIdentity },
-}
-
-impl Identity {
-    pub fn urn(&self) -> &Urn {
-        match self {
-            Self::Unresolved { ref urn } => urn,
-            Self::Resolved {
-                identity: project::PeerIdentity { urn, .. },
-            } => urn,
-        }
-    }
-
-    pub fn name(&self) -> String {
-        match self {
-            Self::Unresolved { urn } => urn.encode_id(),
-            Self::Resolved { identity } => identity.name.clone(),
-        }
-    }
-
-    pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Identity, ResolveError> {
-        match self {
-            Self::Unresolved { urn } => {
-                let identity = project::PeerIdentity::get(urn, storage)?
-                    .ok_or_else(|| ResolveError::NotFound { urn: urn.clone() })?;
-                *self = Self::Resolved { identity };
-            }
-            Self::Resolved { .. } => {}
-        }
-        Ok(self)
-    }
-}
-
-impl From<Urn> for Identity {
-    fn from(urn: Urn) -> Self {
-        Self::Unresolved { urn }
-    }
+pub struct AuthorProfile {
+    pub name: String,
+    pub ens: Option<person::Ens>,
 }
 
 /// Author.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Author {
     pub peer: PeerId,
-    #[serde(flatten)]
-    pub identity: Identity,
+    #[serde(deserialize_with = "project::deserialize_urn")]
+    pub urn: Urn,
+    pub profile: Option<AuthorProfile>,
 }
 
 impl Author {
     pub fn new(urn: Urn, peer: PeerId) -> Self {
         Self {
             peer,
-            identity: Identity::Unresolved { urn },
+            urn,
+            profile: None,
         }
     }
 
     pub fn name(&self) -> String {
-        self.identity.name()
+        self.profile
+            .as_ref()
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|| self.urn.encode_id())
     }
 
     pub fn urn(&self) -> &Urn {
-        self.identity.urn()
+        &self.urn
     }
 
     pub fn resolve<S: AsRef<ReadOnly>>(&mut self, storage: &S) -> Result<&Author, ResolveError> {
-        self.identity.resolve(storage)?;
+        if self.profile.is_none() {
+            let identity = project::PeerIdentity::get(&self.urn, storage)?.ok_or_else(|| {
+                ResolveError::NotFound {
+                    urn: self.urn.clone(),
+                }
+            })?;
 
+            self.profile = Some(AuthorProfile {
+                name: identity.name,
+                ens: identity.ens,
+            });
+        }
         Ok(self)
     }
 }

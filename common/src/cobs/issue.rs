@@ -856,13 +856,13 @@ mod test {
         let c1 = &issue.comments()[0];
 
         assert!(
-            matches!(&issue.author().identity, Identity::Resolved { identity } if identity.name == "cloudhead")
+            matches!(&issue.author().profile, Some(AuthorProfile { name, .. }) if name == "cloudhead")
         );
         assert!(
-            matches!(&issue.comment.author.identity, Identity::Resolved { identity } if identity.name == "cloudhead")
+            matches!(&issue.comment.author.profile, Some(AuthorProfile { name, .. }) if name == "cloudhead")
         );
         assert!(
-            matches!(&c1.author.identity, Identity::Resolved { identity } if identity.name == "cloudhead")
+            matches!(&c1.author.profile, Some(AuthorProfile { name, .. }) if name == "cloudhead")
         );
     }
 

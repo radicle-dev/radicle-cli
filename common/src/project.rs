@@ -567,7 +567,7 @@ impl<'a> SetupRemote<'a> {
     }
 }
 
-fn deserialize_urn<'de, D>(deserializer: D) -> Result<Urn, D::Error>
+pub fn deserialize_urn<'de, D>(deserializer: D) -> Result<Urn, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
