@@ -7,7 +7,8 @@ use common::cobs::patch::Verdict;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::Patch;
-use radicle_common::{cobs, keys, project};
+use radicle_common::tokio;
+use radicle_common::{cobs, keys, project, sync};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
 
@@ -28,6 +29,7 @@ Usage
 Options
 
     -r, --revision <number>   Revision number to review, defaults to the latest
+        --[no-]sync           Sync review to seed (default: sync)
     -m, --message [<string>]  Provide a comment with the review
         --no-wmessage         Don't provide a comment with the review
         --help                Print help
@@ -49,6 +51,8 @@ pub struct Options {
     pub id: cobs::Identifier,
     pub revision: Option<RevisionIx>,
     pub message: Comment,
+    pub sync: bool,
+    pub verbose: bool,
     pub verdict: Option<Verdict>,
 }
 
@@ -60,6 +64,8 @@ impl Args for Options {
         let mut id: Option<cobs::Identifier> = None;
         let mut revision: Option<RevisionIx> = None;
         let mut message = Comment::default();
+        let mut sync = true;
+        let mut verbose = false;
         let mut verdict = None;
 
         while let Some(arg) = parser.next()? {
@@ -75,11 +81,20 @@ impl Args for Options {
                         })?;
                     revision = Some(id);
                 }
+                Long("sync") => {
+                    sync = true;
+                }
+                Long("no-sync") => {
+                    sync = false;
+                }
                 Long("message") | Short('m') => {
                     message = Comment::Text(parser.value()?.to_string_lossy().into());
                 }
                 Long("no-message") => {
                     message = Comment::Blank;
+                }
+                Long("verbose") | Short('v') => {
+                    verbose = true;
                 }
                 Long("accept") if verdict.is_none() => {
                     verdict = Some(Verdict::Accept);
@@ -105,7 +120,9 @@ impl Args for Options {
             Options {
                 id: id.ok_or_else(|| anyhow!("a patch id to review must be provided"))?,
                 message,
+                sync,
                 revision,
+                verbose,
                 verdict,
             },
             vec![],
@@ -118,7 +135,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         .map_err(|_| anyhow!("this command must be run in the context of a project"))?;
     let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
-    let storage = keys::storage(&profile, signer)?;
+    let storage = keys::storage(&profile, signer.clone())?;
     let cobs = cobs::store(&profile, &storage)?;
     let patches = cobs.patches();
 
@@ -177,6 +194,19 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         None => {
             term::success!("Patch {} reviewed", patch_id_pretty);
         }
+    }
+
+    if options.sync {
+        let rt = tokio::runtime::Runtime::new()?;
+
+        term::sync::sync(
+            urn,
+            sync::seeds(&profile)?,
+            sync::Mode::Push,
+            &profile,
+            signer,
+            &rt,
+        )?;
     }
 
     Ok(())
