@@ -149,7 +149,7 @@ pub fn init(options: Options, profile: &profile::Profile) -> anyhow::Result<()> 
         }
     ));
 
-    let repo = git::Repository::open(path)?;
+    let repo = git::Repository::open(&path)?;
     if let Ok(remote) = git::rad_remote(&repo) {
         bail!(
             "repository is already initialized with remote {}",
@@ -165,10 +165,9 @@ pub fn init(options: Options, profile: &profile::Profile) -> anyhow::Result<()> 
         .ok()
         .and_then(|head| head.shorthand().map(|h| h.to_owned()))
         .ok_or_else(|| anyhow!("error: repository head does not point to any commits"))?;
-    let cwd = env::current_dir()?;
 
     let name = options.name.unwrap_or_else(|| {
-        let default = cwd.file_name().map(|f| f.to_string_lossy().to_string());
+        let default = path.file_name().map(|f| f.to_string_lossy().to_string());
         term::text_input("Name", default).unwrap()
     });
     let description = options
