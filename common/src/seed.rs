@@ -20,18 +20,6 @@ pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 pub const DEFAULT_SEED_P2P_PORT: u16 = 8776;
 pub const DEFAULT_SEED_GIT_PORT: u16 = 443;
 
-/// Git configuration scope.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub enum Scope<'a> {
-    /// Local repository scope.
-    Local(&'a Path),
-    /// Global (user) scope.
-    Global,
-    /// Any (default) scope.
-    #[default]
-    Any,
-}
-
 #[derive(serde::Deserialize)]
 pub struct CommitHeader {
     pub summary: String,
@@ -236,43 +224,6 @@ pub fn parse_value(parser: &mut lexopt::Parser) -> anyhow::Result<Seed<String>> 
     })?;
 
     Ok(seed)
-}
-
-/// Get the configured seed within a scope.
-pub fn get_seed(scope: Scope) -> Result<Url, anyhow::Error> {
-    let (path, args) = match scope {
-        Scope::Any => (Path::new("."), vec!["config", CONFIG_SEED_KEY]),
-        Scope::Local(path) => (path, vec!["config", "--local", CONFIG_SEED_KEY]),
-        Scope::Global => (Path::new("."), vec!["config", "--global", CONFIG_SEED_KEY]),
-    };
-    let output = git::git(path, args).context("failed to lookup seed configuration")?;
-    let url =
-        Url::parse(&output).context(format!("`{}` is not set to a valid URL", CONFIG_SEED_KEY))?;
-
-    Ok(url)
-}
-
-/// Set the configured seed within a scope.
-pub fn set_seed(seed: &Seed<String>, scope: Scope) -> Result<(), anyhow::Error> {
-    let seed = seed.to_string();
-    let (path, args) = match scope {
-        Scope::Any => (
-            Path::new("."),
-            vec!["config", CONFIG_SEED_KEY, seed.as_str()],
-        ),
-        Scope::Local(path) => (
-            path,
-            vec!["config", "--local", CONFIG_SEED_KEY, seed.as_str()],
-        ),
-        Scope::Global => (
-            Path::new("."),
-            vec!["config", "--global", CONFIG_SEED_KEY, seed.as_str()],
-        ),
-    };
-
-    git::git(path, args)
-        .map(|_| ())
-        .context("failed to save seed configuration")
 }
 
 /// Set the configured "peer" seed within the local repository.

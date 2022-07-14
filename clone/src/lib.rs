@@ -137,7 +137,7 @@ pub fn clone_project(
         rad_sync::Options {
             origin: Some(identity::Origin {
                 urn: urn.clone(),
-                seed: seed.clone(),
+                seed,
             }),
             verbose: true,
             ..rad_sync::Options::default()
@@ -151,15 +151,6 @@ pub fn clone_project(
         },
         &profile,
     )?;
-
-    if let Some(seed) = seed {
-        seed::set_seed(&seed, seed::Scope::Local(&path))?;
-        term::success!(
-            "Local repository seed for {} set to {}",
-            term::format::highlight(path.display()),
-            term::format::highlight(seed)
-        );
-    }
 
     let signer = term::signer(&profile)?;
     let storage = keys::storage(&profile, signer)?;

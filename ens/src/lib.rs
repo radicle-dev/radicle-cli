@@ -213,12 +213,7 @@ async fn setup(
         }
     };
 
-    let seed_host = if let Ok(seed_url) = seed::get_seed(seed::Scope::Any) {
-        seed_url.host_str().map(|s| s.to_owned())
-    } else {
-        None
-    };
-    let seed_host = term::text_input("Seed host", seed_host)?;
+    let seed_host: String = term::text_input("Seed host", None)?;
     let seed_url = url::Url::parse(&format!("https://{}", seed_host))?;
 
     let spinner = term::spinner("Querying seed...");
