@@ -15,11 +15,6 @@ use crate::{git, project};
 
 pub const CONFIG_SEED_KEY: &str = "rad.seed";
 pub const CONFIG_PEER_KEY: &str = "rad.peer";
-pub const DEFAULT_SEEDS: &[&str] = &[
-    "hyb5to4rshftx4apgmu9s6wnsp4ddmp1mz6ijh4qqey7fb8wrpawxa@pine.radicle.garden:8776",
-    "hyd7wpd8p5aqnm9htsfoatxkckmw6ingnsdudns9code5xq17h1rhw@willow.radicle.garden:8776",
-    "hyd1to75dyfpizchxp43rdwhisp8nbr76g5pxa5f4y7jh4pa6jjzns@maple.radicle.garden:8776",
-];
 pub const DEFAULT_SEED_GIT_LOCAL_PORT: u16 = 8778;
 pub const DEFAULT_SEED_API_PORT: u16 = 8777;
 pub const DEFAULT_SEED_P2P_PORT: u16 = 8776;
@@ -51,6 +46,7 @@ pub struct Commit {
 pub enum Protocol {
     Link { peer: Option<PeerId> },
     Git { local: bool },
+    Api { local: bool },
 }
 
 impl Protocol {
@@ -59,6 +55,7 @@ impl Protocol {
             Self::Link { .. } => DEFAULT_SEED_P2P_PORT,
             Self::Git { local: true } => DEFAULT_SEED_GIT_LOCAL_PORT,
             Self::Git { local: false } => DEFAULT_SEED_GIT_PORT,
+            Self::Api { .. } => DEFAULT_SEED_API_PORT,
         }
     }
 
@@ -67,6 +64,8 @@ impl Protocol {
             Self::Link { .. } => "rad",
             Self::Git { local: true } => "http",
             Self::Git { local: false } => "https",
+            Self::Api { local: true } => "http",
+            Self::Api { local: false } => "https",
         }
     }
 }
@@ -81,6 +80,15 @@ pub struct Address {
 }
 
 impl Address {
+    pub fn new(host: impl Into<Host>, protocol: Protocol) -> Self {
+        Self {
+            host: host.into(),
+            protocol,
+            port: None,
+            urn: None,
+        }
+    }
+
     pub fn url(&self) -> Url {
         Url::from(self.clone())
     }
@@ -228,43 +236,6 @@ pub fn parse_value(parser: &mut lexopt::Parser) -> anyhow::Result<Seed<String>> 
     })?;
 
     Ok(seed)
-}
-
-/// Get the configured seed within a scope.
-pub fn get_seeds(scope: Scope) -> Result<Vec<Seed<String>>, anyhow::Error> {
-    let seed_regexp = "^rad.seed.*.address$";
-    let (path, args) = match scope {
-        Scope::Any => (Path::new("."), vec!["config", "--get-regexp", seed_regexp]),
-        Scope::Local(path) => (path, vec!["config", "--local", "--get-regexp", seed_regexp]),
-        Scope::Global => (
-            Path::new("."),
-            vec!["config", "--global", "--get-regexp", seed_regexp],
-        ),
-    };
-    let output = git::git(path, args).context("failed to lookup seed configuration")?;
-
-    // Output looks like:
-    //
-    //      rad.seed.<peer-id>.address <address>
-    //      rad.seed.<peer-id>.address <address>
-    //      rad.seed.<peer-id>.address <address>
-    //
-    let mut seeds = Vec::new();
-    for line in output.lines() {
-        if let Some((_, val)) = line.split_once(' ') {
-            let seed =
-                Seed::from_str(val).context(format!("`{}` is not a valid seed address", val))?;
-
-            seeds.push(seed);
-        } else {
-            return Err(anyhow!(
-                "failed to parse seed configuration; malformed output: `{}`",
-                line
-            ));
-        }
-    }
-
-    Ok(seeds)
 }
 
 /// Get the configured seed within a scope.

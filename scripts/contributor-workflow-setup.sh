@@ -32,6 +32,10 @@ set -e
 #
 export RAD_HOME="$(pwd)/tmp/root"
 
+# Nb. change ID to whatever your seed "Peer ID" is.
+SEED_ID="hybiuzf4onqwszanr47qbd9g6ok7ypghtaq7rp9cey561oxtbksn7c"
+SEED_ADDR="$SEED_ID@127.0.0.1:8776"
+
 rad() {
   cmd=$1; shift
 
@@ -48,10 +52,6 @@ banner() {
 
 BASE=$(pwd)
 
-# Nb. change ID to whatever your seed "Peer ID" is.
-SEED_ID="hybiuzf4onqwszanr47qbd9g6ok7ypghtaq7rp9cey561oxtbksn7c"
-SEED_ADDR="$SEED_ID@127.0.0.1:8776"
-
 rm -rf tmp/
 mkdir -p tmp/root
 
@@ -65,11 +65,20 @@ MAINTAINER=$(cargo run -q --bin rad-self -- --profile)
 # Create git repo
 mkdir -p $BASE/tmp/maintainer/acme
 cd $BASE/tmp/maintainer/acme
+# Setup project seed config.
 echo "ACME" > README
+  cat << EOF > Radicle.toml
+[[seed]]
+  name = "radicle.local"
+  p2p = "rad://$SEED_ADDR"
+  git = "http://127.0.0.1:8778"
+  api = "http://127.0.0.1:8777"
+EOF
+
+# Create repo and initial commit.
 git init -b master
 git add .
 git commit -m "Initial commit" --no-gpg-sign
-git config rad.seed.$SEED_ID.address $SEED_ADDR
 
 # Initialize
 rad init --name acme --description 'Acme Monorepo' --no-confirm
@@ -93,13 +102,10 @@ CONTRIBUTOR_PEER=$(rad self --peer)
 # Change into project directory
 cd acme
 
-# Setup seed
-git config rad.seed.$SEED_ID.address $SEED_ADDR
-
 # Create change
 echo >> README
 echo "Acme is such a great company!" >> README
-git add .
+git add README
 git commit -m "Update README" --no-gpg-sign
 
 # Push commit to monorepo

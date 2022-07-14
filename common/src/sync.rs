@@ -1,7 +1,7 @@
 mod push;
 
+use std::convert::TryInto;
 use std::net::SocketAddr;
-use std::path::Path;
 use std::sync::Arc;
 use std::time;
 
@@ -25,7 +25,7 @@ use lnk_clib::seed::store::FileStore;
 pub use lnk_clib::seed::{Seed, Seeds};
 pub use lnk_sync::Mode;
 
-use crate::seed;
+use crate::config;
 
 /// Sync result of a seed.
 #[derive(Debug)]
@@ -100,12 +100,19 @@ pub async fn client(
 /// Get the seeds configured for the profile.
 /// First checks local (working copy) config, then global.
 pub fn seeds(profile: &Profile) -> anyhow::Result<Vec<Seed<String>>> {
-    let local_seeds = seed::get_seeds(seed::Scope::Local(Path::new(".")))?;
-    if !local_seeds.is_empty() {
-        return Ok(local_seeds);
+    let config = config::Config::load(profile)?;
+    let seeds = config
+        .seeds()
+        .cloned()
+        .map(|s| s.try_into())
+        .collect::<Result<Vec<_>, _>>()?;
+    if !seeds.is_empty() {
+        return Ok(seeds);
     }
 
     // Fallback to global seeds if no local seeds are configured.
+    // Nb. These seeds are in a different format, and eventually we will consolidate the
+    // seed configurations under a unified format. For now we support both.
     let seeds_file = profile.paths().seeds_file();
     let store = FileStore::<String>::new(seeds_file)?;
     let seeds = store.iter()?.collect::<Result<_, _>>()?;

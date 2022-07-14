@@ -2,6 +2,7 @@
 #![allow(clippy::or_fun_call)]
 pub mod args;
 pub mod cobs;
+pub mod config;
 pub mod git;
 pub mod identity;
 pub mod keys;

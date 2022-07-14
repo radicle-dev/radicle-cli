@@ -1,7 +1,5 @@
 #![allow(clippy::or_fun_call)]
 use std::ffi::OsString;
-use std::fs::File;
-use std::io::Write;
 use std::str::FromStr;
 
 use anyhow::Context as _;
@@ -12,7 +10,7 @@ use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::profile::ProfileId;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{git, keys, person, profile, seed};
+use radicle_common::{config, git, keys, person, profile};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -179,18 +177,9 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         signer
     };
 
-    {
-        spinner = term::spinner("Setting up default seeds list...");
-
-        let path = profile.paths().seeds_file();
-        let mut file = File::create(path)?;
-
-        for seed in seed::DEFAULT_SEEDS {
-            // TODO: Finish spinner on error.
-            writeln!(&mut file, "{}", seed)?;
-        }
-        spinner.finish();
-    }
+    spinner = term::spinner("Setting up config...");
+    config::Config::init(&profile)?;
+    spinner.finish();
 
     let storage = keys::storage(&profile, signer.clone())?;
     let person = person::create(&profile, &name, signer, &storage)
