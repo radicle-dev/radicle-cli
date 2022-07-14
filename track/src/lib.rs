@@ -123,33 +123,25 @@ pub fn track(
     );
 
     if options.sync {
-        let mode = sync::Mode::Fetch;
-        let rt = tokio::runtime::Runtime::new()?;
-        let _result = if let Some(addr) = &options.seed {
+        let seeds = if let Some(addr) = &options.seed {
             let seed = addr
                 .clone()
                 .try_into()
                 .map_err(|e| anyhow!("invalid seed specified: {}", e))?;
-
-            term::sync::sync(
-                project.urn.clone(),
-                vec![seed],
-                mode,
-                &profile,
-                signer.clone(),
-                &rt,
-            )?
+            vec![seed]
         } else {
-            let seeds = sync::seeds(&profile)?;
-            term::sync::sync(
-                project.urn.clone(),
-                seeds,
-                mode,
-                &profile,
-                signer.clone(),
-                &rt,
-            )?
+            sync::seeds(&profile)?
         };
+
+        let rt = tokio::runtime::Runtime::new()?;
+        term::sync::sync(
+            project.urn.clone(),
+            seeds,
+            sync::Mode::Fetch,
+            &profile,
+            signer.clone(),
+            &rt,
+        )?;
     }
 
     // If a seed is explicitly specified, associate it with the peer being tracked.
