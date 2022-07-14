@@ -32,8 +32,7 @@ set -e
 #
 export RAD_HOME="$(pwd)/tmp/root"
 
-# Nb. change ID to whatever your seed "Peer ID" is.
-SEED_ID="hybiuzf4onqwszanr47qbd9g6ok7ypghtaq7rp9cey561oxtbksn7c"
+SEED_ID=$(curl http://127.0.0.1:8777 | jq --raw-output .peer.id)
 SEED_ADDR="$SEED_ID@127.0.0.1:8776"
 
 rad() {
