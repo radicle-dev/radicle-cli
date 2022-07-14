@@ -10,7 +10,9 @@ use librad::PeerId;
 use serde::{Deserialize, Serialize};
 use url::{Host, Url};
 
-use crate::seed::{Address, Protocol};
+use crate::seed::{
+    Address, Protocol, DEFAULT_SEED_API_PORT, DEFAULT_SEED_GIT_PORT, DEFAULT_SEED_P2P_PORT,
+};
 use crate::sync::Seed;
 
 pub const DEFAULT_SEEDS: &[(&str, &str)] = &[
@@ -69,14 +71,19 @@ impl Default for Config {
                 .map(|(host, peer)| {
                     let host = String::from(*host);
                     let peer = PeerId::from_str(peer).ok();
-                    let p2p =
+
+                    let mut p2p: Url =
                         Address::new(Host::Domain(host.clone()), Protocol::Link { peer }).into();
-                    let git =
+                    let mut git: Url =
                         Address::new(Host::Domain(host.clone()), Protocol::Git { local: false })
                             .into();
-                    let api =
+                    let mut api: Url =
                         Address::new(Host::Domain(host.clone()), Protocol::Api { local: false })
                             .into();
+
+                    p2p.set_port(Some(DEFAULT_SEED_P2P_PORT)).ok();
+                    git.set_port(Some(DEFAULT_SEED_GIT_PORT)).ok();
+                    api.set_port(Some(DEFAULT_SEED_API_PORT)).ok();
 
                     SeedConfig {
                         name: Some(host),
