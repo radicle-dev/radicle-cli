@@ -18,7 +18,8 @@ use librad::profile::Profile;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, PatchStore};
-use radicle_common::{cobs, git, keys, patch, project};
+use radicle_common::tokio;
+use radicle_common::{cobs, git, keys, patch, project, sync};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
 
@@ -176,7 +177,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
     if options.list {
-        list(&storage, &repo, &profile, &project)?;
+        list(&storage, &repo, &profile, &project, options)?;
     } else {
         create(&storage, &profile, &project, &repo, options)?;
     }
@@ -189,7 +190,21 @@ fn list(
     repo: &git::Repository,
     profile: &Profile,
     project: &project::Metadata,
+    options: Options,
 ) -> anyhow::Result<()> {
+    if options.sync {
+        let rt = tokio::runtime::Runtime::new()?;
+
+        term::sync::sync(
+            project.urn.clone(),
+            sync::seeds(profile)?,
+            sync::Mode::Fetch,
+            profile,
+            term::signer(profile)?,
+            &rt,
+        )?;
+    }
+
     let cobs = cobs::store(profile, storage)?;
     let patches = cobs.patches();
     let proposed = patches.proposed(&project.urn)?;
