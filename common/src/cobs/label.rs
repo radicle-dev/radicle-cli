@@ -20,8 +20,6 @@ use crate::cobs::shared::*;
 
 lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.label").unwrap();
-    pub static ref SCHEMA: serde_json::Value =
-        serde_json::from_slice(include_bytes!("label.json")).unwrap();
 }
 
 /// Identifier for a label.
@@ -152,7 +150,6 @@ mod cobs {
                 whoami,
                 project,
                 NewObjectSpec {
-                    schema_json: SCHEMA.clone(),
                     typename: TYPENAME.clone(),
                     message: Some("Create label".to_owned()),
                     history,

@@ -21,8 +21,6 @@ use crate::cobs::shared::*;
 
 lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.issue").unwrap();
-    pub static ref SCHEMA: serde_json::Value =
-        serde_json::from_slice(include_bytes!("issue.json")).unwrap();
 }
 
 /// Identifier for an issue.
@@ -443,7 +441,6 @@ mod cobs {
                 whoami,
                 project,
                 NewObjectSpec {
-                    schema_json: SCHEMA.clone(),
                     typename: TYPENAME.clone(),
                     message: Some("Create issue".to_owned()),
                     history,

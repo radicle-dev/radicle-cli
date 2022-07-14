@@ -28,8 +28,6 @@ use crate::cobs::shared::*;
 
 lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.patch").unwrap();
-    pub static ref SCHEMA: serde_json::Value =
-        serde_json::from_slice(include_bytes!("patch.json")).unwrap();
 }
 
 /// Identifier for a patch.
@@ -851,7 +849,6 @@ mod cobs {
                 whoami,
                 project,
                 NewObjectSpec {
-                    schema_json: SCHEMA.clone(),
                     typename: TYPENAME.clone(),
                     message: Some("Create patch".to_owned()),
                     history,

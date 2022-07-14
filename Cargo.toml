@@ -4,7 +4,7 @@ description = "Radicle command line interface"
 version = "0.6.0"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
-rust-version = "1.59"
+rust-version = "1.62"
 
 [profile.ci]
 inherits = "dev"
@@ -152,39 +152,39 @@ members = [
 
 [patch.crates-io.link-crypto]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.radicle-git-helpers]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.lnk-clib]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.lnk-profile]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.radicle-git-ext]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.git-trailers]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.lnk-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-06-21"
+tag = "cycle/2022-07-12"
 
 [patch.crates-io.automerge]
 git = "https://github.com/automerge/automerge-rs"

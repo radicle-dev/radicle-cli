@@ -46,18 +46,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8fd72866655d1904d6b0997d0b07ba561047d070fbe29de039031c641b61217"
 
 [[package]]
-name = "ahash"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
-dependencies = [
- "getrandom 0.2.6",
- "once_cell",
- "serde",
- "version_check",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -284,27 +272,13 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "automerge"
-version = "0.0.2"
-source = "git+https://github.com/automerge/automerge-rs.git?rev=e72571962b51c2f0726fb534890ef3b4f7c74dfc#e72571962b51c2f0726fb534890ef3b4f7c74dfc"
-dependencies = [
- "automerge-backend",
- "automerge-frontend",
- "automerge-protocol",
- "serde",
- "serde_json",
- "thiserror",
- "uuid 0.8.2",
-]
-
-[[package]]
-name = "automerge"
 version = "0.1.0"
 source = "git+https://github.com/automerge/automerge-rs?rev=291557a019acac283e54ea31a9fad81ed65736ab#291557a019acac283e54ea31a9fad81ed65736ab"
 dependencies = [
  "flate2",
  "fxhash",
  "hex",
- "itertools 0.10.3",
+ "itertools",
  "leb128",
  "nonzero_ext 0.2.0",
  "rand 0.8.5",
@@ -314,61 +288,6 @@ dependencies = [
  "thiserror",
  "tinyvec",
  "tracing",
- "uuid 0.8.2",
-]
-
-[[package]]
-name = "automerge-backend"
-version = "0.0.1"
-source = "git+https://github.com/automerge/automerge-rs.git?rev=e72571962b51c2f0726fb534890ef3b4f7c74dfc#e72571962b51c2f0726fb534890ef3b4f7c74dfc"
-dependencies = [
- "automerge-protocol",
- "flate2",
- "fxhash",
- "hex",
- "itertools 0.9.0",
- "js-sys",
- "leb128",
- "maplit",
- "nonzero_ext 0.2.0",
- "rand 0.8.5",
- "serde",
- "serde_json",
- "sha2 0.9.9",
- "smol_str",
- "thiserror",
- "tracing",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "automerge-frontend"
-version = "0.1.0"
-source = "git+https://github.com/automerge/automerge-rs.git?rev=e72571962b51c2f0726fb534890ef3b4f7c74dfc#e72571962b51c2f0726fb534890ef3b4f7c74dfc"
-dependencies = [
- "automerge-protocol",
- "getrandom 0.2.6",
- "maplit",
- "serde",
- "serde_json",
- "smol_str",
- "thiserror",
- "unicode-segmentation",
- "uuid 0.8.2",
-]
-
-[[package]]
-name = "automerge-protocol"
-version = "0.1.0"
-source = "git+https://github.com/automerge/automerge-rs.git?rev=e72571962b51c2f0726fb534890ef3b4f7c74dfc#e72571962b51c2f0726fb534890ef3b4f7c74dfc"
-dependencies = [
- "hex",
- "serde",
- "smol_str",
- "strum",
- "thiserror",
- "tinyvec",
  "uuid 0.8.2",
 ]
 
@@ -443,21 +362,6 @@ checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "bit-set"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e11e16035ea35e4e5997b393eacbf6f63983188f7a2ad25bfb13465f5ad59de"
-dependencies = [
- "bit-vec",
-]
-
-[[package]]
-name = "bit-vec"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
 
 [[package]]
 name = "bitflags"
@@ -658,12 +562,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
 
 [[package]]
-name = "bytecount"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72feb31ffc86498dacdbd0fcebb56138e7177a8cc5cea4516031d15ae85a742e"
-
-[[package]]
 name = "bytemuck"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -846,7 +744,7 @@ version = "3.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3aab4734e083b809aaf5794e14e756d1c798d2c69c7f7de7a09a2f5214993c1"
 dependencies = [
- "heck 0.4.0",
+ "heck",
  "proc-macro-error",
  "proc-macro2",
  "quote",
@@ -880,17 +778,14 @@ dependencies = [
 [[package]]
 name = "cob"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
- "automerge 0.0.2",
  "either",
  "git-trailers",
  "git2",
- "jsonschema",
  "lazy_static",
  "link-crypto",
  "link-identities",
- "lru",
  "minicbor",
  "multibase",
  "multihash 0.11.4",
@@ -1857,16 +1752,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 
 [[package]]
-name = "fancy-regex"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d6b8560a05112eb52f04b00e5d3790c0dd75d9d980eb8a122fb23b92a623ccf"
-dependencies = [
- "bit-set",
- "regex",
-]
-
-[[package]]
 name = "fastrand"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1977,16 +1862,6 @@ checksum = "5fc25a87fa4fd2094bffb06925852034d90a17f0d1e05197d4956d3555752191"
 dependencies = [
  "matches",
  "percent-encoding",
-]
-
-[[package]]
-name = "fraction"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aba3510011eee8825018be07f08d9643421de007eaf62a3bde58d89b058abfa7"
-dependencies = [
- "lazy_static",
- "num",
 ]
 
 [[package]]
@@ -2380,7 +2255,7 @@ dependencies = [
 [[package]]
 name = "git-ref-format"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "git-ref-format-core",
  "git-ref-format-macro",
@@ -2389,7 +2264,7 @@ dependencies = [
 [[package]]
 name = "git-ref-format-core"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "bstr",
  "minicbor",
@@ -2399,7 +2274,7 @@ dependencies = [
 [[package]]
 name = "git-ref-format-macro"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "git-ref-format-core",
  "proc-macro-error",
@@ -2424,7 +2299,7 @@ dependencies = [
 [[package]]
 name = "git-trailers"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "nom 7.1.1",
  "thiserror",
@@ -2585,7 +2460,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e91b62f79061a0bc2e046024cb7ba44b08419ed238ecbd9adbd787434b9e8c25"
 dependencies = [
- "ahash 0.3.8",
+ "ahash",
  "autocfg",
 ]
 
@@ -2594,24 +2469,12 @@ name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
-dependencies = [
- "ahash 0.7.6",
-]
 
 [[package]]
 name = "hashbrown"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c21d40587b92fa6a6c6e3c1bdbf87d75511db5672f9c93175574b3a00df1758"
-
-[[package]]
-name = "heck"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
-dependencies = [
- "unicode-segmentation",
-]
 
 [[package]]
 name = "heck"
@@ -2827,7 +2690,7 @@ dependencies = [
  "byteorder",
  "color_quant",
  "num-iter",
- "num-rational 0.3.2",
+ "num-rational",
  "num-traits",
 ]
 
@@ -2939,24 +2802,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879d54834c8c76457ef4293a689b2a8c59b076067ad77b15efafbb05f92a592b"
 
 [[package]]
-name = "iso8601"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a59a3f2be6271b2a844cd0dd13bf8ccc88a9540482d872c7ce58ab1c4db9fab"
-dependencies = [
- "nom 7.1.1",
-]
-
-[[package]]
-name = "itertools"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itertools"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3008,31 +2853,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
-]
-
-[[package]]
-name = "jsonschema"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877e398ffb23c1c311c417ef5e72e8699c3822dbf835468f009c6ce91b6c206b"
-dependencies = [
- "ahash 0.7.6",
- "base64 0.13.0",
- "bytecount",
- "fancy-regex",
- "fraction",
- "iso8601",
- "itoa 0.4.8",
- "lazy_static",
- "num-cmp",
- "parking_lot 0.12.0",
- "percent-encoding",
- "regex",
- "serde",
- "serde_json",
- "time 0.3.9",
- "url",
- "uuid 0.8.2",
 ]
 
 [[package]]
@@ -3133,7 +2953,7 @@ dependencies = [
 [[package]]
 name = "librad"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "async-lock",
  "async-stream",
@@ -3157,7 +2977,7 @@ dependencies = [
  "governor",
  "if-watch",
  "indexmap",
- "itertools 0.10.3",
+ "itertools",
  "lazy_static",
  "libc",
  "libgit2-sys",
@@ -3239,7 +3059,7 @@ dependencies = [
 [[package]]
 name = "link-async"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "blocking",
  "futures",
@@ -3254,7 +3074,7 @@ dependencies = [
 [[package]]
 name = "link-canonical"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "link-canonical-derive",
  "nom 7.1.1",
@@ -3268,7 +3088,7 @@ dependencies = [
 [[package]]
 name = "link-canonical-derive"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -3279,7 +3099,7 @@ dependencies = [
 [[package]]
 name = "link-crypto"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "async-trait",
  "dyn-clone",
@@ -3302,7 +3122,7 @@ dependencies = [
 [[package]]
 name = "link-git"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "arc-swap",
  "async-process",
@@ -3339,7 +3159,7 @@ dependencies = [
 [[package]]
 name = "link-hooks"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "async-trait",
  "futures",
@@ -3354,7 +3174,7 @@ dependencies = [
 [[package]]
 name = "link-identities"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "either",
  "futures-lite",
@@ -3385,7 +3205,7 @@ dependencies = [
 [[package]]
 name = "link-replication"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "async-trait",
  "blocking",
@@ -3393,7 +3213,7 @@ dependencies = [
  "either",
  "futures-lite",
  "git-ref-format",
- "itertools 0.10.3",
+ "itertools",
  "link-crypto",
  "link-git",
  "parking_lot 0.12.0",
@@ -3407,7 +3227,7 @@ dependencies = [
 [[package]]
 name = "link-tracking"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "cob",
  "either",
@@ -3430,11 +3250,11 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 [[package]]
 name = "lnk-clib"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "async-trait",
  "futures",
- "itertools 0.10.3",
+ "itertools",
  "librad",
  "lnk-thrussh-agent",
  "minicbor",
@@ -3461,7 +3281,7 @@ dependencies = [
 [[package]]
 name = "lnk-identities"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "anyhow",
  "clap",
@@ -3487,7 +3307,7 @@ dependencies = [
 [[package]]
 name = "lnk-profile"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "anyhow",
  "clap",
@@ -3545,21 +3365,6 @@ checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if 1.0.0",
 ]
-
-[[package]]
-name = "lru"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32613e41de4c47ab04970c348ca7ae7382cf116625755af070b008a15516a889"
-dependencies = [
- "hashbrown 0.11.2",
-]
-
-[[package]]
-name = "maplit"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "matches"
@@ -3915,47 +3720,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8536030f9fea7127f841b45bb6243b27255787fb4eb83958aa1ef9d2fdc0c36"
-dependencies = [
- "num-bigint",
- "num-complex",
- "num-integer",
- "num-iter",
- "num-rational 0.2.4",
- "num-traits",
-]
-
-[[package]]
-name = "num-bigint"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-cmp"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63335b2e2c34fae2fb0aa2cecfd9f0832a1e24b3b32ecec612c3426d46dc8aaa"
-
-[[package]]
-name = "num-complex"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6b19411a9719e753aff12e5187b74d60d3dc449ec3f4dc21e3989c3f554bc95"
-dependencies = [
- "autocfg",
- "num-traits",
-]
-
-[[package]]
 name = "num-integer"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3972,18 +3736,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d03e6c028c5dc5cac6e2dec0efda81fc887605bb3d884578bb6d6bf7514e252"
 dependencies = [
  "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-rational"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c000134b5dbf44adc5cb772486d335293351644b801551abe8f75c84cfa4aef"
-dependencies = [
- "autocfg",
- "num-bigint",
  "num-integer",
  "num-traits",
 ]
@@ -4442,7 +4194,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5aab5be6e4732b473071984b3164dbbfb7a3674d30ea5ff44410b6bcd960c3c"
 dependencies = [
  "difflib",
- "itertools 0.10.3",
+ "itertools",
  "predicates-core",
 ]
 
@@ -4832,7 +4584,7 @@ name = "rad-issue"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "automerge 0.1.0",
+ "automerge",
  "lazy_static",
  "lexopt",
  "librad",
@@ -5077,7 +4829,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "automerge 0.1.0",
+ "automerge",
  "base64 0.13.0",
  "byteorder",
  "chrono",
@@ -5112,7 +4864,7 @@ dependencies = [
 [[package]]
 name = "radicle-data"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "minicbor",
  "nonempty",
@@ -5124,7 +4876,7 @@ dependencies = [
 [[package]]
 name = "radicle-git-ext"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "git-ref-format",
  "git2",
@@ -5140,7 +4892,7 @@ dependencies = [
 [[package]]
 name = "radicle-git-helpers"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "anyhow",
  "git2",
@@ -5176,7 +4928,7 @@ dependencies = [
 [[package]]
 name = "radicle-macros"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 dependencies = [
  "proc-macro-error",
  "quote",
@@ -5187,7 +4939,7 @@ dependencies = [
 [[package]]
 name = "radicle-std-ext"
 version = "0.1.0"
-source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-06-21#241d5307adbdf5fb79bf2c22a3bbf0e5839ded7c"
+source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-07-12#541a8161cb24c3b7b10d44f958cc5c5ed05cf443"
 
 [[package]]
 name = "radicle-terminal"
@@ -6072,27 +5824,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
-name = "strum"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaf86bbcfd1fa9670b7a129f64fc0c9fcbbfe4f1bc4210e9e98fe71ffc12cde2"
-dependencies = [
- "strum_macros",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.21.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d06aaeeee809dbc59eb4556183dd927df67db1540de5be8d3ec0b6636358a5ec"
-dependencies = [
- "heck 0.3.3",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6223,14 +5954,7 @@ checksum = "c2702e08a7a860f005826c6815dcac101b19b5eb330c27fe4a5928fec1d20ddd"
 dependencies = [
  "libc",
  "num_threads",
- "time-macros",
 ]
-
-[[package]]
-name = "time-macros"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42657b1a6f4d817cda8e7a0ace261fe0cc946cf3a80314390b22cc61ae080792"
 
 [[package]]
 name = "timeago"
@@ -6434,12 +6158,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "unicode-segmentation"
-version = "1.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e8820f5d777f6224dc4be3632222971ac30164d4a258d595640799554ebfd99"
-
-[[package]]
 name = "unicode-width"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6549,7 +6267,7 @@ version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5cd9a7a22c45daf5aeb6bea3dff4ecbb8eb43e492582d467b18ce2979b512cbe"
 dependencies = [
- "itertools 0.10.3",
+ "itertools",
  "nom 7.1.1",
 ]
 

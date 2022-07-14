@@ -17,8 +17,6 @@ use crate::cobs::shared::*;
 
 lazy_static::lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.user").unwrap();
-    pub static ref SCHEMA: serde_json::Value =
-        serde_json::from_slice(include_bytes!("user.json")).unwrap();
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -214,7 +212,6 @@ mod cobs {
                 whoami,
                 person,
                 NewObjectSpec {
-                    schema_json: SCHEMA.clone(),
                     typename: TYPENAME.clone(),
                     message: Some("Create user".to_owned()),
                     history,
