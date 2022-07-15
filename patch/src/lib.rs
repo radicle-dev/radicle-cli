@@ -298,12 +298,15 @@ fn update(
     term::blank();
 
     if options.sync {
-        rad_sync::run(
-            rad_sync::Options {
-                verbose: options.verbose,
-                ..rad_sync::Options::default()
-            },
-            profile.clone(),
+        let rt = tokio::runtime::Runtime::new()?;
+
+        term::sync::sync(
+            project.urn.clone(),
+            sync::seeds(profile)?,
+            sync::Mode::Push,
+            profile,
+            term::signer(profile)?,
+            &rt,
         )?;
     }
 
@@ -521,14 +524,16 @@ fn create(
     term::blank();
     term::success!("Patch {} created 🌱", term::format::highlight(id));
 
-    // TODO: Don't show "Project synced, you can find your project at ... etc."
     if options.sync {
-        rad_sync::run(
-            rad_sync::Options {
-                verbose: options.verbose,
-                ..rad_sync::Options::default()
-            },
-            profile.clone(),
+        let rt = tokio::runtime::Runtime::new()?;
+
+        term::sync::sync(
+            project.urn.clone(),
+            sync::seeds(profile)?,
+            sync::Mode::Push,
+            profile,
+            term::signer(profile)?,
+            &rt,
         )?;
     }
 
