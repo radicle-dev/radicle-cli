@@ -9,7 +9,9 @@ use std::str::FromStr;
 use anyhow::anyhow;
 
 use common::cobs::patch::Verdict;
+use librad::git::identities;
 use librad::git::identities::local::LocalIdentity;
+use librad::git::identities::project::heads::DefaultBranchHead;
 use librad::git::storage::ReadOnlyStorage;
 use librad::git::Storage;
 use librad::git_ext::{Oid, RefLike};
@@ -207,10 +209,8 @@ fn list(
     let cobs = cobs::store(profile, storage)?;
     let patches = cobs.patches();
     let proposed = patches.proposed(&project.urn)?;
-    let repo = git::Repository::open_bare(profile.paths().git_dir())?;
+    let monorepo = git::Repository::open_bare(profile.paths().git_dir())?;
 
-    // Our `HEAD`.
-    let head = repo.head()?;
     // Patches the user authored.
     let mut own = Vec::new();
     // Patches other users authored.
@@ -233,7 +233,7 @@ fn list(
         for (id, patch) in &mut own {
             term::blank();
 
-            print(&cobs.whoami, id, patch, project, &head, &repo, storage)?;
+            print(&cobs.whoami, id, patch, project, &monorepo, storage)?;
         }
     }
     term::blank();
@@ -246,7 +246,7 @@ fn list(
         for (id, patch) in &mut other {
             term::blank();
 
-            print(&cobs.whoami, id, patch, project, &head, &repo, storage)?;
+            print(&cobs.whoami, id, patch, project, &monorepo, storage)?;
         }
     }
     term::blank();
@@ -544,14 +544,8 @@ fn create(
 fn pretty_sync_status(
     repo: &git::Repository,
     revision_oid: git::Oid,
-    head: &git::Reference,
+    head_oid: git::Oid,
 ) -> anyhow::Result<String> {
-    let head_oid = if let Some(v) = head.target() {
-        v
-    } else {
-        return Ok(String::default());
-    };
-
     let (a, b) = repo.graph_ahead_behind(revision_oid, head_oid)?;
     if a == 0 && b == 0 {
         return Ok(term::format::dim("up to date"));
@@ -569,7 +563,6 @@ pub fn print(
     patch_id: &PatchId,
     patch: &mut Patch,
     project: &project::Metadata,
-    head: &git::Reference,
     repo: &git::Repository,
     storage: &Storage,
 ) -> anyhow::Result<()> {
@@ -579,6 +572,14 @@ pub fn print(
         }
     }
     patch.author.resolve(storage).ok();
+
+    let verified = identities::project::verify(storage, &project.urn)?.unwrap();
+    let target_head = match identities::project::heads::default_branch_head(storage, verified)? {
+        DefaultBranchHead::Head { target, .. } => target,
+        _ => {
+            anyhow::bail!("");
+        }
+    };
 
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";
@@ -600,7 +601,7 @@ pub fn print(
         term::format::secondary(common::fmt::cob(patch_id)),
         term::format::dim(format!("R{}", patch.version())),
         term::format::secondary(common::fmt::oid(&revision.oid)),
-        pretty_sync_status(repo, *revision.oid, head)?,
+        pretty_sync_status(repo, *revision.oid, target_head)?,
     );
     term::info!("{}", author_info.join(" "));
 
