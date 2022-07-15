@@ -18,7 +18,7 @@ codegen-units = 1
 panic = "abort"
 
 [features]
-default = ["ethereum"]
+default = []
 ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "rad-reward", "ethers", "futures"]
 
 [package.metadata.deb]
