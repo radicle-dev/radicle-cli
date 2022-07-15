@@ -26,21 +26,6 @@ lazy_static! {
 /// Identifier for an issue.
 pub type IssueId = ObjectId;
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("Create error: {0}")]
-    Create(String),
-
-    #[error("List error: {0}")]
-    List(String),
-
-    #[error("Retrieve error: {0}")]
-    Retrieve(String),
-
-    #[error(transparent)]
-    Automerge(#[from] AutomergeError),
-}
-
 /// Reason why an issue was closed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -372,10 +357,7 @@ impl<'a> IssueStore<'a> {
     }
 
     pub fn all(&self, project: &Urn) -> Result<Vec<(IssueId, Issue)>, Error> {
-        let cobs = self
-            .store
-            .list(project, &TYPENAME)
-            .map_err(|e| Error::List(e.to_string()))?;
+        let cobs = self.store.list(project, &TYPENAME)?;
 
         let mut issues = Vec::new();
         for cob in cobs {
@@ -388,10 +370,7 @@ impl<'a> IssueStore<'a> {
     }
 
     pub fn count(&self, project: &Urn) -> Result<usize, Error> {
-        let cobs = self
-            .store
-            .list(project, &TYPENAME)
-            .map_err(|e| Error::List(e.to_string()))?;
+        let cobs = self.store.list(project, &TYPENAME)?;
 
         Ok(cobs.len())
     }
@@ -401,11 +380,7 @@ impl<'a> IssueStore<'a> {
     }
 
     pub fn get_raw(&self, project: &Urn, id: &IssueId) -> Result<Option<Automerge>, Error> {
-        let cob = self
-            .store
-            .retrieve(project, &TYPENAME, id)
-            .map_err(|e| Error::Retrieve(e.to_string()))?;
-
+        let cob = self.store.retrieve(project, &TYPENAME, id)?;
         let cob = if let Some(cob) = cob {
             cob
         } else {
@@ -436,17 +411,15 @@ mod cobs {
         whoami: &LocalIdentity,
         store: &CollaborativeObjects,
     ) -> Result<IssueId, Error> {
-        let cob = store
-            .create(
-                whoami,
-                project,
-                NewObjectSpec {
-                    typename: TYPENAME.clone(),
-                    message: Some("Create issue".to_owned()),
-                    history,
-                },
-            )
-            .map_err(|e| Error::Create(e.to_string()))?;
+        let cob = store.create(
+            whoami,
+            project,
+            NewObjectSpec {
+                typename: TYPENAME.clone(),
+                message: Some("Create issue".to_owned()),
+                history,
+            },
+        )?;
 
         Ok(*cob.id())
     }
@@ -682,7 +655,7 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
         let timestamp = Timestamp::now();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
@@ -700,7 +673,7 @@ mod test {
     #[test]
     fn test_issue_create_and_change_state() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
@@ -734,7 +707,7 @@ mod test {
     #[test]
     fn test_issue_react() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let project = project.urn();
         let issue_id = issues
@@ -757,7 +730,7 @@ mod test {
     #[test]
     fn test_issue_reply() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let project = project.urn();
         let issue_id = issues
@@ -783,7 +756,7 @@ mod test {
     #[test]
     fn test_issue_label() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let project = project.urn();
         let issue_id = issues
@@ -812,7 +785,7 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let now = Timestamp::now();
         let author = whoami.urn();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
@@ -840,7 +813,7 @@ mod test {
     #[test]
     fn test_issue_resolve() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
         let issue_id = issues
             .create(&project.urn(), "My first issue", "Blah blah blah.", &[])
@@ -886,7 +859,7 @@ mod test {
     fn test_issue_all() {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = Author::new(whoami.urn(), *storage.peer_id());
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let issues = cobs.issues();
 
         cobs::create(

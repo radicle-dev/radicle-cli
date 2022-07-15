@@ -15,6 +15,7 @@ use automerge::{Automerge, AutomergeError, ObjType, ScalarValue, Value};
 use chrono::TimeZone;
 use serde::{Deserialize, Serialize};
 
+use librad::collaborative_objects;
 use librad::collaborative_objects::{CollaborativeObjects, History, ObjectId, TypeName};
 use librad::git::identities::local::LocalIdentity;
 use librad::git::storage::ReadOnly;
@@ -27,6 +28,18 @@ use radicle_git_ext as git;
 
 use crate::cobs::{issue, patch, user};
 use crate::{person, project};
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("create error: {0}")]
+    Create(#[from] collaborative_objects::error::Create),
+    #[error("update error: {0}")]
+    Update(#[from] collaborative_objects::error::Update),
+    #[error("retrieve error: {0}")]
+    Retrieve(#[from] collaborative_objects::error::Retrieve),
+    #[error(transparent)]
+    Automerge(#[from] AutomergeError),
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ValueError {
@@ -101,19 +114,15 @@ impl<'a> Deref for Store<'a> {
 }
 
 impl<'a> Store<'a> {
-    pub fn new(
-        whoami: LocalIdentity,
-        paths: &Paths,
-        storage: &'a Storage,
-    ) -> Result<Self, StoreError> {
+    pub fn new(whoami: LocalIdentity, paths: &Paths, storage: &'a Storage) -> Self {
         let store = storage.collaborative_objects(Some(paths.cob_cache_dir().to_path_buf()));
         let peer_id = *storage.peer_id();
 
-        Ok(Self {
+        Self {
             store,
             whoami,
             peer_id,
-        })
+        }
     }
 
     pub fn author(&self) -> Author {
@@ -133,10 +142,7 @@ impl<'a> Store<'a> {
     }
 
     pub fn get<T: Cob>(&self, namespace: &Urn, id: &ObjectId) -> anyhow::Result<Option<T>> {
-        let cob = self
-            .store
-            .retrieve(namespace, T::type_name(), id)
-            .map_err(|e| StoreError::Retrieve(e.to_string()))?;
+        let cob = self.store.retrieve(namespace, T::type_name(), id)?;
 
         if let Some(cob) = cob {
             let history = cob.history();
@@ -170,10 +176,7 @@ impl<'a> Store<'a> {
         match identifier {
             Identifier::Full(id) => Ok(Some(*id)),
             Identifier::Prefix(prefix) => {
-                let cobs = self
-                    .store
-                    .list(project, T::type_name())
-                    .map_err(|e| StoreError::List(e.to_string()))?;
+                let cobs = self.store.list(project, T::type_name())?;
 
                 let matches = cobs
                     .into_iter()
@@ -194,24 +197,6 @@ impl<'a> Store<'a> {
             }
         }
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum StoreError {
-    #[error("Create error: {0}")]
-    Create(String),
-
-    #[error("Update error: {0}")]
-    Update(String),
-
-    #[error("List error: {0}")]
-    List(String),
-
-    #[error("Retrieve error: {0}")]
-    Retrieve(String),
-
-    #[error(transparent)]
-    Automerge(#[from] AutomergeError),
 }
 
 /// A discussion thread.
@@ -870,7 +855,7 @@ pub mod lookup {
 
 pub fn store<'a>(profile: &Profile, storage: &'a Storage) -> anyhow::Result<Store<'a>> {
     let whoami = person::local(storage)?;
-    let cobs = Store::new(whoami, profile.paths(), storage)?;
+    let cobs = Store::new(whoami, profile.paths(), storage);
 
     Ok(cobs)
 }
