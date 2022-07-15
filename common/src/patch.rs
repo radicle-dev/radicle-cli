@@ -2,9 +2,11 @@
 use std::convert::TryInto;
 use std::fmt;
 
+use librad::git::identities;
+use librad::git::identities::project::heads::DefaultBranchHead;
 use librad::git::refs::Refs;
 use librad::git::storage::{ReadOnly, ReadOnlyStorage};
-use librad::git::Urn;
+use librad::git::{Storage, Urn};
 use librad::PeerId;
 
 use git_trailers as trailers;
@@ -240,6 +242,29 @@ where
         }
     }
     Ok(targets)
+}
+
+pub fn patch_merge_target_oid(
+    target: cob::MergeTarget,
+    project: identities::VerifiedProject,
+    storage: &Storage,
+) -> anyhow::Result<git2::Oid> {
+    let urn = project.urn();
+
+    match target {
+        cob::MergeTarget::Upstream => {
+            if let DefaultBranchHead::Head { target, .. } =
+                identities::project::heads::default_branch_head(storage, project)?
+            {
+                Ok(target)
+            } else {
+                anyhow::bail!(
+                    "failed to determine default branch head for project {}",
+                    urn,
+                );
+            }
+        }
+    }
 }
 
 /// Return commits between the merge base and a head.

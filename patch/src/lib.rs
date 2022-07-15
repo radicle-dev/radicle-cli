@@ -9,9 +9,7 @@ use std::str::FromStr;
 use anyhow::anyhow;
 
 use common::cobs::patch::Verdict;
-use librad::git::identities;
 use librad::git::identities::local::LocalIdentity;
-use librad::git::identities::project::heads::DefaultBranchHead;
 use librad::git::storage::ReadOnlyStorage;
 use librad::git::Storage;
 use librad::git_ext::{Oid, RefLike};
@@ -573,13 +571,8 @@ pub fn print(
     }
     patch.author.resolve(storage).ok();
 
-    let verified = identities::project::verify(storage, &project.urn)?.unwrap();
-    let target_head = match identities::project::heads::default_branch_head(storage, verified)? {
-        DefaultBranchHead::Head { target, .. } => target,
-        _ => {
-            anyhow::bail!("");
-        }
-    };
+    let verified = project.verified(storage)?;
+    let target_head = common::patch::patch_merge_target_oid(patch.target, verified, storage)?;
 
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";

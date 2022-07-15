@@ -23,8 +23,8 @@ use librad::git::types::{Namespace, Reference};
 use librad::git::Urn;
 use librad::git_ext::{OneLevel, RefLike};
 use librad::identities::payload::{self, ProjectPayload};
-use librad::identities::Person;
 use librad::identities::SomeIdentity;
+use librad::identities::{Person, VerifiedProject};
 use librad::paths::Paths;
 use librad::profile::Profile;
 use librad::PeerId;
@@ -187,6 +187,12 @@ impl Metadata {
         S: AsRef<ReadOnly>,
     {
         peer_self(storage, self.urn.clone(), peer)
+    }
+
+    /// Get a [`VerifiedProject`] from project metadata.
+    pub fn verified(&self, storage: &Storage) -> anyhow::Result<VerifiedProject> {
+        identities::project::verify(storage, &self.urn)?
+            .ok_or_else(|| anyhow::anyhow!("project {} not found", self.urn))
     }
 }
 
