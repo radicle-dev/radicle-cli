@@ -111,11 +111,7 @@ impl Args for Options {
                 }
                 Long("message") | Short('m') => {
                     let txt: String = parser.value()?.to_string_lossy().into();
-                    if let Comment::Text(msg) = message {
-                        message = Comment::Text(msg + "\n\n" + &txt);
-                    } else {
-                        message = Comment::Text(txt.to_string());
-                    }
+                    message.append(&txt);
                 }
                 Long("no-message") => {
                     message = Comment::Blank;

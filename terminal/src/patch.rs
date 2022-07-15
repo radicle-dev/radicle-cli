@@ -4,7 +4,7 @@ use radicle_common::git;
 use crate as term;
 
 /// How a comment is to be supplied by the user for a patch or issue on the terminal.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Comment {
     /// Prompt user to write comment in editor.
     Edit,
@@ -31,6 +31,14 @@ impl Comment {
         let comment = comment.trim();
 
         comment.to_owned()
+    }
+
+    pub fn append(&mut self, arg: &str) {
+        if let Comment::Text(v) = self {
+            v.extend(["\n\n", arg]);
+        } else {
+            *self = Comment::Text(arg.into());
+        };
     }
 }
 

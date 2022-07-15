@@ -30,8 +30,8 @@ Options
 
     -r, --revision <number>   Revision number to review, defaults to the latest
         --[no-]sync           Sync review to seed (default: sync)
-    -m, --message [<string>]  Provide a comment with the review
-        --no-wmessage         Don't provide a comment with the review
+    -m, --message [<string>]  Provide a comment with the review (default: prompt)
+        --no-message          Don't provide a comment with the review
         --help                Print help
 "#,
 };
@@ -88,7 +88,8 @@ impl Args for Options {
                     sync = false;
                 }
                 Long("message") | Short('m') => {
-                    message = Comment::Text(parser.value()?.to_string_lossy().into());
+                    let txt: String = parser.value()?.to_string_lossy().into();
+                    message.append(&txt);
                 }
                 Long("no-message") => {
                     message = Comment::Blank;
