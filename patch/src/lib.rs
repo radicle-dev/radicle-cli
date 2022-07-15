@@ -18,7 +18,8 @@ use librad::profile::Profile;
 use radicle_common as common;
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::patch::{MergeTarget, Patch, PatchId, PatchStore};
-use radicle_common::{cobs, git, keys, patch, project};
+use radicle_common::tokio;
+use radicle_common::{cobs, git, keys, patch, project, sync};
 use radicle_terminal as term;
 use radicle_terminal::patch::Comment;
 
@@ -176,7 +177,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
     if options.list {
-        list(&storage, &repo, &profile, &project)?;
+        list(&storage, &repo, &profile, &project, options)?;
     } else {
         create(&storage, &profile, &project, &repo, options)?;
     }
@@ -189,7 +190,21 @@ fn list(
     repo: &git::Repository,
     profile: &Profile,
     project: &project::Metadata,
+    options: Options,
 ) -> anyhow::Result<()> {
+    if options.sync {
+        let rt = tokio::runtime::Runtime::new()?;
+
+        term::sync::sync(
+            project.urn.clone(),
+            sync::seeds(profile)?,
+            sync::Mode::Fetch,
+            profile,
+            term::signer(profile)?,
+            &rt,
+        )?;
+    }
+
     let cobs = cobs::store(profile, storage)?;
     let patches = cobs.patches();
     let proposed = patches.proposed(&project.urn)?;
@@ -244,7 +259,6 @@ fn update(
     patch_id: PatchId,
     base: &git::Oid,
     head: &git::Oid,
-    branch: &RefLike,
     patches: &PatchStore,
     project: &project::Metadata,
     repo: &git::Repository,
@@ -286,7 +300,6 @@ fn update(
     if options.sync {
         rad_sync::run(
             rad_sync::Options {
-                refs: rad_sync::Refs::Branch(branch.to_string()),
                 verbose: options.verbose,
                 ..rad_sync::Options::default()
             },
@@ -425,16 +438,7 @@ fn create(
             term::blank();
 
             return update(
-                patch,
-                id,
-                &base_oid,
-                &head_oid,
-                &head_branch,
-                &patches,
-                project,
-                repo,
-                options,
-                profile,
+                patch, id, &base_oid, &head_oid, &patches, project, repo, options, profile,
             );
         } else {
             anyhow::bail!("Patch update aborted by user");
@@ -521,7 +525,6 @@ fn create(
     if options.sync {
         rad_sync::run(
             rad_sync::Options {
-                refs: rad_sync::Refs::Branch(head_branch.to_string()),
                 verbose: options.verbose,
                 ..rad_sync::Options::default()
             },

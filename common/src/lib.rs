@@ -2,6 +2,7 @@
 #![allow(clippy::or_fun_call)]
 pub mod args;
 pub mod cobs;
+pub mod config;
 pub mod git;
 pub mod identity;
 pub mod keys;
@@ -12,6 +13,7 @@ pub mod profile;
 pub mod project;
 pub mod seed;
 pub mod signer;
+pub mod sync;
 pub mod test;
 
 #[cfg(feature = "ethereum")]

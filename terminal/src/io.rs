@@ -71,7 +71,7 @@ pub fn headline(headline: &str) {
 }
 
 pub fn blob(text: impl fmt::Display) {
-    println!("{}", style(text).dim());
+    println!("{}", style(text.to_string().trim()).dim());
 }
 
 pub fn blank() {
@@ -279,9 +279,12 @@ pub fn secret_input() -> SecUtf8 {
 
 pub fn secret_key(profile: &Profile) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
     let passphrase = secret_input();
-    let _spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
+    let spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
+    let key = keys::load_secret_key(profile, passphrase)?;
 
-    keys::load_secret_key(profile, passphrase)
+    spinner.finish();
+
+    Ok(key)
 }
 
 // TODO: This prompt shows success just for entering a password,

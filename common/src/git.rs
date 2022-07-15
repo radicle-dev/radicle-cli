@@ -265,17 +265,23 @@ pub fn rad_remote(repo: &Repository) -> anyhow::Result<Remote<LocalUrl>> {
 
 /// Setup an upstream tracking branch for the given remote and branch.
 /// Creates the tracking branch if it does not exist.
+///
+/// > peers/scooby/master...peers/scooby/rad/heads/master
+///
 pub fn set_tracking(repo: &Path, remote: &str, branch: &str) -> anyhow::Result<String> {
+    let repository = git2::Repository::open(repo)?;
+    // The tracking branch name, eg. 'peers/scooby/master'
     let branch_name = format!("{}/{}", remote, branch);
+    // The remote branch being tracked, eg. 'peers/scooby/rad/heads/master'
+    let remote_branch_name = format!("{}/rad/heads/{}", remote, branch);
+    // The target reference this branch should be set to.
+    let target = format!("refs/remotes/{}", remote_branch_name);
+    let reference = repository.find_reference(&target)?;
+    let commit = reference.peel_to_commit()?;
 
-    git(
-        repo,
-        [
-            "branch",
-            &branch_name,
-            &format!("{}/heads/{}", remote, branch),
-        ],
-    )?;
+    repository
+        .branch(&branch_name, &commit, true)?
+        .set_upstream(Some(&remote_branch_name))?;
 
     Ok(branch_name)
 }

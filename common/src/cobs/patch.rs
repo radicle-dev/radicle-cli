@@ -74,24 +74,6 @@ impl<'a> FromValue<'a> for MergeTarget {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("Create error: {0}")]
-    Create(String),
-
-    #[error("Update error: {0}")]
-    Update(String),
-
-    #[error("List error: {0}")]
-    List(String),
-
-    #[error("Retrieve error: {0}")]
-    Retrieve(String),
-
-    #[error(transparent)]
-    Automerge(#[from] AutomergeError),
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct Patch<T = (), P = PeerId>
 where
@@ -398,11 +380,7 @@ impl<'a> PatchStore<'a> {
     }
 
     pub fn get_raw(&self, project: &Urn, id: &PatchId) -> Result<Option<Automerge>, Error> {
-        let cob = self
-            .store
-            .retrieve(project, &TYPENAME, id)
-            .map_err(|e| Error::Retrieve(e.to_string()))?;
-
+        let cob = self.store.retrieve(project, &TYPENAME, id)?;
         let cob = if let Some(cob) = cob {
             cob
         } else {
@@ -453,21 +431,14 @@ impl<'a> PatchStore<'a> {
     }
 
     pub fn count(&self, project: &Urn) -> Result<usize, Error> {
-        let cobs = self
-            .store
-            .list(project, &TYPENAME)
-            .map_err(|e| Error::List(e.to_string()))?;
+        let cobs = self.store.list(project, &TYPENAME)?;
 
         Ok(cobs.len())
     }
 
     pub fn all(&self, project: &Urn) -> Result<Vec<(PatchId, Patch)>, Error> {
-        let cobs = self
-            .store
-            .list(project, &TYPENAME)
-            .map_err(|e| Error::List(e.to_string()))?;
-
         let mut patches = Vec::new();
+        let cobs = self.store.list(project, &TYPENAME)?;
         for cob in cobs {
             let patch: Result<Patch, _> = cob.history().try_into();
             patches.push((*cob.id(), patch.unwrap()));
@@ -844,17 +815,15 @@ mod cobs {
         whoami: &LocalIdentity,
         store: &CollaborativeObjects,
     ) -> Result<PatchId, Error> {
-        let cob = store
-            .create(
-                whoami,
-                project,
-                NewObjectSpec {
-                    typename: TYPENAME.clone(),
-                    message: Some("Create patch".to_owned()),
-                    history,
-                },
-            )
-            .map_err(|e| Error::Create(e.to_string()))?;
+        let cob = store.create(
+            whoami,
+            project,
+            NewObjectSpec {
+                typename: TYPENAME.clone(),
+                message: Some("Create patch".to_owned()),
+                history,
+            },
+        )?;
 
         Ok(*cob.id())
     }
@@ -867,18 +836,16 @@ mod cobs {
         whoami: &LocalIdentity,
         store: &CollaborativeObjects,
     ) -> Result<PatchId, Error> {
-        let cob = store
-            .update(
-                whoami,
-                project,
-                UpdateObjectSpec {
-                    object_id,
-                    typename: TYPENAME.clone(),
-                    message: Some(message.to_owned()),
-                    changes,
-                },
-            )
-            .map_err(|e| Error::Update(e.to_string()))?;
+        let cob = store.update(
+            whoami,
+            project,
+            UpdateObjectSpec {
+                object_id,
+                typename: TYPENAME.clone(),
+                message: Some(message.to_owned()),
+                changes,
+            },
+        )?;
 
         Ok(*cob.id())
     }
@@ -1112,7 +1079,7 @@ mod test {
         let (storage, profile, whoami, project) = test::setup::profile();
         let author = whoami.urn();
         let timestamp = Timestamp::now();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let oid = git::Oid::from(git2::Oid::zero());
@@ -1150,7 +1117,7 @@ mod test {
     #[test]
     fn test_patch_merge() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let oid = git::Oid::from(git2::Oid::zero());
@@ -1179,7 +1146,7 @@ mod test {
     #[test]
     fn test_patch_review() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami.clone(), profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami.clone(), profile.paths(), &storage);
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let base = git::Oid::from_str("cb18e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();
@@ -1213,7 +1180,7 @@ mod test {
     #[test]
     fn test_patch_update() {
         let (storage, profile, whoami, project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let patches = cobs.patches();
         let target = MergeTarget::Upstream;
         let base = git::Oid::from_str("af08e95ada2bb38aadd8e6cef0963ce37a87add3").unwrap();

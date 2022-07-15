@@ -1,10 +1,10 @@
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
 
 use librad::crypto::BoxedSigner;
-use librad::git::identities;
 use librad::git::storage::{ReadOnly, Storage};
 use librad::git::tracking;
 use librad::profile::Profile;
@@ -12,8 +12,9 @@ use librad::PeerId;
 
 use radicle_common::args::Help;
 use radicle_common::project::PeerInfo;
+use radicle_common::tokio;
 use radicle_common::Url;
-use radicle_common::{git, keys, project, seed};
+use radicle_common::{git, keys, project, seed, sync};
 use radicle_terminal as term;
 
 mod options;
@@ -42,8 +43,8 @@ pub const HELP: Help = Help {
 Usage
 
     rad track           [--local | --remote]
-    rad track           [--seed <host>]
-    rad track <peer-id> [--seed <host>] [--no-sync] [--no-upstream] [--no-fetch]
+    rad track           [--seed <url>]
+    rad track <peer-id> [--seed <url>] [--no-sync] [--no-upstream] [--no-fetch]
 
     If a peer id is supplied, track this peer in the context of the current project. By default,
     a remote is created in the repository and an upstream tracking branch is setup. If a seed
@@ -55,7 +56,7 @@ Options
 
     --local                Show the local project tracking graph
     --remote               Show the remote project tracking graph from a seed
-    --seed <host>          Seed host to fetch refs from
+    --seed <url>           Seed URL to fetch refs from
     --no-upstream          Don't setup a tracking branch for the remote
     --no-sync              Don't sync the peer's refs
     --no-fetch             Don't fetch the peer's refs into the working copy
@@ -121,81 +122,65 @@ pub fn track(
         if existing { "exists" } else { "established" },
     );
 
-    let seed = options
-        .seed
-        .as_ref()
-        .map(|s| s.url())
-        .or_else(|| seed::get_seed(seed::Scope::Any).ok());
+    if options.sync {
+        let seeds = if let Some(addr) = &options.seed {
+            let seed = addr
+                .clone()
+                .try_into()
+                .map_err(|e| anyhow!("invalid seed specified: {}", e))?;
+            vec![seed]
+        } else {
+            sync::seeds(&profile)?
+        };
 
-    if let Some(seed) = seed {
-        if options.sync {
-            // Fetch refs from seed...
-            let seed_pretty = term::format::highlight(seed.host_str().unwrap_or("seed"));
-            let mut spinner = term::spinner(&format!("Syncing peer refs from {}...", seed_pretty));
-            if let Err(e) = term::sync::fetch_remotes(&storage, &seed, urn, [&peer], &mut spinner) {
-                spinner.failed();
-                term::blank();
-
-                return Err(e);
-            }
-
-            if let Ok(Some(person)) = project::person(&storage, urn.clone(), &peer) {
-                spinner.message(format!(
-                    "Syncing peer identity {} from {}...",
-                    term::format::tertiary(person.urn()),
-                    seed_pretty
-                ));
-
-                let monorepo = profile.paths().git_dir();
-                match seed::fetch_identity(monorepo, &seed, &person.urn()).and_then(|out| {
-                    spinner.finish();
-                    spinner.message("Verifying identity...");
-                    identities::person::verify(&storage, &person.urn())?;
-
-                    Ok(out)
-                }) {
-                    Ok(output) => {
-                        if options.verbose {
-                            spinner.finish();
-                            term::blob(output);
-                        }
-                    }
-                    Err(err) => {
-                        spinner.failed();
-                        term::blank();
-                        return Err(err);
-                    }
-                }
-            }
-
-            spinner.finish();
-        }
+        let rt = tokio::runtime::Runtime::new()?;
+        term::sync::sync(
+            project.urn.clone(),
+            seeds,
+            sync::Mode::Fetch,
+            &profile,
+            signer.clone(),
+            &rt,
+        )?;
     }
 
     // If a seed is explicitly specified, associate it with the peer being tracked.
     if let Some(addr) = &options.seed {
-        seed::set_peer_seed(&addr.url(), &peer)?;
+        let seed = addr
+            .clone()
+            .try_into()
+            .map_err(|e| anyhow!("invalid seed specified: {}", e))?;
+
+        seed::set_peer_seed(&seed, &peer)?;
         term::success!(
             "Saving seed configuration for {} to local git config...",
             term::format::tertiary(radicle_common::fmt::peer(&peer))
         );
     }
 
-    // Don't setup remote if tracking relationship already existed, as the branch
-    // probably already exists.
-    //
-    // TODO: We should allow this anyway if for eg. you want to update a checkout with a peer.
-    // There's no other way to setup a remote tracking branch right now..
-    //
-    if !existing {
-        project::SetupRemote {
+    if options.upstream {
+        let name = if let Some(person) = project::person(&storage, urn.clone(), &peer)? {
+            person.subject().name.to_string()
+        } else {
+            term::warning("peer identity document not found, using id as remote name");
+            peer.default_encoding()
+        };
+
+        let branch = project::SetupRemote {
             project: &project,
             repo: &repo,
             signer,
             fetch: options.fetch,
             upstream: options.upstream,
         }
-        .run(&peer, &profile, &storage)?;
+        .run(&peer, &name, &profile)?;
+
+        if let Some(branch) = branch {
+            term::success!(
+                "Remote-tracking branch {} set",
+                term::format::highlight(branch)
+            );
+        }
     }
 
     Ok(())
@@ -216,21 +201,25 @@ pub fn show(
         );
         show_local(&project, storage)?
     } else {
-        let seed = &if let Some(seed_url) = options.seed.as_ref().map(|s| s.url()) {
-            seed_url
-        } else if let Ok(seed) = seed::get_seed(seed::Scope::Any) {
-            seed
+        let seed = if let Some(seed) = &options.seed {
+            seed.clone()
         } else {
             anyhow::bail!("a seed node must be specified with `--seed`");
         };
+
+        if !matches!(seed.protocol, seed::Protocol::Git { .. }) {
+            anyhow::bail!(
+                "invalid seed specified with `--seed`: must start with `http` or `https`"
+            );
+        }
 
         let spinner = term::spinner(&format!(
             "{} {} {}",
             term::format::highlight(&project.name),
             &project.urn,
-            term::format::dim(format!("({})", seed.host_str().unwrap_or("seed"))),
+            term::format::dim(format!("({})", seed.host)),
         ));
-        let peers = show_remote(&project, &repo, seed)?;
+        let peers = show_remote(&project, &repo, &seed.url())?;
 
         spinner.done();
 

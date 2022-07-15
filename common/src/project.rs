@@ -40,7 +40,7 @@ use crate::{git, person};
 pub const URL_SCHEME: &str = "rad";
 
 /// Prefix for remote tracking branches from peers.
-pub const PEER_BRANCH_PREFIX: &str = "peers";
+pub const PEER_PREFIX: &str = "peers";
 
 /// Project indirect contributor identity.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -537,31 +537,31 @@ impl<'a> SetupRemote<'a> {
     pub fn run(
         &self,
         peer: &PeerId,
+        name: &str,
         profile: &Profile,
-        storage: &Storage,
     ) -> anyhow::Result<Option<String>> {
         let repo = self.repo;
         let urn = &self.project.urn;
 
         // TODO: Handle conflicts in remote name.
-        if let Some(person) = self::person(storage, urn.clone(), peer)? {
-            let name = format!("{}/{}", PEER_BRANCH_PREFIX, person.subject().name);
-            let mut remote = self::remote(urn, peer, &name)?;
+        let peer_prefix = format!("{}/{}", PEER_PREFIX, name);
+        let remote_name = format!("{}/rad", peer_prefix);
+        let mut remote = self::remote(urn, peer, &remote_name)?;
 
-            // Configure the remote in the repository.
-            remote.save(repo)?;
-            // Fetch the refs into the working copy.
-            if self.fetch {
-                git::fetch_remote(&mut remote, repo, self.signer.clone(), profile)?;
-            }
-            // Setup remote-tracking branch.
-            if self.upstream {
-                // TODO: If this fails because the branch already exists, suggest how to specify a
-                // different branch name or prefix.
-                let branch = git::set_tracking(repo.path(), &name, &self.project.default_branch)?;
+        // Configure the remote in the repository.
+        remote.save(repo)?;
+        // Fetch the refs into the working copy.
+        if self.fetch {
+            git::fetch_remote(&mut remote, repo, self.signer.clone(), profile)?;
+        }
+        // Setup remote-tracking branch.
+        if self.upstream {
+            // TODO: If this fails because the branch already exists, suggest how to specify a
+            // different branch name or prefix.
+            let branch =
+                git::set_tracking(repo.path(), &peer_prefix, &self.project.default_branch)?;
 
-                return Ok(Some(branch));
-            }
+            return Ok(Some(branch));
         }
         Ok(None)
     }

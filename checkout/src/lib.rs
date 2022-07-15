@@ -152,7 +152,15 @@ pub fn execute(options: Options, profile: &profile::Profile) -> anyhow::Result<P
             };
             for peer in &project.remotes {
                 if peer != storage.peer_id() {
-                    if let Some(upstream) = setup.run(peer, profile, &storage)? {
+                    let name = if let Some(person) =
+                        project::person(&storage, project.urn.clone(), peer)?
+                    {
+                        person.subject().name.to_string()
+                    } else {
+                        peer.default_encoding()
+                    };
+
+                    if let Some(upstream) = setup.run(peer, &name, profile)? {
                         term::success!(
                             "Remote-tracking branch {} created for {}",
                             term::format::highlight(&upstream),

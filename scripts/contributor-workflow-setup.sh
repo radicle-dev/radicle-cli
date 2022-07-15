@@ -32,6 +32,17 @@ set -e
 #
 export RAD_HOME="$(pwd)/tmp/root"
 
+abort() {
+  echo $1 >&2
+  exit 1
+}
+
+SEED_API=127.0.0.1:8777
+SEED_ID=$(curl --silent http://$SEED_API | jq --raw-output .peer.id)
+SEED_ADDR="$SEED_ID@127.0.0.1:8776"
+
+[ ! -z "$SEED_ID" ] || abort "Couldn't get peer id from $SEED_API"
+
 rad() {
   cmd=$1; shift
 
@@ -61,14 +72,24 @@ MAINTAINER=$(cargo run -q --bin rad-self -- --profile)
 # Create git repo
 mkdir -p $BASE/tmp/maintainer/acme
 cd $BASE/tmp/maintainer/acme
+# Setup project seed config.
 echo "ACME" > README
+  cat << EOF > Radicle.toml
+[[seed]]
+  name = "radicle.local"
+  p2p = "rad://$SEED_ADDR"
+  git = "http://127.0.0.1:8778"
+  api = "http://127.0.0.1:8777"
+EOF
+
+# Create repo and initial commit.
 git init -b master
 git add .
 git commit -m "Initial commit" --no-gpg-sign
 
 # Initialize
 rad init --name acme --description 'Acme Monorepo' --no-confirm
-rad sync --seed '127.0.0.1:8778' -v
+rad push
 
 PROJECT=$(rad inspect)
 
@@ -80,23 +101,25 @@ mkdir -p $BASE/tmp/contributor
 cd $BASE/tmp/contributor
 
 rad auth --init --name scooby --passphrase scooby
-rad clone $PROJECT --seed '127.0.0.1:8778' --no-confirm
+rad clone $PROJECT --seed $SEED_ADDR --no-confirm
+
 CONTRIBUTOR=$(rad self --profile)
 CONTRIBUTOR_PEER=$(rad self --peer)
 
-# Add commit
+# Change into project directory
 cd acme
+
+# Create change
 echo >> README
 echo "Acme is such a great company!" >> README
-git add .
+git add README
 git commit -m "Update README" --no-gpg-sign
 
 # Push commit to monorepo
-rad push
+# (rad-push)
+git push rad
 # Create patch
 rad patch --sync --message "Update README" --message "Reflect the recent positive news"
-# Sync identity
-rad sync --self
 
 ###################
 banner "MAINTAINER"
@@ -105,7 +128,7 @@ banner "MAINTAINER"
 cd $BASE/tmp/maintainer/acme
 
 rad auth $MAINTAINER
-rad track $CONTRIBUTOR_PEER --sync
+rad track $CONTRIBUTOR_PEER
 rad patch --list
 
 rm .gitignore

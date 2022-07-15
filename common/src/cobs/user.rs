@@ -19,24 +19,6 @@ lazy_static::lazy_static! {
     pub static ref TYPENAME: TypeName = FromStr::from_str("xyz.radicle.user").unwrap();
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("Create error: {0}")]
-    Create(String),
-
-    #[error("Update error: {0}")]
-    Update(String),
-
-    #[error("List error: {0}")]
-    List(String),
-
-    #[error("Retrieve error: {0}")]
-    Retrieve(String),
-
-    #[error(transparent)]
-    Automerge(#[from] AutomergeError),
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum Event {}
@@ -137,11 +119,7 @@ impl<'a> UserStore<'a> {
     }
 
     pub fn local(&self) -> Result<Option<User>, Error> {
-        let cobs = self
-            .store
-            .list(&self.whoami.urn(), &TYPENAME)
-            .map_err(|e| Error::Retrieve(e.to_string()))?;
-
+        let cobs = self.store.list(&self.whoami.urn(), &TYPENAME)?;
         if let Some(cob) = cobs.first() {
             let user = User::try_from(cob.history()).unwrap();
             Ok(Some(user))
@@ -151,11 +129,7 @@ impl<'a> UserStore<'a> {
     }
 
     pub fn local_raw(&self, project: &Urn) -> Result<Option<(ObjectId, Automerge)>, Error> {
-        let cob = self
-            .store
-            .list(project, &TYPENAME)
-            .map_err(|e| Error::Retrieve(e.to_string()))?;
-
+        let cob = self.store.list(project, &TYPENAME)?;
         let cob = if let Some(cob) = cob.first() {
             cob
         } else {
@@ -180,19 +154,16 @@ impl<'a> UserStore<'a> {
         let urn = self.whoami.urn();
         let (user_id, mut user) = self.local_raw(&urn)?.unwrap();
         let changes = events::project(&mut user, &project)?;
-        let _cob = self
-            .store
-            .update(
-                &self.whoami,
-                &urn,
-                UpdateObjectSpec {
-                    object_id: user_id,
-                    typename: TYPENAME.clone(),
-                    message: Some("Add project".to_owned()),
-                    changes,
-                },
-            )
-            .map_err(|e| Error::Update(e.to_string()));
+        let _cob = self.store.update(
+            &self.whoami,
+            &urn,
+            UpdateObjectSpec {
+                object_id: user_id,
+                typename: TYPENAME.clone(),
+                message: Some("Add project".to_owned()),
+                changes,
+            },
+        )?;
 
         Ok(())
     }
@@ -207,17 +178,15 @@ mod cobs {
         whoami: &LocalIdentity,
         store: &CollaborativeObjects,
     ) -> Result<(), Error> {
-        let _cob = store
-            .create(
-                whoami,
-                person,
-                NewObjectSpec {
-                    typename: TYPENAME.clone(),
-                    message: Some("Create user".to_owned()),
-                    history,
-                },
-            )
-            .map_err(|e| Error::Create(e.to_string()))?;
+        let _cob = store.create(
+            whoami,
+            person,
+            NewObjectSpec {
+                typename: TYPENAME.clone(),
+                message: Some("Create user".to_owned()),
+                history,
+            },
+        )?;
 
         Ok(())
     }
@@ -279,7 +248,7 @@ mod test {
     #[test]
     fn test_create() {
         let (storage, profile, whoami, _project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
 
         cobs.users().create().unwrap();
 
@@ -290,7 +259,7 @@ mod test {
     #[test]
     fn test_projects() {
         let (storage, profile, whoami, _project) = test::setup::profile();
-        let cobs = Store::new(whoami, profile.paths(), &storage).unwrap();
+        let cobs = Store::new(whoami, profile.paths(), &storage);
         let mut users = cobs.users();
         let project1 = Urn::from_str("rad:git:hnrkbjokbt439jk3p1dsi67u3mca85yiy7fiy").unwrap();
         let project2 = Urn::from_str("rad:git:hnrkbtw9t1of4ykjy6er4qqwxtc54k9943eto").unwrap();

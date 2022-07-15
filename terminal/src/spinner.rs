@@ -10,8 +10,9 @@ pub struct Spinner {
 
 impl Drop for Spinner {
     fn drop(&mut self) {
+        // TODO: Set error that will be output on fail.
         if !self.progress.is_finished() {
-            self.finish()
+            self.set_failed();
         }
     }
 }
@@ -27,9 +28,8 @@ impl Spinner {
         term::info!("{}", &self.message);
     }
 
-    pub fn failed(self) {
-        self.progress.finish_and_clear();
-        term::eprintln(style("!!").red().reverse(), &self.message);
+    pub fn failed(mut self) {
+        self.set_failed();
     }
 
     pub fn error(self, err: anyhow::Error) {
@@ -47,6 +47,11 @@ impl Spinner {
 
         self.progress.set_message(msg.clone());
         self.message = msg;
+    }
+
+    pub fn set_failed(&mut self) {
+        self.progress.finish_and_clear();
+        term::eprintln(style("!!").red().reverse(), &self.message);
     }
 }
 

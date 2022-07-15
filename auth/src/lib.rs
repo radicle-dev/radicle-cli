@@ -10,7 +10,7 @@ use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::profile::ProfileId;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{git, keys, person, profile};
+use radicle_common::{config, git, keys, person, profile};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -161,8 +161,6 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
     let (profile, peer_id) = profile::create(home, pwhash.clone())?;
 
-    git::configure_signing(profile.paths().git_dir(), &peer_id)?;
-
     let signer = if let Ok(sock) = sock {
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");
@@ -178,6 +176,10 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         spinner.finish();
         signer
     };
+
+    spinner = term::spinner("Setting up config...");
+    config::Config::init(&profile)?;
+    spinner.finish();
 
     let storage = keys::storage(&profile, signer.clone())?;
     let person = person::create(&profile, &name, signer, &storage)
@@ -266,7 +268,7 @@ pub fn authenticate(
     }
 
     let profile = selection;
-    let signer = if let Ok(sock) = keys::ssh_auth_sock() {
+    if let Ok(sock) = keys::ssh_auth_sock() {
         if !keys::is_ready(profile, sock.clone())? {
             term::warning("Adding your radicle key to ssh-agent...");
 
@@ -282,21 +284,14 @@ pub fn authenticate(
             let pass = keys::pwhash(secret_input);
             let spinner = term::spinner("Unlocking...");
 
-            keys::add(profile, pass, sock.clone()).context("invalid passphrase supplied")?;
+            keys::add(profile, pass, sock).context("invalid passphrase supplied")?;
             spinner.finish();
 
             term::success!("Radicle key added to ssh-agent");
         } else {
             term::success!("Signing key already in ssh-agent");
         }
-        sock.to_signer(profile)?
-    } else {
-        let signer = term::secret_key(profile)?;
-        signer.to_signer(profile)?
-    };
-
-    git::configure_signing(selection.paths().git_dir(), &signer.peer_id())?;
-    term::success!("Signing key configured in git");
+    }
 
     Ok(())
 }
