@@ -563,9 +563,8 @@ pub fn print(
     let you = patch.author.urn() == &whoami.urn();
     let prefix = "└── ";
     let mut author_info = vec![format!(
-        "{}{} opened by {}",
+        "{}opened by {}",
         prefix,
-        term::format::secondary(common::fmt::cob(patch_id)),
         term::format::tertiary(patch.author.name()),
     )];
 
@@ -589,8 +588,9 @@ pub fn print(
     };
 
     term::info!(
-        "{} {} {} {}",
+        "{} {} {} {} {}",
         term::format::bold(&patch.title),
+        term::format::secondary(common::fmt::cob(patch_id)),
         revision_pretty,
         term::format::secondary(common::fmt::oid(&revision_oid)),
         diff
