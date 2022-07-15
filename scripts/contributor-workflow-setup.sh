@@ -32,8 +32,16 @@ set -e
 #
 export RAD_HOME="$(pwd)/tmp/root"
 
-SEED_ID=$(curl http://127.0.0.1:8777 | jq --raw-output .peer.id)
+abort() {
+  echo $1 >&2
+  exit 1
+}
+
+SEED_API=127.0.0.1:8777
+SEED_ID=$(curl --silent http://$SEED_API | jq --raw-output .peer.id)
 SEED_ADDR="$SEED_ID@127.0.0.1:8776"
+
+[ ! -z "$SEED_ID" ] || abort "Couldn't get peer id from $SEED_API"
 
 rad() {
   cmd=$1; shift
