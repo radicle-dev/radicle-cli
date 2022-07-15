@@ -177,7 +177,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
     if options.list {
-        list(&storage, &repo, &profile, &project, options)?;
+        list(&storage, &profile, &project, options)?;
     } else {
         create(&storage, &profile, &project, &repo, options)?;
     }
@@ -187,7 +187,6 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
 fn list(
     storage: &Storage,
-    repo: &git::Repository,
     profile: &Profile,
     project: &project::Metadata,
     options: Options,
@@ -208,6 +207,7 @@ fn list(
     let cobs = cobs::store(profile, storage)?;
     let patches = cobs.patches();
     let proposed = patches.proposed(&project.urn)?;
+    let repo = git::Repository::open_bare(profile.paths().git_dir())?;
 
     // Our `HEAD`.
     let head = repo.head()?;
@@ -233,7 +233,7 @@ fn list(
         for (id, patch) in &mut own {
             term::blank();
 
-            print(&cobs.whoami, id, patch, project, &head, repo, storage)?;
+            print(&cobs.whoami, id, patch, project, &head, &repo, storage)?;
         }
     }
     term::blank();
@@ -246,7 +246,7 @@ fn list(
         for (id, patch) in &mut other {
             term::blank();
 
-            print(&cobs.whoami, id, patch, project, &head, repo, storage)?;
+            print(&cobs.whoami, id, patch, project, &head, &repo, storage)?;
         }
     }
     term::blank();
