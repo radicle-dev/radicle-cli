@@ -4,9 +4,7 @@ use std::ffi::OsString;
 use anyhow::anyhow;
 use anyhow::Context as _;
 
-use librad::git::storage::Storage;
 use librad::git::tracking;
-use librad::git::Urn;
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
@@ -108,33 +106,6 @@ impl Args for Options {
     }
 }
 
-fn find_remote(
-    remote: &String,
-    storage: &Storage,
-    repo: &git::Repository,
-    urn: &Urn,
-) -> anyhow::Result<Option<String>> {
-    if let Ok(peer_) = remote.parse() {
-        // by Peer ID
-        for (name, peer) in git::remotes(repo)? {
-            if peer == peer_ {
-                return Ok(Some(name));
-            }
-        }
-        return Ok(None);
-    }
-
-    // by person's name
-    for (name, peer) in git::remotes(repo)? {
-        if let Some(person) = project::person(&storage, urn.clone(), &peer)? {
-            if person.subject().name.to_string() == *remote {
-                return Ok(Some(name));
-            }
-        }
-    }
-    Ok(None)
-}
-
 pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let profile = ctx.profile()?;
     let signer = term::signer(&profile)?;
@@ -172,19 +143,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                 term::format::highlight(&name)
             );
         }
-        Operation::Remove { remote } => match find_remote(&remote, &storage, &repo, &urn)? {
-            Some(name) => {
-                repo.remote_delete(&name)?;
-                term::success!(
-                    "Remote {} {} removed",
-                    term::format::highlight(&remote),
-                    term::format::dim(format!("{:?}", name)),
-                );
-            }
-            None => {
-                anyhow::bail!("remote '{}' not found", remote)
-            }
-        },
+        Operation::Remove { remote } => term::remote::remove(&remote, &storage, &repo, &urn)?,
         Operation::List => {
             let mut table = term::Table::default();
             let proj = project::get(&storage, &urn)?

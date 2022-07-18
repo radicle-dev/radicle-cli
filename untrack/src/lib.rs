@@ -4,13 +4,14 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Context as _;
 
+use librad::git::storage::Storage;
 use librad::git::tracking::git::tracking;
 use librad::git::Urn;
 use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::profile::Profile;
-use radicle_common::{fmt, keys, project};
+use radicle_common::{fmt, git, keys, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -26,14 +27,14 @@ Usage
 
 Options
 
-    --help   Print help
+    --help              Print help
 "#,
 };
 
 /// Tool options.
 #[derive(Debug)]
 pub struct Options {
-    pub peer: Option<PeerId>,
+    pub peer: Option<String>,
 }
 
 impl Args for Options {
@@ -41,7 +42,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut peer: Option<PeerId> = None;
+        let mut peer: Option<String> = None;
         let mut all = false;
 
         while let Some(arg) = parser.next()? {
@@ -51,12 +52,7 @@ impl Args for Options {
                 }
                 Value(val) if peer.is_none() => {
                     let val = val.to_string_lossy();
-
-                    if let Ok(val) = PeerId::from_str(&val) {
-                        peer = Some(val);
-                    } else {
-                        return Err(anyhow!("invalid <peer-id> '{}'", val));
-                    }
+                    peer = Some(val.to_string());
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
@@ -76,21 +72,50 @@ impl Args for Options {
 }
 
 pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
-    let (urn, _) =
+    let (urn, repo) =
         project::cwd().context("this command must be run in the context of a project")?;
     let profile = ctx.profile()?;
 
-    execute(&urn, options, &profile)
+    execute(&urn, Some(&repo), options, &profile)
 }
 
-pub fn execute(urn: &Urn, options: Options, profile: &Profile) -> anyhow::Result<()> {
-    // TODO: Remove remote
-    // TODO: Remove tracking branch
+fn get_peer_id(
+    project: &project::Metadata,
+    storage: &Storage,
+    name: &String,
+) -> anyhow::Result<Option<PeerId>> {
+    for (id, peer) in project::tracked(project, storage)? {
+        if peer.name() == *name {
+            return Ok(Some(id));
+        }
+    }
 
+    Ok(None)
+}
+
+pub fn execute(
+    urn: &Urn,
+    repo: Option<&git::Repository>,
+    options: Options,
+    profile: &Profile,
+) -> anyhow::Result<()> {
     let signer = term::signer(profile)?;
     let storage = keys::storage(profile, signer)?;
 
-    if let Some(peer) = options.peer {
+    if let Some(peer_str) = options.peer {
+        let peer = if let Ok(val) = PeerId::from_str(&peer_str) {
+            val
+        } else {
+            let project = project::get(&storage, urn)?
+                .ok_or_else(|| anyhow!("project {} not found in local storage", &urn))?;
+
+            if let Some(v) = get_peer_id(&project, &storage, &peer_str)? {
+                v
+            } else {
+                anyhow::bail!("invalid <peer-id> '{}'", peer_str)
+            }
+        };
+
         tracking::untrack(
             &storage,
             urn,
@@ -100,6 +125,11 @@ pub fn execute(urn: &Urn, options: Options, profile: &Profile) -> anyhow::Result
                 prune: true,
             },
         )??;
+
+        if let Some(repo) = repo {
+            term::remote::remove(&peer.to_string(), &storage, repo, urn)?;
+        };
+
         term::success!(
             "Tracking relationship {} removed for {}",
             term::format::dim(fmt::peer(&peer)),

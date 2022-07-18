@@ -128,7 +128,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                     term::format::dim(namespace.display())
                 ))
             {
-                rad_untrack::execute(urn, rad_untrack::Options { peer: None }, &profile)?;
+                rad_untrack::execute(&urn, None, rad_untrack::Options { peer: None }, &profile)?;
                 fs::remove_dir_all(namespace)?;
                 term::success!("Successfully removed project {}", &urn);
             }

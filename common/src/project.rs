@@ -482,6 +482,33 @@ pub fn list_seed_heads(
     Ok(remotes)
 }
 
+pub fn find_remote(
+    name: &str,
+    storage: &Storage,
+    repo: &git::Repository,
+    urn: &Urn,
+) -> anyhow::Result<Option<String>> {
+    if let Ok(peer_) = name.parse() {
+        // by Peer ID
+        for (name, peer) in git::remotes(repo)? {
+            if peer == peer_ {
+                return Ok(Some(name));
+            }
+        }
+        return Ok(None);
+    }
+
+    // by person's name
+    for (name, peer) in git::remotes(repo)? {
+        if let Some(person) = person(&storage, urn.clone(), &peer)? {
+            if person.subject().name.to_string() == *name {
+                return Ok(Some(name));
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// Create a git remote for the given project and peer. This does not save the
 /// remote to the git configuration.
 pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, anyhow::Error> {
@@ -523,6 +550,15 @@ where
     Ok(remotes)
 }
 
+pub fn peer_prefix(name: &str) -> String {
+    format!("{}/{}", PEER_PREFIX, name)
+}
+
+pub fn remote_name(name: &str) -> String {
+    let peer_prefix = peer_prefix(name);
+    format!("{}/rad", peer_prefix)
+}
+
 /// Setup a project remote and tracking branch.
 pub struct SetupRemote<'a> {
     /// The project.
@@ -549,9 +585,7 @@ impl<'a> SetupRemote<'a> {
         let urn = &self.project.urn;
 
         // TODO: Handle conflicts in remote name.
-        let peer_prefix = format!("{}/{}", PEER_PREFIX, name);
-        let remote_name = format!("{}/rad", peer_prefix);
-        let mut remote = self::remote(urn, peer, &remote_name)?;
+        let mut remote = self::remote(urn, peer, &remote_name(name))?;
 
         // Configure the remote in the repository.
         remote.save(repo)?;
@@ -563,8 +597,11 @@ impl<'a> SetupRemote<'a> {
         if self.upstream {
             // TODO: If this fails because the branch already exists, suggest how to specify a
             // different branch name or prefix.
-            let branch =
-                git::set_tracking(repo.path(), &peer_prefix, &self.project.default_branch)?;
+            let branch = git::set_tracking(
+                repo.path(),
+                &peer_prefix(name),
+                &self.project.default_branch,
+            )?;
 
             return Ok(Some((remote, branch)));
         }
