@@ -1,5 +1,6 @@
 #![allow(clippy::extra_unused_lifetimes)]
 use librad::crypto::keystore::pinentry::SecUtf8;
+use librad::git::local::url::LocalUrl;
 use librad::profile::{LnkHome, LNK_HOME};
 use link_identities::git::Urn;
 use radicle_git_helpers::remote_helper;
@@ -34,9 +35,9 @@ impl FromStr for Remote {
 
     #[cfg(not(feature = "ethereum"))]
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let urn = Urn::from_str(&format!("rad:git:{}", input))?;
+        let url: LocalUrl = LocalUrl::from_str(input)?;
 
-        Ok(Self::Project { urn })
+        Ok(Self::Project { urn: url.urn })
     }
 
     #[cfg(feature = "ethereum")]
