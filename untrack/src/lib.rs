@@ -136,7 +136,7 @@ pub fn execute(
             term::format::highlight(urn)
         );
     } else {
-        tracking::untrack_all(
+        let all_untracked = tracking::untrack_all(
             &storage,
             urn,
             tracking::UntrackAllArgs {
@@ -144,6 +144,13 @@ pub fn execute(
                 prune: true,
             },
         )?;
+
+        if let Some(repo) = repo {
+            for p in all_untracked.untracked.flatten() {
+                term::remote::remove(&p.remote.to_string(), &storage, repo, urn)?;
+            }
+        };
+
         term::success!(
             "Tracking relationships for {} removed",
             term::format::highlight(urn)
