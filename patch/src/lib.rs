@@ -173,7 +173,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
     if options.list {
-        list(&storage, &profile, &project, options)?;
+        list(&storage, Some(repo), &profile, &project, options)?;
     } else {
         create(&storage, &profile, &project, &repo, options)?;
     }
@@ -183,6 +183,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
 fn list(
     storage: &Storage,
+    repo: Option<git::Repository>,
     profile: &Profile,
     project: &project::Metadata,
     options: Options,
@@ -227,7 +228,7 @@ fn list(
         for (id, patch) in &mut own {
             term::blank();
 
-            print(&cobs.whoami, id, patch, project, &monorepo, storage)?;
+            print(&cobs.whoami, id, patch, project, &monorepo, &repo, storage)?;
         }
     }
     term::blank();
@@ -240,7 +241,7 @@ fn list(
         for (id, patch) in &mut other {
             term::blank();
 
-            print(&cobs.whoami, id, patch, project, &monorepo, storage)?;
+            print(&cobs.whoami, id, patch, project, &monorepo, &repo, storage)?;
         }
     }
     term::blank();
@@ -551,13 +552,40 @@ fn pretty_sync_status(
     Ok(format!("ahead {}, behind {}", ahead, behind))
 }
 
+/// Make a human friendly string for commit version information.
+///
+/// For example '<oid> (branch1[, branch2])'.
+fn pretty_commit_version(
+    revision_oid: &git::Oid,
+    repo: &Option<git::Repository>,
+) -> anyhow::Result<String> {
+    let mut str = common::fmt::oid(revision_oid);
+    let mut branches: Vec<String> = vec![];
+
+    if let Some(repo) = repo {
+        for r in repo.references()?.flatten() {
+            if let (Some(oid), Some(name)) = (&r.target(), &r.shorthand()) {
+                if oid == revision_oid {
+                    branches.push(name.to_string());
+                };
+            };
+        }
+    };
+    if !branches.is_empty() {
+        str = format!("<{}> ({})", str, &branches.join(", "));
+    }
+
+    Ok(str)
+}
+
 /// Adds patch details as a new row to `table` and render later.
 pub fn print(
     whoami: &LocalIdentity,
     patch_id: &PatchId,
     patch: &mut Patch,
     project: &project::Metadata,
-    repo: &git::Repository,
+    monorepo: &git::Repository,
+    repo: &Option<git::Repository>,
     storage: &Storage,
 ) -> anyhow::Result<()> {
     for r in patch.revisions.iter_mut() {
@@ -589,8 +617,8 @@ pub fn print(
         term::format::bold(&patch.title),
         term::format::secondary(common::fmt::cob(patch_id)),
         term::format::dim(format!("R{}", patch.version())),
-        term::format::secondary(common::fmt::oid(&revision.oid)),
-        pretty_sync_status(repo, *revision.oid, target_head)?,
+        term::format::secondary(pretty_commit_version(&revision.oid, repo)?),
+        pretty_sync_status(monorepo, *revision.oid, target_head)?,
     );
     term::info!("{}", author_info.join(" "));
 
