@@ -626,6 +626,18 @@ impl fmt::Display for Verdict {
     }
 }
 
+impl FromStr for Verdict {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<Verdict, Self::Err> {
+        match input {
+            "accept" => Ok(Verdict::Accept),
+            "reject" => Ok(Verdict::Reject),
+            _ => Err(()),
+        }
+    }
+}
+
 impl From<Verdict> for ScalarValue {
     fn from(verdict: Verdict) -> Self {
         let s = serde_json::to_string(&verdict).unwrap(); // Cannot fail.
