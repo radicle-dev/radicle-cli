@@ -176,10 +176,11 @@ pub fn track(
         }
         .run(&peer, &name, &profile)?;
 
-        if let Some(branch) = branch {
+        if let Some((remote, branch)) = branch {
+            term::success!("Remote {} set", term::format::highlight(remote.name),);
             term::success!(
                 "Remote-tracking branch {} set",
-                term::format::highlight(branch)
+                term::format::highlight(branch),
             );
         }
     }

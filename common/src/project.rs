@@ -544,7 +544,7 @@ impl<'a> SetupRemote<'a> {
         peer: &PeerId,
         name: &str,
         profile: &Profile,
-    ) -> anyhow::Result<Option<String>> {
+    ) -> anyhow::Result<Option<(Remote<LocalUrl>, String)>> {
         let repo = self.repo;
         let urn = &self.project.urn;
 
@@ -566,7 +566,7 @@ impl<'a> SetupRemote<'a> {
             let branch =
                 git::set_tracking(repo.path(), &peer_prefix, &self.project.default_branch)?;
 
-            return Ok(Some(branch));
+            return Ok(Some((remote, branch)));
         }
         Ok(None)
     }

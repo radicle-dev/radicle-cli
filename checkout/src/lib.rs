@@ -160,10 +160,11 @@ pub fn execute(options: Options, profile: &profile::Profile) -> anyhow::Result<P
                         peer.default_encoding()
                     };
 
-                    if let Some(upstream) = setup.run(peer, &name, profile)? {
+                    if let Some((remote, branch)) = setup.run(peer, &name, profile)? {
+                        term::success!("Remote {} set", term::format::highlight(remote.name),);
                         term::success!(
                             "Remote-tracking branch {} created for {}",
-                            term::format::highlight(&upstream),
+                            term::format::highlight(&branch),
                             term::format::tertiary(fmt::peer(peer))
                         );
                     }
