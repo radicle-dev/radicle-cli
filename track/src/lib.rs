@@ -15,7 +15,7 @@ use radicle_common::nonempty::NonEmpty;
 use radicle_common::project::PeerInfo;
 use radicle_common::tokio;
 use radicle_common::Url;
-use radicle_common::{git, keys, project, seed, sync};
+use radicle_common::{git, keys, project, seed, sync, Urn};
 use radicle_terminal as term;
 
 mod options;
@@ -285,19 +285,47 @@ pub fn show(
     Ok(())
 }
 
+/// Return the Peer's branches with their Oid's by parsing references in the storage's git
+/// repository.
+fn get_peer_branches(
+    storage: &ReadOnly,
+    peer: PeerId,
+    urn: &Urn,
+) -> anyhow::Result<Vec<(String, git::Oid)>> {
+    // Open the monorepo.
+    let repo = git::Repository::open_bare(storage.as_ref().path())?;
+
+    let ref_name_prefix = &format!(
+        "refs/namespaces/{}/refs/remotes/{}/heads/",
+        urn.encode_id(),
+        peer,
+    );
+
+    let mut branches = vec![];
+    for r in repo.references()?.flatten() {
+        let (head, ref_name) = if let (Some(target), Some(name)) = (r.target(), r.name()) {
+            (target, name)
+        } else {
+            continue;
+        };
+
+        if let Some(branch_name) = ref_name.strip_prefix(ref_name_prefix) {
+            branches.push((branch_name.to_string(), head));
+        }
+    }
+
+    Ok(branches)
+}
+
 pub fn show_local(project: &project::Metadata, storage: &ReadOnly) -> anyhow::Result<Vec<Peer>> {
     let tracked = project::tracked(project, storage)?;
     let mut peers = Vec::new();
 
     for (id, meta) in tracked {
         let mut branches = vec![];
-
-        let head = project::get_remote_head(&storage, &project.urn, &id, &project.default_branch)
-            .ok()
-            .flatten();
-        if let Some(head) = head {
+        for (branch_name, head) in get_peer_branches(storage, id, &project.urn)? {
             branches.push(Branch {
-                name: project.default_branch.to_string(),
+                name: branch_name,
                 head,
                 message: String::new(),
             });
