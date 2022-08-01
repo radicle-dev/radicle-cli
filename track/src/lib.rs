@@ -290,27 +290,24 @@ pub fn show_local(project: &project::Metadata, storage: &ReadOnly) -> anyhow::Re
     let mut peers = Vec::new();
 
     for (id, meta) in tracked {
+        let mut branches = vec![];
+
         let head = project::get_remote_head(&storage, &project.urn, &id, &project.default_branch)
             .ok()
             .flatten();
-
         if let Some(head) = head {
-            peers.push(Peer {
-                id,
-                meta: Some(meta),
-                branches: vec![Branch {
-                    name: project.default_branch.to_string(),
-                    head,
-                    message: String::new(),
-                }],
-            });
-        } else {
-            peers.push(Peer {
-                id,
-                meta: Some(meta),
-                branches: vec![],
+            branches.push(Branch {
+                name: project.default_branch.to_string(),
+                head,
+                message: String::new(),
             });
         }
+
+        peers.push(Peer {
+            id,
+            meta: Some(meta),
+            branches,
+        });
     }
     Ok(peers)
 }
