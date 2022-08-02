@@ -272,7 +272,7 @@ pub fn get_seed_id(mut seed: Url) -> Result<PeerId, anyhow::Error> {
 pub fn get_commit(
     mut seed: Url,
     project: &Urn,
-    commit: &git2::Oid,
+    commit: &git::Oid,
 ) -> Result<Commit, anyhow::Error> {
     seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
     seed = seed.join(&format!("/v1/projects/{}/commits/{}", project, commit))?;

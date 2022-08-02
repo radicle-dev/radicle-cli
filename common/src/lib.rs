@@ -46,7 +46,7 @@ pub mod fmt {
     }
 
     /// Format a git Oid.
-    pub fn oid(oid: &git2::Oid) -> String {
+    pub fn oid(oid: &super::git::Oid) -> String {
         format!("{:.7}", oid)
     }
 

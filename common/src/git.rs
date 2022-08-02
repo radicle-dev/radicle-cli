@@ -16,8 +16,8 @@ use librad::reflike;
 use librad::{crypto::BoxedSigner, PeerId};
 
 pub use git2::{
-    build::CheckoutBuilder, AnnotatedCommit, Commit, ErrorCode, MergeAnalysis, MergeOptions, Oid,
-    Reference, Repository, Signature,
+    build::CheckoutBuilder, AnnotatedCommit, Commit, Direction, ErrorCode, MergeAnalysis,
+    MergeOptions, Oid, Reference, Repository, Signature,
 };
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;

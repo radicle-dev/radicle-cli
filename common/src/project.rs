@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use either::Either;
-use git2::Repository;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -287,7 +286,7 @@ pub fn create(payload: payload::Project, storage: &Storage) -> anyhow::Result<Pr
 /// Initialize a repo as a project.
 pub fn init(
     project: &Project,
-    repo: &git2::Repository,
+    repo: &git::Repository,
     storage: &Storage,
     paths: &Paths,
     signer: BoxedSigner,
@@ -315,7 +314,7 @@ pub fn checkout<S>(
     urn: &Urn,
     peer: Option<PeerId>,
     path: PathBuf,
-) -> anyhow::Result<git2::Repository>
+) -> anyhow::Result<git::Repository>
 where
     S: AsRef<ReadOnly>,
 {
@@ -338,7 +337,7 @@ where
 }
 
 /// List projects on the local device. Includes the project head if available.
-pub fn list<S>(storage: &S) -> anyhow::Result<Vec<(Urn, Metadata, Option<git2::Oid>)>>
+pub fn list<S>(storage: &S) -> anyhow::Result<Vec<(Urn, Metadata, Option<git::Oid>)>>
 where
     S: AsRef<ReadOnly>,
 {
@@ -365,9 +364,9 @@ where
 
 /// List the heads of the rad remote.
 pub fn list_rad_remote_heads(
-    repo: &git2::Repository,
+    repo: &git::Repository,
     settings: transport::Settings,
-) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
+) -> anyhow::Result<HashMap<PeerId, Vec<(String, git::Oid)>>> {
     let mut remote = git::rad_remote(repo)?;
     let mut remotes = HashMap::new();
     let heads = remote.remote_heads(settings, repo)?;
@@ -384,11 +383,11 @@ pub fn list_rad_remote_heads(
 }
 
 /// Get a local head of a project.
-pub fn get_local_head<S>(storage: &S, urn: &Urn, branch: &str) -> anyhow::Result<Option<git2::Oid>>
+pub fn get_local_head<S>(storage: &S, urn: &Urn, branch: &str) -> anyhow::Result<Option<git::Oid>>
 where
     S: AsRef<ReadOnly>,
 {
-    let repo = git2::Repository::open_bare(storage.as_ref().path())?;
+    let repo = git::Repository::open_bare(storage.as_ref().path())?;
     let reference = repo
         .find_reference(&format!(
             "refs/namespaces/{}/refs/heads/{}",
@@ -406,14 +405,14 @@ pub fn get_remote_head<S>(
     urn: &Urn,
     peer: &PeerId,
     branch: &str,
-) -> anyhow::Result<Option<git2::Oid>>
+) -> anyhow::Result<Option<git::Oid>>
 where
     S: AsRef<ReadOnly>,
 {
     // Open the monorepo.
-    let repo = git2::Repository::open_bare(storage.as_ref().path())?;
+    let repo = git::Repository::open_bare(storage.as_ref().path())?;
 
-    // Nb. `git2` doesn't handle namespaces properly, so we specify it manually.
+    // Nb. the git2 crate doesn't handle namespaces properly, so we specify it manually.
     let reference = repo.find_reference(&format!(
         "refs/namespaces/{}/refs/remotes/{}/heads/{}",
         urn.encode_id(),
@@ -465,12 +464,12 @@ pub fn list_seed_heads(
     repo: &git::Repository,
     url: &Url,
     project: &Urn,
-) -> anyhow::Result<HashMap<PeerId, Vec<(String, git2::Oid)>>> {
+) -> anyhow::Result<HashMap<PeerId, Vec<(String, git::Oid)>>> {
     let url = url.join(&project.encode_id())?;
     let mut remote = repo.remote_anonymous(url.as_str())?;
     let mut remotes = HashMap::new();
 
-    remote.connect(git2::Direction::Fetch)?;
+    remote.connect(git::Direction::Fetch)?;
 
     for head in remote.list()? {
         if let Some((peer, r)) = git::parse_remote(head.name()) {
@@ -500,7 +499,7 @@ pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, 
 }
 
 /// Get the project URN and repository of the current working directory.
-pub fn cwd() -> anyhow::Result<(Urn, Repository)> {
+pub fn cwd() -> anyhow::Result<(Urn, git::Repository)> {
     let repo = git::repository()?;
     let urn = git::rad_remote(&repo)?.url.urn;
 
@@ -529,7 +528,7 @@ pub struct SetupRemote<'a> {
     /// The project.
     pub project: &'a Metadata,
     /// The repository in which to setup the remote.
-    pub repo: &'a git2::Repository,
+    pub repo: &'a git::Repository,
     /// Radicle signer.
     pub signer: BoxedSigner,
     /// Whether or not to fetch the remote immediately.
