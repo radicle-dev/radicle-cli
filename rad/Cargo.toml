@@ -8,8 +8,6 @@ description = "Radicle command line interface"
 
 [dependencies]
 anyhow = "1.0"
-librad = "0"
 lexopt = "0.2"
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
-rad-help = { path = "../help" }

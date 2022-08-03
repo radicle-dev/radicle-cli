@@ -14,6 +14,5 @@ radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
 rad-sync = { path = "../sync" }
 rad-checkout = { path = "../checkout" }
-rad-track = { path = "../track" }
 rad-init = { path = "../init" }
 url = "2.2.2"

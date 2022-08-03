@@ -7,13 +7,10 @@ license = "GPL-3.0-or-later"
 description = "Manage radicle issues"
 
 [dependencies]
-automerge = { version = "0" }
 lexopt = { version = "0.2" }
 anyhow = { version = "1.0" }
-lazy_static = { version = "1.4.0" }
 librad = { version = "0" }
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
-serde_json = { version = "1.0" }
 serde_yaml = { version = "0.8" }
 serde = { version = "1.0" }

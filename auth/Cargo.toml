@@ -10,7 +10,6 @@ description = "Manage radicle identities and profiles"
 anyhow = "1.0"
 lexopt = "0.2.0"
 librad = "0"
-lnk-profile = "0"
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
 atty = "0.2"

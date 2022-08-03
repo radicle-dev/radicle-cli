@@ -4417,8 +4417,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "librad",
- "rad-help",
  "radicle-common",
  "radicle-terminal",
 ]
@@ -4463,7 +4461,6 @@ dependencies = [
  "atty",
  "lexopt",
  "librad",
- "lnk-profile",
  "radicle-common",
  "radicle-terminal",
  "zeroize",
@@ -4476,7 +4473,6 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "lnk-profile",
  "rad-init",
  "radicle-common",
  "radicle-terminal",
@@ -4492,7 +4488,6 @@ dependencies = [
  "rad-checkout",
  "rad-init",
  "rad-sync",
- "rad-track",
  "radicle-common",
  "radicle-terminal",
  "url",
@@ -4532,7 +4527,6 @@ dependencies = [
  "radicle-common",
  "radicle-terminal",
  "serde_json",
- "thiserror",
  "url",
 ]
 
@@ -4557,9 +4551,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "librad",
- "lnk-clib",
- "lnk-profile",
  "rad-account",
  "rad-auth",
  "rad-checkout",
@@ -4602,8 +4593,6 @@ dependencies = [
  "colored_json",
  "lexopt",
  "librad",
- "link-identities",
- "lnk-profile",
  "radicle-common",
  "radicle-terminal",
  "serde_json",
@@ -4614,14 +4603,11 @@ name = "rad-issue"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "automerge",
- "lazy_static",
  "lexopt",
  "librad",
  "radicle-common",
  "radicle-terminal",
  "serde",
- "serde_json",
  "serde_yaml",
 ]
 
@@ -4659,13 +4645,8 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "lnk-identities",
- "lnk-profile",
- "rad-sync",
  "radicle-common",
  "radicle-terminal",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -4674,8 +4655,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "librad",
- "lnk-profile",
  "radicle-common",
  "radicle-terminal",
 ]
@@ -4686,7 +4665,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "librad",
  "rad-sync",
  "radicle-common",
  "radicle-terminal",
@@ -4720,14 +4698,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "librad",
- "lnk-identities",
- "lnk-profile",
- "rad-sync",
  "radicle-common",
  "radicle-terminal",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -4760,8 +4732,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lexopt",
- "librad",
- "lnk-profile",
  "radicle-common",
  "radicle-terminal",
 ]
@@ -4771,11 +4741,8 @@ name = "rad-sync"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "fastrand",
  "lexopt",
  "librad",
- "lnk-clib",
- "lnk-profile",
  "radicle-common",
  "radicle-terminal",
  "url",
@@ -4799,7 +4766,6 @@ dependencies = [
  "anyhow",
  "lexopt",
  "librad",
- "rad-track",
  "radicle-common",
  "radicle-terminal",
 ]
@@ -4811,7 +4777,6 @@ dependencies = [
  "anyhow",
  "assay",
  "assert_cmd",
- "atty",
  "colored 1.9.3",
  "ethers",
  "futures",
@@ -4867,7 +4832,6 @@ dependencies = [
  "either",
  "ethers",
  "futures-lite",
- "git-ref-format",
  "git-trailers",
  "git2",
  "hex",
@@ -4875,7 +4839,6 @@ dependencies = [
  "lexopt",
  "librad",
  "link-async",
- "link-replication",
  "lnk-clib",
  "lnk-identities",
  "lnk-sync",
@@ -4982,16 +4945,11 @@ name = "radicle-terminal"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "console",
  "dialoguer",
  "indicatif",
- "lexopt",
  "librad",
- "lnk-profile",
  "radicle-common",
- "thiserror",
- "zeroize",
 ]
 
 [[package]]

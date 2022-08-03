@@ -9,16 +9,11 @@ default = []
 ethereum = ["radicle-common/ethereum"]
 
 [dependencies]
-async-trait = "0.1.51"
 anyhow = "1.0"
 dialoguer = "0.10.0"
 indicatif = "0.16.2"
 console = "0.15"
-lexopt = "0.2.0"
 librad = { version = "0" }
-lnk-profile = { version = "0" }
-thiserror = "1.0"
-zeroize = "1.1"
 
 [dependencies.radicle-common]
 path = "../common"

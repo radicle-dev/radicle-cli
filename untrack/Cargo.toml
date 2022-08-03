@@ -12,4 +12,3 @@ anyhow = { version = "1.0" }
 librad = { version = "0" }
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
-rad-track = { path = "../track" }

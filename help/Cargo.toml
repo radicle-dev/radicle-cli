@@ -12,10 +12,7 @@ ethereum = ["rad-ens", "rad-account"]
 
 [dependencies]
 anyhow = "1.0"
-librad = "0"
 lexopt = "0.2"
-lnk-clib = "0"
-lnk-profile = "0"
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
 rad-self = { path = "../self" }

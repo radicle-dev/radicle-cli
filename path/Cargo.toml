@@ -8,8 +8,6 @@ description = "Show radicle paths"
 
 [dependencies]
 anyhow = "1.0"
-librad = "0"
 lexopt = "0.2"
-lnk-profile = "0"
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }

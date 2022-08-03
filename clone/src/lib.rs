@@ -9,7 +9,7 @@ use librad::git::Urn;
 use url::Url;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::seed::{self};
+use radicle_common::seed;
 use radicle_common::Interactive;
 use radicle_common::{git, identity, keys, profile, project, sync};
 use radicle_terminal as term;
