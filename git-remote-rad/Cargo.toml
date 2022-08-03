@@ -7,10 +7,7 @@ license = "GPL-3.0-or-later"
 description = "Git remote helper for radicle"
 
 [dependencies]
-radicle-cli = { path = "../" }
 async-trait = { version = "0.1" }
-log = { version = "0.4" }
-lexopt = { version = "0.2" }
 ethers = { version = "0.6" }
 link-identities = { version = "0" }
 radicle-git-helpers = { version = "0" }

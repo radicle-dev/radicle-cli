@@ -81,6 +81,7 @@ members = [
   "edit",
   "reward",
   "comment",
+  "git-remote-rad",
 ]
 
 [patch.crates-io.link-crypto]

@@ -2284,6 +2284,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "git-remote-rad"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "ethers",
+ "librad",
+ "link-identities",
+ "radicle-common",
+ "radicle-git-helpers",
+ "url",
+]
+
+[[package]]
 name = "git-tempfile"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
