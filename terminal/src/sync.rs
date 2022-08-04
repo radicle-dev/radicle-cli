@@ -3,6 +3,7 @@ use std::time;
 use librad::git::Urn;
 
 use radicle_common as common;
+use radicle_common::nonempty::NonEmpty;
 use radicle_common::profile::Profile;
 use radicle_common::signer::ToSigner;
 use radicle_common::sync;
@@ -13,7 +14,7 @@ use crate as term;
 // TODO: Don't return a result.
 pub fn sync(
     urn: Urn,
-    seeds: Vec<sync::Seed<String>>,
+    seeds: NonEmpty<sync::Seed<String>>,
     mode: sync::Mode,
     profile: &Profile,
     signer: impl ToSigner,

@@ -26,6 +26,7 @@ pub use lnk_clib::seed::{Seed, Seeds};
 pub use lnk_sync::Mode;
 
 use crate::config;
+use crate::nonempty::NonEmpty;
 
 /// Sync result of a seed.
 #[derive(Debug)]
@@ -99,14 +100,14 @@ pub async fn client(
 
 /// Get the seeds configured for the profile.
 /// First checks local (working copy) config, then global.
-pub fn seeds(profile: &Profile) -> anyhow::Result<Vec<Seed<String>>> {
+pub fn seeds(profile: &Profile) -> anyhow::Result<NonEmpty<Seed<String>>> {
     let config = config::Config::load(profile)?;
     let seeds = config
         .seeds()
         .cloned()
         .map(|s| s.try_into())
         .collect::<Result<Vec<_>, _>>()?;
-    if !seeds.is_empty() {
+    if let Ok(seeds) = seeds.try_into() {
         return Ok(seeds);
     }
 
@@ -115,7 +116,9 @@ pub fn seeds(profile: &Profile) -> anyhow::Result<Vec<Seed<String>>> {
     // seed configurations under a unified format. For now we support both.
     let seeds_file = profile.paths().seeds_file();
     let store = FileStore::<String>::new(seeds_file)?;
-    let seeds = store.iter()?.collect::<Result<_, _>>()?;
+    let seeds: Vec<_> = store.iter()?.collect::<Result<_, _>>()?;
 
-    Ok(seeds)
+    seeds
+        .try_into()
+        .map_err(|_| anyhow!("No seeds configured for profile {}", profile.id()))
 }

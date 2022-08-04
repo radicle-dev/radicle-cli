@@ -11,6 +11,7 @@ use librad::profile::Profile;
 use librad::PeerId;
 
 use radicle_common::args::Help;
+use radicle_common::nonempty::NonEmpty;
 use radicle_common::project::PeerInfo;
 use radicle_common::tokio;
 use radicle_common::Url;
@@ -128,7 +129,7 @@ pub fn track(
                 .clone()
                 .try_into()
                 .map_err(|e| anyhow!("invalid seed specified: {}", e))?;
-            vec![seed]
+            NonEmpty::new(seed)
         } else {
             sync::seeds(&profile)?
         };

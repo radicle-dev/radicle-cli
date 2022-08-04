@@ -1,4 +1,5 @@
 #![allow(clippy::or_fun_call)]
+use std::convert::TryInto;
 use std::ffi::OsString;
 use std::iter;
 use std::str::FromStr;
@@ -9,6 +10,7 @@ use librad::profile::Profile;
 
 use radicle_common::args;
 use radicle_common::args::{Args, Error, Help};
+use radicle_common::nonempty::NonEmpty;
 use radicle_common::sync::Mode;
 use radicle_common::{identity, keys, person, project, sync, tokio};
 use radicle_terminal as term;
@@ -144,16 +146,12 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     };
 
     let seeds = if let Some(seed) = options.origin.as_ref().and_then(|o| o.seed.clone()) {
-        vec![seed]
-    } else if !options.seeds.is_empty() {
-        options.seeds.clone()
+        NonEmpty::new(seed)
+    } else if let Ok(seeds) = options.seeds.clone().try_into() {
+        seeds
     } else {
         sync::seeds(&profile)?
     };
-
-    if seeds.is_empty() {
-        anyhow::bail!("No seeds configured");
-    }
 
     if options.sync_self {
         sync_self(&profile, seeds, storage, options, rt)
@@ -164,7 +162,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
 pub fn sync_self(
     profile: &Profile,
-    seeds: Vec<sync::Seed<String>>,
+    seeds: NonEmpty<sync::Seed<String>>,
     storage: Storage,
     options: Options,
     rt: tokio::runtime::Runtime,
@@ -190,7 +188,7 @@ pub fn sync_self(
 pub fn sync(
     urn: Urn,
     profile: &Profile,
-    seeds: Vec<sync::Seed<String>>,
+    seeds: NonEmpty<sync::Seed<String>>,
     storage: Storage,
     options: Options,
     rt: tokio::runtime::Runtime,

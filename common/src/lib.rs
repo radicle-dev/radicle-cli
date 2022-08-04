@@ -27,6 +27,7 @@ extern crate quickcheck;
 pub use args::Error;
 pub use librad::git::Urn;
 pub use lnk_identities as identities;
+pub use nonempty;
 pub use serde_json as json;
 pub use tokio;
 pub use url::Url;
