@@ -65,10 +65,10 @@ pub struct Options {
 }
 
 impl Args for Options {
-    fn from_args(_args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let parser = lexopt::Parser::from_env();
+        let parser = lexopt::Parser::from_args(args);
         let (provider, parser) = ProviderOptions::from(parser)?;
         let (signer, mut parser) = SignerOptions::from(parser)?;
 

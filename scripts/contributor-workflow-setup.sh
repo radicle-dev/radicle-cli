@@ -48,7 +48,7 @@ rad() {
 
   echo                   >&2
   echo "▒ rad $cmd $@" >&2
-  cargo run -q --bin rad-$cmd -- "$@"
+  cargo run -q -p rad -- $cmd "$@"
 }
 
 banner() {
@@ -67,7 +67,7 @@ banner "MAINTAINER"
 ###################
 
 rad auth --init --name cloudhead --passphrase cloudhead
-MAINTAINER=$(cargo run -q --bin rad-self -- --profile)
+MAINTAINER=$(rad self --profile)
 
 # Create git repo
 mkdir -p $BASE/tmp/maintainer/acme

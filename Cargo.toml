@@ -19,34 +19,11 @@ panic = "abort"
 
 [features]
 default = []
-ethereum = ["rad-ens", "rad-account", "rad-help/ethereum", "rad-gov", "rad-reward", "ethers", "futures"]
+ethereum = ["ethers", "futures"]
 
 [package.metadata.deb]
 assets = [
-    ["target/release/rad-self", "usr/bin/rad-self", "755"],
-    ["target/release/rad-inspect", "usr/bin/rad-inspect", "755"],
-    ["target/release/rad-account", "usr/bin/rad-account", "755"],
-    ["target/release/rad-sync", "usr/bin/rad-sync", "755"],
-    ["target/release/rad-help", "usr/bin/rad-help", "755"],
-    ["target/release/rad-ens", "usr/bin/rad-ens", "755"],
-    ["target/release/rad-push", "usr/bin/rad-push", "755"],
     ["target/release/rad", "usr/bin/rad", "755"],
-    ["target/release/rad-auth", "usr/bin/rad-auth", "755"],
-    ["target/release/rad-rm", "usr/bin/rad-rm", "755"],
-    ["target/release/rad-track", "usr/bin/rad-track", "755"],
-    ["target/release/rad-ls", "usr/bin/rad-ls", "755"],
-    ["target/release/rad-init", "usr/bin/rad-init", "755"],
-    ["target/release/rad-issue", "usr/bin/rad-issue", "755"],
-    ["target/release/rad-clone", "usr/bin/rad-clone", "755"],
-    ["target/release/rad-patch", "usr/bin/rad-patch", "755"],
-    ["target/release/rad-pull", "usr/bin/rad-pull", "755"],
-    ["target/release/rad-checkout", "usr/bin/rad-checkout", "755"],
-    ["target/release/rad-untrack", "usr/bin/rad-untrack", "755"],
-    ["target/release/rad-remote", "usr/bin/rad-remote", "755"],
-    ["target/release/rad-gov", "usr/bin/rad-gov", "755"],
-    ["target/release/rad-edit", "usr/bin/rad-edit", "755"],
-    ["target/release/rad-reward", "usr/bin/rad-reward", "755"],
-    ["target/release/rad-comment", "usr/bin/rad-comment", "755"],
     ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
     ["rad.1.gz", "usr/share/man/man1/rad.1.gz", "644"],
     ["rad-checkout.1.gz", "usr/share/man/man1/rad-checkout.1.gz", "644"],
@@ -60,29 +37,6 @@ colored = { version = "1.9" }
 log = { version = "0.4", features = ["std"] }
 librad = { version = "0" }
 futures-lite = { version = "1.12" }
-rad = { path = "./rad" }
-rad-clone = { path = "./clone" }
-rad-auth = { path = "./auth" }
-rad-init = { path = "./init" }
-rad-self = { path = "./self" }
-rad-inspect = { path = "./inspect" }
-rad-issue = { path = "./issue" }
-rad-merge = { path = "./merge" }
-rad-patch = { path = "./patch" }
-rad-push = { path = "./push" }
-rad-pull = { path = "./pull" }
-rad-sync = { path = "./sync" }
-rad-remote = { path = "./remote" }
-rad-review = { path = "./review" }
-rad-checkout = { path = "./checkout" }
-rad-path = { path = "./path" }
-rad-track = { path = "./track" }
-rad-untrack = { path = "./untrack" }
-rad-help = { path = "./help" }
-rad-ls = { path = "./ls" }
-rad-rm = { path = "./rm" }
-rad-edit = { path = "./edit" }
-rad-comment = { path = "./comment" }
 link-identities = { version = "0" }
 radicle-common = { path = "./common" }
 radicle-terminal = { path = "./terminal" }
@@ -92,31 +46,11 @@ url = { version = "2" }
 # Ethereum functionality
 
 ethers = { version = "0.6.2", optional = true }
-rad-account = { path = "./account", optional = true }
-rad-ens = { path = "./ens", optional = true }
-rad-gov = { path = "./gov", optional = true }
-rad-reward = { path = "./reward", optional = true }
 futures = { version = "0.3", optional = true }
 
 [dev-dependencies]
 assay = "0.1.1"
 assert_cmd = "2.0"
-
-[[bin]]
-name = "rad-account"
-required-features = ["ethereum"]
-
-[[bin]]
-name = "rad-ens"
-required-features = ["ethereum"]
-
-[[bin]]
-name = "rad-gov"
-required-features = ["ethereum"]
-
-[[bin]]
-name = "rad-reward"
-required-features = ["ethereum"]
 
 [workspace]
 members = [

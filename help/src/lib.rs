@@ -3,6 +3,28 @@ use std::ffi::OsString;
 use radicle_common::args::{Args, Error, Help};
 use radicle_terminal as term;
 
+pub use rad_auth;
+pub use rad_checkout;
+pub use rad_clone;
+pub use rad_comment;
+pub use rad_edit;
+pub use rad_init;
+pub use rad_inspect;
+pub use rad_issue;
+pub use rad_ls;
+pub use rad_merge;
+pub use rad_patch;
+pub use rad_path;
+pub use rad_pull;
+pub use rad_push;
+pub use rad_remote;
+pub use rad_review;
+pub use rad_rm;
+pub use rad_self;
+pub use rad_sync;
+pub use rad_track;
+pub use rad_untrack;
+
 pub const HELP: Help = Help {
     name: "help",
     description: env!("CARGO_PKG_DESCRIPTION"),

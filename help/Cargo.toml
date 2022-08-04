@@ -20,7 +20,13 @@ rad-inspect = { path = "../inspect" }
 rad-ls = { path = "../ls" }
 rad-track = { path = "../track" }
 rad-untrack = { path = "../untrack" }
+rad-comment = { path = "../comment" }
+rad-review = { path = "../review" }
+rad-patch = { path = "../patch" }
+rad-path = { path = "../path" }
+rad-issue = { path = "../issue" }
 rad-init = { path = "../init" }
+rad-merge = { path = "../merge" }
 rad-auth = { path = "../auth" }
 rad-clone = { path = "../clone" }
 rad-checkout = { path = "../checkout" }

@@ -22,10 +22,10 @@ Options
 pub struct Options {}
 
 impl Args for Options {
-    fn from_args(_args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
+    fn from_args(args: Vec<OsString>) -> anyhow::Result<(Self, Vec<OsString>)> {
         use lexopt::prelude::*;
 
-        let mut parser = lexopt::Parser::from_env();
+        let mut parser = lexopt::Parser::from_args(args);
 
         if let Some(arg) = parser.next()? {
             match arg {

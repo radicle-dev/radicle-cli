@@ -12,6 +12,7 @@ pub mod sync;
 pub mod table;
 pub mod textbox;
 
+use std::ffi::OsString;
 use std::process;
 
 use dialoguer::console::style;
@@ -67,10 +68,26 @@ where
     A: Args,
     C: Command<A, fn() -> anyhow::Result<Profile>>,
 {
+    let args = std::env::args_os().into_iter().skip(1).collect();
+
+    run_command_args(help, action, cmd, args)
+}
+
+pub fn run_command_args<A, C>(help: Help, action: &str, cmd: C, args: Vec<OsString>) -> !
+where
+    A: Args,
+    C: Command<A, fn() -> anyhow::Result<Profile>>,
+{
     use crate::io as term;
 
-    let options = match A::from_env() {
-        Ok(opts) => opts,
+    let options = match A::from_args(args) {
+        Ok((opts, unparsed)) => {
+            if let Err(err) = radicle_common::args::finish(unparsed) {
+                term::error(err);
+                process::exit(1);
+            }
+            opts
+        }
         Err(err) => {
             match err.downcast_ref::<Error>() {
                 Some(Error::Help) => {
