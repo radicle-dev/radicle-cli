@@ -202,8 +202,6 @@ pub fn clone_repository(url: Url, profile: &profile::Profile) -> anyhow::Result<
             path: Some(destination.as_path().into()),
             ..Default::default()
         };
-
-        term::blank();
         rad_init::init(options, profile)?;
     }
     Ok(())
