@@ -32,10 +32,12 @@ impl Spinner {
         self.set_failed();
     }
 
-    pub fn error(self, err: anyhow::Error) {
+    pub fn error(self, err: anyhow::Error) -> anyhow::Error {
         self.progress.finish_and_clear();
         term::eprintln(style("!!").red().reverse(), &self.message);
-        term::eprintln("  ", style(err).red());
+        term::eprintln("  ", style(&err).red());
+
+        err
     }
 
     pub fn clear(self) {

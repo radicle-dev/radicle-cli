@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::time;
 
 use librad::git::Urn;
@@ -11,7 +12,6 @@ use radicle_common::sync::SyncResult;
 
 use crate as term;
 
-// TODO: Don't return a result.
 pub fn sync(
     urn: Urn,
     seeds: NonEmpty<sync::Seed<String>>,
@@ -19,7 +19,7 @@ pub fn sync(
     profile: &Profile,
     signer: impl ToSigner,
     rt: &common::tokio::runtime::Runtime,
-) -> anyhow::Result<Vec<SyncResult>> {
+) -> anyhow::Result<NonEmpty<SyncResult>> {
     let signer = signer.to_signer(profile)?;
     let timeout = time::Duration::from_secs(9);
     let spinner = term::spinner("Syncing...");
@@ -30,7 +30,16 @@ pub fn sync(
 
         Ok::<Vec<SyncResult>, anyhow::Error>(result)
     })?;
+
+    let results = if let Ok(results) = result.try_into() {
+        results
+    } else {
+        return Err(spinner.error(anyhow::anyhow!(
+            "No seeds attempted: all seeds failed to resolve"
+        )));
+    };
+
     spinner.finish();
 
-    Ok(result)
+    Ok(results)
 }
