@@ -74,7 +74,7 @@ mkdir -p $BASE/tmp/maintainer/acme
 cd $BASE/tmp/maintainer/acme
 # Setup project seed config.
 echo "ACME" > README
-  cat << EOF > Radicle.toml
+cat << EOF > Radicle.toml
 [[seed]]
   name = "radicle.local"
   p2p = "rad://$SEED_ADDR"
