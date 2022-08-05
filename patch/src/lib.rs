@@ -559,7 +559,7 @@ fn pretty_commit_version(
     revision_oid: &git::Oid,
     repo: &Option<git::Repository>,
 ) -> anyhow::Result<String> {
-    let mut str = common::fmt::oid(revision_oid);
+    let mut oid = common::fmt::oid(revision_oid);
     let mut branches: Vec<String> = vec![];
 
     if let Some(repo) = repo {
@@ -575,10 +575,14 @@ fn pretty_commit_version(
         }
     };
     if !branches.is_empty() {
-        str = format!("<{}> ({})", str, &branches.join(", "));
+        oid = format!(
+            "{} {}",
+            term::format::secondary(oid),
+            term::format::yellow(format!("({})", branches.join(", "))),
+        );
     }
 
-    Ok(str)
+    Ok(oid)
 }
 
 /// Adds patch details as a new row to `table` and render later.
@@ -602,9 +606,9 @@ pub fn print(
     let target_head = common::patch::patch_merge_target_oid(patch.target, verified, storage)?;
 
     let you = patch.author.urn() == &whoami.urn();
-    let prefix = "└── ";
+    let prefix = "└─ ";
     let mut author_info = vec![format!(
-        "{}opened by {}",
+        "{}* opened by {}",
         prefix,
         term::format::tertiary(patch.author.name()),
     )];
@@ -618,9 +622,9 @@ pub fn print(
     term::info!(
         "{} {} {} {} {}",
         term::format::bold(&patch.title),
-        term::format::secondary(common::fmt::cob(patch_id)),
+        term::format::highlight(common::fmt::cob(patch_id)),
         term::format::dim(format!("R{}", patch.version())),
-        term::format::secondary(pretty_commit_version(&revision.oid, repo)?),
+        pretty_commit_version(&revision.oid, repo)?,
         pretty_sync_status(monorepo, *revision.oid, target_head)?,
     );
     term::info!("{}", author_info.join(" "));
@@ -631,7 +635,7 @@ pub fn print(
         let mut badges = Vec::new();
 
         if peer.delegate {
-            badges.push(term::format::badge_secondary("delegate"));
+            badges.push(term::format::secondary("(delegate)"));
         }
         if peer.id == *storage.peer_id() {
             badges.push(term::format::secondary("(you)"));
@@ -658,7 +662,7 @@ pub fn print(
         let mut badges = Vec::new();
 
         if peer.delegate {
-            badges.push(term::format::badge_secondary("delegate"));
+            badges.push(term::format::secondary("(delegate)"));
         }
         if peer.id == *storage.peer_id() {
             badges.push(term::format::secondary("(you)"));
