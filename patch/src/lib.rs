@@ -564,6 +564,9 @@ fn pretty_commit_version(
 
     if let Some(repo) = repo {
         for r in repo.references()?.flatten() {
+            if !r.is_branch() {
+                continue;
+            }
             if let (Some(oid), Some(name)) = (&r.target(), &r.shorthand()) {
                 if oid == revision_oid {
                     branches.push(name.to_string());
