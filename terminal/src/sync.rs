@@ -39,7 +39,10 @@ pub fn sync(
         )));
     };
 
-    spinner.finish();
+    match mode {
+        sync::Mode::Push | sync::Mode::All => spinner.finish(),
+        sync::Mode::Fetch => spinner.clear(),
+    }
 
     Ok(results)
 }
