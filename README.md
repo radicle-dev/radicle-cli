@@ -9,11 +9,11 @@
 You can install the Radicle CLI by running the following command from inside
 this repository:
 
-    cargo install --force --locked --path .
+    cargo install --force --locked --path ./rad
 
 Or directly from our seed node:
 
-    cargo install --force --locked --git https://seed.alt-clients.radicle.xyz/radicle-cli.git radicle-cli
+    cargo install --force --locked --git https://seed.alt-clients.radicle.xyz/radicle-cli.git rad
 
 ### 🐧 From APT (Debian/Ubuntu)
 
