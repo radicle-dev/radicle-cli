@@ -34,9 +34,9 @@ pub fn sync(
     let results = if let Ok(results) = result.try_into() {
         results
     } else {
-        return Err(spinner.error(anyhow::anyhow!(
+        return Err(anyhow::anyhow!(
             "No seeds attempted: all seeds failed to resolve"
-        )));
+        ));
     };
 
     match mode {

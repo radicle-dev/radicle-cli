@@ -34,8 +34,7 @@ impl Spinner {
 
     pub fn error(self, err: anyhow::Error) -> anyhow::Error {
         self.progress.finish_and_clear();
-        term::eprintln(style("!!").red().reverse(), &self.message);
-        term::eprintln("  ", style(&err).red());
+        term::eprintln(style("!!").red().reverse(), style(&err).red());
 
         err
     }
