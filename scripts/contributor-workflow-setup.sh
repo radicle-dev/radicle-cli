@@ -48,7 +48,7 @@ rad() {
 
   echo                   >&2
   echo "▒ rad $cmd $@" >&2
-  cargo run -q -p rad -- $cmd "$@"
+  cargo run --quiet --package rad -- $cmd "$@"
 }
 
 banner() {
@@ -59,8 +59,8 @@ banner() {
 
 BASE=$(pwd)
 
-rm -rf tmp/
-mkdir -p tmp/root
+rm --recursive --force tmp/
+mkdir --parents tmp/root
 
 ###################
 banner "MAINTAINER"
@@ -70,7 +70,7 @@ rad auth --init --name cloudhead --passphrase cloudhead
 MAINTAINER=$(rad self --profile)
 
 # Create git repo
-mkdir -p $BASE/tmp/maintainer/acme
+mkdir --parents $BASE/tmp/maintainer/acme
 cd $BASE/tmp/maintainer/acme
 # Setup project seed config.
 echo "ACME" > README
@@ -83,9 +83,9 @@ cat << EOF > Radicle.toml
 EOF
 
 # Create repo and initial commit.
-git init -b master
+git init --initial-branch master
 git add .
-git commit -m "Initial commit" --no-gpg-sign
+git commit --message "Initial commit" --no-gpg-sign
 
 # Initialize
 rad init --name acme --description 'Acme Monorepo' --no-confirm
@@ -97,7 +97,7 @@ PROJECT=$(rad inspect)
 banner "CONTRIBUTOR"
 ####################
 
-mkdir -p $BASE/tmp/contributor
+mkdir --parents $BASE/tmp/contributor
 cd $BASE/tmp/contributor
 
 rad auth --init --name scooby --passphrase scooby
@@ -113,7 +113,7 @@ cd acme
 echo >> README
 echo "Acme is such a great company!" >> README
 git add README
-git commit -m "Update README" --no-gpg-sign
+git commit --message "Update README" --no-gpg-sign
 
 # Push commit to monorepo
 # (rad-push)
