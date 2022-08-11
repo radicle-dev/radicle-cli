@@ -260,15 +260,6 @@ fn run_other(exe: &str, args: &[OsString]) -> Result<(), Option<anyhow::Error>> 
                 args.to_vec(),
             );
         }
-        #[cfg(feature = "ethereum")]
-        "reward" => {
-            term::run_command_args::<rad_reward::Options, _>(
-                rad_reward::HELP,
-                "Command",
-                rad_reward::run,
-                args.to_vec(),
-            );
-        }
         "rm" => {
             term::run_command_args::<rad_rm::Options, _>(
                 rad_rm::HELP,

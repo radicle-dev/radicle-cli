@@ -48,7 +48,7 @@ rad() {
 
   echo                   >&2
   echo "▒ rad $cmd $@" >&2
-  cargo run --quiet --package rad --bin rad -- $cmd "$@"
+  cargo run --quiet --package radicle-cli --bin rad -- $cmd "$@"
 }
 
 banner() {

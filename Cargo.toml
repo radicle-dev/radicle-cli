@@ -1,11 +1,3 @@
-[package]
-name = "radicle-cli"
-description = "Radicle command line interface"
-version = "0.6.0"
-authors = ["The Radicle Team <dev@radicle.xyz>"]
-edition = "2018"
-rust-version = "1.62"
-
 [profile.ci]
 inherits = "dev"
 debug = 0
@@ -17,41 +9,6 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
-[features]
-default = []
-ethereum = ["ethers", "futures"]
-
-[package.metadata.deb]
-assets = [
-    ["target/release/rad", "usr/bin/rad", "755"],
-    ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
-    ["rad.1.gz", "usr/share/man/man1/rad.1.gz", "644"],
-    ["rad-checkout.1.gz", "usr/share/man/man1/rad-checkout.1.gz", "644"],
-    ["rad-sync.1.gz", "usr/share/man/man1/rad-sync.1.gz", "644"]
-]
-
-[dependencies]
-anyhow = "1.0"
-lexopt = "0.2"
-colored = { version = "1.9" }
-log = { version = "0.4", features = ["std"] }
-librad = { version = "0" }
-futures-lite = { version = "1.12" }
-link-identities = { version = "0" }
-radicle-common = { path = "./common" }
-radicle-terminal = { path = "./terminal" }
-radicle-git-helpers = { version = "0" }
-url = { version = "2" }
-
-# Ethereum functionality
-
-ethers = { version = "0.6.2", optional = true }
-futures = { version = "0.3", optional = true }
-
-[dev-dependencies]
-assay = "0.1.1"
-assert_cmd = "2.0"
-
 [workspace]
 members = [
   "anchor",
@@ -59,10 +16,10 @@ members = [
   "terminal",
   "common",
   "checkout",
+  "cli",
   "ens",
   "auth",
   "help",
-  "rad",
   "init",
   "ls",
   "rm",
@@ -81,7 +38,6 @@ members = [
   "edit",
   "reward",
   "comment",
-  "git-remote-rad",
 ]
 
 [patch.crates-io.link-crypto]

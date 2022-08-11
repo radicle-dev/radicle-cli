@@ -6,6 +6,7 @@ use ethers::prelude::Chain;
 use ethers::signers::{HDPath, Ledger};
 
 use radicle_common::args::{Args, Error, Help};
+use radicle_common::tokio;
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -53,26 +54,30 @@ impl Args for Options {
     }
 }
 
-pub async fn run(opts: Options, _ctx: impl term::Context) -> anyhow::Result<()> {
-    let chain_id: u64 = if opts.testnet {
-        Chain::Rinkeby.into()
-    } else {
-        Chain::Mainnet.into()
-    };
+pub fn run(opts: Options, _ctx: impl term::Context) -> anyhow::Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
 
-    let ledger = Ledger::new(HDPath::LedgerLive(0), chain_id)
-        .await
-        .context("couldn't connect to Ledger device")?;
+    rt.block_on(async {
+        let chain_id: u64 = if opts.testnet {
+            Chain::Rinkeby.into()
+        } else {
+            Chain::Mainnet.into()
+        };
 
-    for i in 0..=8 {
-        let path = HDPath::LedgerLive(i);
+        let ledger = Ledger::new(HDPath::LedgerLive(0), chain_id)
+            .await
+            .context("couldn't connect to Ledger device")?;
 
-        println!(
-            "{} {:?}",
-            term::format::dim(path.to_string()),
-            ledger.get_address_with_path(&path).await?
-        );
-    }
+        for i in 0..=8 {
+            let path = HDPath::LedgerLive(i);
 
-    Ok(())
+            println!(
+                "{} {:?}",
+                term::format::dim(path.to_string()),
+                ledger.get_address_with_path(&path).await?
+            );
+        }
+
+        Ok(())
+    })
 }

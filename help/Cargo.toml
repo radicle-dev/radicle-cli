@@ -8,7 +8,7 @@ description = "Radicle CLI help"
 
 [features]
 default = []
-ethereum = ["rad-ens", "rad-account"]
+ethereum = ["rad-ens", "rad-account", "rad-gov"]
 
 [dependencies]
 anyhow = "1.0"
@@ -41,3 +41,4 @@ rad-edit = { path = "../edit" }
 
 rad-ens = { path = "../ens", optional = true }
 rad-account = { path = "../account", optional = true }
+rad-gov = { path = "../gov", optional = true }

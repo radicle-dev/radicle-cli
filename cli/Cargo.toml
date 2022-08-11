@@ -1,0 +1,45 @@
+[package]
+name = "radicle-cli"
+description = "Radicle command line interface"
+version = "0.6.0"
+authors = ["The Radicle Team <dev@radicle.xyz>"]
+edition = "2018"
+rust-version = "1.63"
+
+[package.metadata.deb]
+assets = [
+  ["target/release/rad", "usr/bin/rad", "755"],
+  ["target/release/git-remote-rad", "usr/bin/git-remote-rad", "755"],
+  ["../rad.1.gz", "usr/share/man/man1/rad.1.gz", "644"],
+  ["../rad-checkout.1.gz", "usr/share/man/man1/rad-checkout.1.gz", "644"],
+  ["../rad-sync.1.gz", "usr/share/man/man1/rad-sync.1.gz", "644"]
+]
+
+[features]
+ethereum = ["radicle-common/ethereum", "rad-help/ethereum", "ethers", "futures-lite"]
+
+[dependencies]
+anyhow = "1.0"
+async-trait = { version = "0.1" }
+lexopt = "0.2"
+rad-help = { path = "../help" }
+radicle-terminal = { path = "../terminal" }
+radicle-common = { path = "../common" }
+radicle-git-helpers = { version = "0" }
+link-identities = { version = "0" }
+librad = { version = "0" }
+url = { version = "*" }
+
+# Ethereum functionality
+
+ethers = { version = "0.6.2", optional = true }
+futures-lite = { version = "1.12", optional = true }
+
+[[bin]]
+name = "rad"
+path = "src/rad.rs"
+
+[[bin]]
+name = "git-remote-rad"
+path = "src/git-remote-rad.rs"
+

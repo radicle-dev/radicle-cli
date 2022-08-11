@@ -9,17 +9,16 @@ use anyhow::Context as _;
 use coins_bip32::path::DerivationPath;
 
 use rad_anchor as anchor;
-use radicle_cli::logger;
-use radicle_common::tokio;
+use radicle_common::{logger, tokio};
 
 use anchor::{Address, Urn};
 
 const USAGE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", "USAGE"));
-const NAME: &str = env!("CARGO_CRATE_NAME");
 
 enum Command {
     Run {
         options: anchor::Options,
+        #[allow(dead_code)]
         verbose: bool,
     },
     Help,
@@ -135,8 +134,7 @@ fn get_repository_head() -> anyhow::Result<String> {
 
 #[tokio::main]
 async fn main() {
-    logger::init(NAME).unwrap();
-    logger::set_level(log::Level::Error);
+    logger::init(log::Level::Info).unwrap();
 
     if let Err(err) = execute().await {
         if let Some(&anchor::Error::NoWallet) =
@@ -158,12 +156,7 @@ async fn execute() -> anyhow::Result<()> {
             std::io::stderr().write_all(USAGE)?;
             return Ok(());
         }
-        Command::Run { options, verbose } => {
-            if verbose {
-                logger::set_level(log::Level::Debug);
-            } else {
-                logger::set_level(log::Level::Info);
-            }
+        Command::Run { options, .. } => {
             anchor::run(options).await?;
         }
     }

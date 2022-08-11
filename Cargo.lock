@@ -117,20 +117,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "assert_cmd"
-version = "2.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93ae1ddd39efd67689deb1979d80bad3bf7f2b09c6e6117c8d1f2443b5e2f83e"
-dependencies = [
- "bstr",
- "doc-comment",
- "predicates",
- "predicates-core",
- "predicates-tree",
- "wait-timeout",
-]
-
-[[package]]
 name = "async-channel"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1278,12 +1264,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e25ea47919b1560c4e3b7fe0aaab9becf5b84a10325ddf7db0f0ba5e1026499"
 
 [[package]]
-name = "difflib"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
-
-[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1340,12 +1320,6 @@ dependencies = [
  "redox_users",
  "winapi 0.3.9",
 ]
-
-[[package]]
-name = "doc-comment"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dyn-clone"
@@ -2281,20 +2255,6 @@ dependencies = [
  "proc-macro-error",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "git-remote-rad"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "ethers",
- "librad",
- "link-identities",
- "radicle-common",
- "radicle-git-helpers",
- "url",
 ]
 
 [[package]]
@@ -4232,33 +4192,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
 
 [[package]]
-name = "predicates"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5aab5be6e4732b473071984b3164dbbfb7a3674d30ea5ff44410b6bcd960c3c"
-dependencies = [
- "difflib",
- "itertools",
- "predicates-core",
-]
-
-[[package]]
-name = "predicates-core"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da1c2388b1513e1b605fcec39a95e0a9e8ef088f71443ef37099fa9ae6673fcb"
-
-[[package]]
-name = "predicates-tree"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d86de6de25020a36c6d3643a86d9a6a9f552107c0559c60ea03551b5e16c032"
-dependencies = [
- "predicates-core",
- "termtree",
-]
-
-[[package]]
 name = "pretty_assertions"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4426,17 +4359,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rad"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lexopt",
- "rad-help",
- "radicle-common",
- "radicle-terminal",
-]
-
-[[package]]
 name = "rad-account"
 version = "0.1.0"
 dependencies = [
@@ -4459,7 +4381,6 @@ dependencies = [
  "link-identities",
  "log",
  "multihash 0.14.0",
- "radicle-cli",
  "radicle-common",
  "rpassword 5.0.1",
  "safe-transaction-client",
@@ -4573,6 +4494,7 @@ dependencies = [
  "rad-comment",
  "rad-edit",
  "rad-ens",
+ "rad-gov",
  "rad-init",
  "rad-inspect",
  "rad-issue",
@@ -4796,16 +4718,13 @@ name = "radicle-cli"
 version = "0.6.0"
 dependencies = [
  "anyhow",
- "assay",
- "assert_cmd",
- "colored 1.9.3",
+ "async-trait",
  "ethers",
- "futures",
  "futures-lite",
  "lexopt",
  "librad",
  "link-identities",
- "log",
+ "rad-help",
  "radicle-common",
  "radicle-git-helpers",
  "radicle-terminal",
@@ -5891,12 +5810,6 @@ dependencies = [
  "phf",
  "phf_codegen",
 ]
-
-[[package]]
-name = "termtree"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "507e9898683b6c43a9aa55b64259b721b52ba226e0f3779137e50ad114a4c90b"
 
 [[package]]
 name = "textwrap"

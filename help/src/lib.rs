@@ -3,11 +3,17 @@ use std::ffi::OsString;
 use radicle_common::args::{Args, Error, Help};
 use radicle_terminal as term;
 
+#[cfg(feature = "ethereum")]
+pub use rad_account;
 pub use rad_auth;
 pub use rad_checkout;
 pub use rad_clone;
 pub use rad_comment;
 pub use rad_edit;
+#[cfg(feature = "ethereum")]
+pub use rad_ens;
+#[cfg(feature = "ethereum")]
+pub use rad_gov;
 pub use rad_init;
 pub use rad_inspect;
 pub use rad_issue;

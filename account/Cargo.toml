@@ -11,4 +11,4 @@ ethers = { version = "0.6.2", features = ["ledger"] }
 anyhow = { version = "1.0" }
 lexopt = "0.2"
 radicle-terminal = { path = "../terminal" }
-radicle-common = { path = "../common" }
+radicle-common = { path = "../common", features = ["ethereum"] }

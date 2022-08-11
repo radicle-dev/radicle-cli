@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-radicle-cli = { path = "../" }
 radicle-common = { path = "../common" }
 safe-transaction-client = { path = "../safe-transaction-client" }
 log = { version = "0.4" }
