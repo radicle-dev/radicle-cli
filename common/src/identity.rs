@@ -39,7 +39,7 @@ impl FromStr for Origin {
         } else if let Ok(url) = Url::from_str(s) {
             Self::try_from(url)
         } else {
-            return Err(anyhow!("invalid origin '{}'", s));
+            Err(anyhow!("invalid origin '{}'", s))
         }
     }
 }

@@ -247,7 +247,7 @@ impl<'a> PatchStore<'a> {
         );
         let history = events::create(&author, title, &revision, target, timestamp, labels)?;
 
-        cobs::create(history, project, &self.whoami, &*self.store)
+        cobs::create(history, project, &self.whoami, self.store)
     }
 
     pub fn comment(

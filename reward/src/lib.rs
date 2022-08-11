@@ -59,7 +59,7 @@ Environment variables
 "#,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Strategy {
     Equally,
     Weighted,

@@ -372,7 +372,7 @@ pub fn list_rad_remote_heads(
     let heads = remote.remote_heads(settings, repo)?;
 
     for (head, oid) in heads {
-        if let Some((peer, r)) = git::parse_remote(&head.to_string()) {
+        if let Some((peer, r)) = git::parse_remote(&head) {
             if let Some(branch) = r.strip_prefix("heads/") {
                 let value = (branch.to_owned(), oid);
                 remotes.entry(peer).or_insert_with(Vec::new).push(value);

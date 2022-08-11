@@ -38,7 +38,7 @@ pub enum Error<M: Middleware> {
 
 type Proposal = (Address, U256, U256, U256, U256, U256, bool, bool);
 
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum ProposalState {
     Pending,
     Active,
