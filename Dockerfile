@@ -29,10 +29,11 @@ RUN /bin/ash -c "set -ex && \
     echo \"Preparing Rust (Stable) Build environment\" && \
     rustup-init -q -y"
 
+# TODO: Make it arg to install either from local volume e.g. env=dev|etc.
 RUN /bin/ash -c "set -ex && \
     source $HOME/.cargo/env && \
     echo \"Preparing Radicle (Binary) Build from seed\" && \
-    cargo install --force --locked --git https://seed.alt-clients.radicle.xyz/radicle-cli.git rad"
+    cargo install radicle-cli --force --locked --git https://seed.alt-clients.radicle.xyz/radicle-cli.git"
 
 ##################################################
 #

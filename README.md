@@ -15,6 +15,17 @@ Or directly from our seed node:
 
     cargo install radicle-cli --force --locked --git https://seed.alt-clients.radicle.xyz/radicle-cli.git
 
+### 🐳 From Dockerfile
+
+Alternatively you can build the Radicle CLI docker `rad` by running the
+following command from inside this repository:
+
+    docker build . -t rad
+
+And then to use it:
+
+    docker -ti --rm rad --help
+
 ### 🐧 From APT (Debian/Ubuntu)
 
 First, download the package signing key:
