@@ -34,7 +34,7 @@ First, download the package signing key:
 
 Then update your sources list with the radicle repository by creating a registry file:
 
-    echo deb https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
+    echo "deb [arch=amd64] https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main" | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
 
 Then update the package list and install `radicle-cli`:
 
