@@ -106,21 +106,24 @@ pub fn execute(options: Options, profile: &profile::Profile) -> anyhow::Result<P
     {
         term::success!("Local {} branch found...", project.default_branch);
         None
-    } else if project.remotes.len() > 1 {
-        anyhow::bail!("project has more than one delegate, please specify which one you would like to checkout");
-    } else if let Some(delegate) = project.remotes.iter().next() {
-        term::success!(
-            "Remote {} branch found via {}...",
-            project.default_branch,
-            term::format::highlight(delegate)
-        );
-        Some(*delegate)
     } else {
-        anyhow::bail!("project has no delegates, cannot checkout");
+        let delegates: Vec<_> = project.remotes.iter().collect();
+        match delegates[..] {
+            [] => anyhow::bail!("project has no delegates, cannot checkout"),
+            [d] => {
+                term::success!(
+                    "Remote {} branch found via {}...",
+                    project.default_branch,
+                    term::format::highlight(d)
+                );
+                Some(*d)
+            }
+            [_,_,..] => anyhow::bail!("project has more than one delegate, please specify which one you would like to checkout"),
+        }
     };
 
     let spinner = term::spinner("Performing checkout...");
-    match project::checkout(
+    let repo = match project::checkout(
         &storage,
         profile.paths().clone(),
         signer.clone(),
@@ -128,48 +131,47 @@ pub fn execute(options: Options, profile: &profile::Profile) -> anyhow::Result<P
         peer,
         path.clone(),
     ) {
+        Ok(repo) => repo,
         Err(err) => {
             spinner.failed();
             term::blank();
 
             return Err(err);
         }
-        Ok(repo) => {
-            spinner.finish();
+    };
+    spinner.finish();
 
-            // Setup signing.
-            if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo, interactive) {
-                term::warning(&format!("Could not setup signing: {:#}", err));
-            }
+    // Setup signing.
+    if let Err(err) = rad_init::setup_signing(storage.peer_id(), &repo, interactive) {
+        term::warning(&format!("Could not setup signing: {:#}", err));
+    }
 
-            // Setup a remote and tracking branch for all project delegates except yourself.
-            let setup = project::SetupRemote {
-                project: &project,
-                repo: &repo,
-                signer,
-                fetch: true,
-                upstream: true,
-            };
-            for peer in &project.remotes {
-                if peer != storage.peer_id() {
-                    let name = if let Some(person) =
-                        project::person(&storage, project.urn.clone(), peer)?
-                    {
-                        person.subject().name.to_string()
-                    } else {
-                        peer.default_encoding()
-                    };
+    // Setup a remote and tracking branch for all project delegates except yourself.
+    let setup = project::SetupRemote {
+        project: &project,
+        repo: &repo,
+        signer,
+        fetch: true,
+        upstream: true,
+    };
+    for peer in &project.remotes {
+        if peer == storage.peer_id() {
+            continue;
+        }
 
-                    if let Some((remote, branch)) = setup.run(peer, &name, profile)? {
-                        term::success!("Remote {} set", term::format::highlight(remote.name),);
-                        term::success!(
-                            "Remote-tracking branch {} created for {}",
-                            term::format::highlight(&branch),
-                            term::format::tertiary(fmt::peer(peer))
-                        );
-                    }
-                }
-            }
+        let name = if let Some(person) = project::person(&storage, project.urn.clone(), peer)? {
+            person.subject().name.to_string()
+        } else {
+            peer.default_encoding()
+        };
+
+        if let Some((remote, branch)) = setup.run(peer, &name, profile)? {
+            term::success!("Remote {} set", term::format::highlight(remote.name),);
+            term::success!(
+                "Remote-tracking branch {} created for {}",
+                term::format::highlight(&branch),
+                term::format::tertiary(fmt::peer(peer))
+            );
         }
     }
 
