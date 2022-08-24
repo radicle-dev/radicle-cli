@@ -14,7 +14,7 @@ automerge = "0.1"
 anyhow = "1.0"
 base64 = "0.13"
 byteorder = "1.4"
-chrono = "0.4"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 either = { version = "1.6" }
 futures-lite = { version = "1.12" }
 git-trailers = "0.1.0"
