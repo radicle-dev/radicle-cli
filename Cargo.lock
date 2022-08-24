@@ -914,19 +914,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "colored_json"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd32eb54d016e203b7c2600e3a7802c75843a92e38ccc4869aefeca21771a64"
-dependencies = [
- "ansi_term",
- "atty",
- "libc",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "concurrent-queue"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2816,6 +2803,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "json-color"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6dc8c55175cad7234a98cc3e31ba3009e276800271692ed3ad2c2f1c574b6e8"
+dependencies = [
+ "colored 1.9.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "jsonrpc-core"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4533,7 +4531,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
- "colored_json",
+ "json-color",
  "lexopt",
  "librad",
  "radicle-common",
@@ -5464,6 +5462,7 @@ version = "1.0.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f972498cf015f7c0746cac89ebe1d6ef10c293b94175a243a2d9442c163d9944"
 dependencies = [
+ "indexmap",
  "itoa 1.0.1",
  "ryu",
  "serde",

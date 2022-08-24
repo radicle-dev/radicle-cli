@@ -17,7 +17,7 @@ use librad::git::Urn;
 use anyhow::anyhow;
 
 use chrono::prelude::*;
-use colored_json::prelude::*;
+use json_color::{Color, Colorizer};
 
 pub const HELP: Help = Help {
     name: "inspect",
@@ -113,6 +113,17 @@ impl Args for Options {
     }
 }
 
+// Used for JSON Colorizing for now
+fn colorizer() -> Colorizer {
+    Colorizer::new()
+        .null(Color::Cyan)
+        .boolean(Color::Yellow)
+        .number(Color::Magenta)
+        .string(Color::Green)
+        .key(Color::Blue)
+        .build()
+}
+
 pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let profile = ctx.profile()?;
     let storage = profile::read_only(&profile)?;
@@ -125,6 +136,8 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
         git::rad_remote(&repo)?.url.urn
     };
+
+    let colorizer = colorizer();
 
     if options.refs {
         let path = profile.paths().git_dir().join("refs").join("namespaces");
@@ -144,7 +157,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
         println!(
             "{}",
-            serde_json::to_string_pretty(&payload)?.to_colored_json_auto()?
+            colorizer.colorize_json_str(&serde_json::to_string_pretty(&payload)?)?
         );
     } else if options.history {
         let branch = Reference::try_from(&urn)?;
@@ -186,7 +199,8 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                             term::format::dim(tip.id()),
                             term::format::dim(blob.id()),
                             term::format::dim(time),
-                            serde_json::to_string_pretty(&content)?.to_colored_json_auto()?,
+                            colorizer
+                                .colorize_json_str(&serde_json::to_string_pretty(&content)?)?,
                         ))
                         .first(i == 0)
                         .last(false)
