@@ -1,13 +1,17 @@
+use std::convert::From;
 use std::ffi::OsString;
 use std::fs;
 use std::str::FromStr;
 
 use anyhow::anyhow;
-use anyhow::Context as _;
+use zeroize::Zeroizing;
+
+use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::git::Urn;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{profile, project};
+use radicle_common::profile::ProfileId;
+use radicle_common::{keys, profile, project};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -17,7 +21,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad rm <urn> [<option>...]
+    rad rm <urn | profile-id> [<option>...]
 
 Options
 
@@ -26,8 +30,26 @@ Options
 "#,
 };
 
+enum Object {
+    Project(Urn),
+    Profile(ProfileId),
+    Unknown(String),
+}
+
+impl From<&str> for Object {
+    fn from(value: &str) -> Self {
+        if let Ok(urn) = Urn::from_str(value) {
+            Object::Project(urn)
+        } else if let Ok(id) = ProfileId::from_str(value) {
+            Object::Profile(id)
+        } else {
+            Object::Unknown(value.to_owned())
+        }
+    }
+}
+
 pub struct Options {
-    urn: Urn,
+    object: Object,
     prompt: bool,
 }
 
@@ -36,7 +58,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut urn: Option<Urn> = None;
+        let mut object: Option<Object> = None;
         let mut prompt = false;
 
         while let Some(arg) = parser.next()? {
@@ -47,11 +69,10 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Value(val) if urn.is_none() => {
+                Value(val) if object.is_none() => {
                     let val = val.to_string_lossy();
-                    let val = Urn::from_str(&val).context(format!("invalid URN '{}'", val))?;
-
-                    urn = Some(val);
+                    let val = Object::from(val.as_ref());
+                    object = Some(val);
                 }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
@@ -59,8 +80,8 @@ impl Args for Options {
 
         Ok((
             Options {
-                urn: urn.ok_or_else(|| {
-                    anyhow!("a URN to remove must be provided; see `rad rm --help`")
+                object: object.ok_or_else(|| {
+                    anyhow!("Urn or profile id to remove must be provided; see `rad rm --help`")
                 })?,
                 prompt,
             },
@@ -70,29 +91,69 @@ impl Args for Options {
 }
 
 pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
-    let profile = ctx.profile()?;
-    let storage = profile::read_only(&profile)?;
-
-    if project::get(&storage, &options.urn)?.is_none() {
-        anyhow::bail!("project {} does not exist", options.urn);
-    }
     term::warning("Experimental tool; use at your own risk!");
 
-    let monorepo = profile.paths().git_dir();
-    let namespace = monorepo
-        .join("refs")
-        .join("namespaces")
-        .join(options.urn.encode_id());
+    match &options.object {
+        Object::Project(urn) => {
+            let profile = ctx.profile()?;
+            let storage = profile::read_only(&profile)?;
+            let monorepo = profile.paths().git_dir();
 
-    if !options.prompt
-        || term::confirm(format!(
-            "Are you sure you would like to delete {}?",
-            term::format::dim(namespace.display())
-        ))
-    {
-        rad_untrack::execute(&options.urn, rad_untrack::Options { peer: None }, &profile)?;
-        fs::remove_dir_all(namespace)?;
-        term::success!("Successfully removed project {}", options.urn);
+            if project::get(&storage, urn)?.is_none() {
+                anyhow::bail!("project {} does not exist", &urn);
+            }
+            let namespace = monorepo
+                .join("refs")
+                .join("namespaces")
+                .join(&urn.encode_id());
+            if !options.prompt
+                || term::confirm(format!(
+                    "Are you sure you would like to delete {}?",
+                    term::format::dim(namespace.display())
+                ))
+            {
+                rad_untrack::execute(urn, rad_untrack::Options { peer: None }, &profile)?;
+                fs::remove_dir_all(namespace)?;
+                term::success!("Successfully removed project {}", &urn);
+            }
+        }
+        Object::Profile(id) => {
+            let profile = ctx.profile()?;
+            if profile.id() == id {
+                anyhow::bail!("Cannot remove active profile; see `rad auth --help`");
+            } else {
+                let profile = profile::get(id)?;
+                let read_only = profile::read_only(&profile)?;
+                let config = read_only.config()?;
+                let username = config.user_name()?;
+
+                if !options.prompt
+                    || term::confirm(format!(
+                        "Are you sure you would like to delete {} ({})?",
+                        term::format::dim(id),
+                        term::format::dim(username)
+                    ))
+                {
+                    let secret_input: SecUtf8 = if atty::is(atty::Stream::Stdin) {
+                        term::secret_input()
+                    } else {
+                        let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
+                        std::io::stdin().read_line(&mut input)?;
+                        SecUtf8::from(input.trim_end())
+                    };
+
+                    if keys::load_secret_key(&profile, secret_input).is_ok() {
+                        profile::remove(&profile)?;
+                        term::success!("Successfully removed profile {}", id);
+                    } else {
+                        anyhow::bail!(format!("Invalid passphrase supplied."));
+                    }
+                }
+            }
+        }
+        Object::Unknown(arg) => {
+            anyhow::bail!(format!("Object must be an Urn or a profile id: {}", arg));
+        }
     }
 
     Ok(())

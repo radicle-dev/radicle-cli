@@ -1,4 +1,5 @@
 //! User profile related functions.
+use std::fs;
 use std::{env, fmt, path};
 
 use anyhow::{anyhow, Error, Result};
@@ -92,6 +93,28 @@ pub fn count() -> Result<usize, Error> {
 /// Set the default profile.
 pub fn set(id: &ProfileId) -> Result<(), Error> {
     Profile::set(&home(), id.clone())?;
+
+    Ok(())
+}
+
+/// Get a profile.
+pub fn get(id: &ProfileId) -> Result<Profile, Error> {
+    let error = args::Error::WithHint {
+        err: anyhow!("Could not load radicle profile"),
+        hint: "To setup your radicle profile, run `rad auth`.",
+    };
+
+    match Profile::get(&home(), id.clone()) {
+        Ok(Some(profile)) => Ok(profile),
+        Ok(None) | Err(_) => Err(error.into()),
+    }
+}
+
+/// Remove all profile directories.
+pub fn remove(profile: &Profile) -> Result<(), Error> {
+    fs::remove_dir_all(profile.paths().keys_dir().parent().unwrap())?;
+    fs::remove_dir_all(profile.paths().git_dir().parent().unwrap())?;
+    fs::remove_dir_all(profile.paths().cob_cache_dir().parent().unwrap())?;
 
     Ok(())
 }

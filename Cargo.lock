@@ -4681,11 +4681,13 @@ name = "rad-rm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "atty",
  "lexopt",
  "librad",
  "rad-untrack",
  "radicle-common",
  "radicle-terminal",
+ "zeroize",
 ]
 
 [[package]]
