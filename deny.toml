@@ -84,8 +84,10 @@ allow = [
     "Apache-2.0",
     "Unlicense",
     "ISC",
+    "WTFPL",
     "CC0-1.0", # public domain
-    "BSD-3-Clause", # "Modified BSD License"
+    "BSD-2-Clause", # FreeBSD License
+    "BSD-3-Clause", # Modified BSD License
     # https://blueoakcouncil.org/license-faq
     # The Council doesn’t see any reason why software licensed under the Blue Oak Model License 1.0.0
     # can’t be used, combined, and distributed with software under .. GPLv3
