@@ -23,8 +23,10 @@ Usage
 
 Options
 
-    --no-confirm    Do not ask for confirmation before removal
-    --help          Print help
+    --no-confirm        Do not ask for confirmation before removal
+    --no-passphrase     Bypass password prompt and do not read environment
+                        variable
+    --help              Print help
 "#,
 };
 
@@ -49,6 +51,7 @@ impl From<&str> for Object {
 pub struct Options {
     object: Object,
     confirm: bool,
+    passphrase: bool,
 }
 
 impl Args for Options {
@@ -58,11 +61,15 @@ impl Args for Options {
         let mut parser = lexopt::Parser::from_args(args);
         let mut object: Option<Object> = None;
         let mut confirm = true;
+        let mut passphrase = true;
 
         while let Some(arg) = parser.next()? {
             match arg {
                 Long("no-confirm") => {
                     confirm = false;
+                }
+                Long("no-passphrase") => {
+                    passphrase = false;
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
@@ -82,6 +89,7 @@ impl Args for Options {
                     anyhow!("Urn or profile id to remove must be provided; see `rad rm --help`")
                 })?,
                 confirm,
+                passphrase,
             },
             vec![],
         ))
@@ -133,14 +141,20 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                         term::format::dim(username)
                     ))
                 {
-                    let is_tty = atty::is(atty::Stream::Stdin);
-                    let secret_input = term::switch_secret_input(is_tty)?;
-                    if keys::load_secret_key(&profile, secret_input).is_ok() {
-                        profile::remove(&profile)?;
-                        term::success!("Successfully removed profile {}", id);
+                    if options.passphrase {
+                        let is_tty = atty::is(atty::Stream::Stdin);
+                        let secret_input = term::switch_secret_input(is_tty)?;
+
+                        if keys::load_secret_key(&profile, secret_input).is_ok() {
+                            profile::remove(&profile)?;
+                        } else {
+                            anyhow::bail!(format!("Invalid passphrase supplied."));
+                        }
                     } else {
-                        anyhow::bail!(format!("Invalid passphrase supplied."));
+                        profile::remove(&profile)?;
                     }
+
+                    term::success!("Successfully removed profile {}", id);
                 }
             }
         }
