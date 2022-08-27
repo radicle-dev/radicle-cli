@@ -24,9 +24,11 @@ Usage
 Options
 
     --no-confirm        Do not ask for confirmation before removal
-    --no-passphrase     If profile id given, bypass passphrase prompt and
-                        do not read environment variable `RAD_PASSPHRASE`
                         (default: false)
+    --no-passphrase     If profile-id is given, bypass passphrase prompt and
+                        neither read environment variable `RAD_PASSPHRASE`
+                        nor standard input stream (default: false)
+    --stdin             Read passphrase from stdin (default: false)
     --help              Print help
 "#,
 };
@@ -127,39 +129,41 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         }
         Object::Profile(id) => {
             let profile = ctx.profile()?;
-            if profile.id() == id {
-                anyhow::bail!("Cannot remove active profile; see `rad auth --help`");
-            } else {
+            if profile.id() != id {
                 let profile = profile::get(id)?;
                 let read_only = profile::read_only(&profile)?;
                 let config = read_only.config()?;
                 let username = config.user_name()?;
 
-                if !options.confirm
-                    || term::confirm(format!(
+                if options.confirm
+                    && !term::confirm(format!(
                         "Are you sure you would like to delete {} ({})?",
                         term::format::dim(id),
                         term::format::dim(username)
                     ))
                 {
-                    if options.passphrase {
-                        let is_tty = atty::is(atty::Stream::Stdin);
-                        let secret_input = match keys::read_env_passphrase() {
-                            Ok(input) => input,
-                            _ => term::switch_secret_input(is_tty)?,
-                        };
-
-                        if keys::load_secret_key(&profile, secret_input).is_ok() {
-                            profile::remove(&profile)?;
-                        } else {
-                            anyhow::bail!(format!("Invalid passphrase supplied."));
-                        }
-                    } else {
-                        profile::remove(&profile)?;
-                    }
-
-                    term::success!("Successfully removed profile {}", id);
+                    return Ok(());
                 }
+
+                if options.passphrase {
+                    let is_tty = atty::is(atty::Stream::Stdin);
+                    let secret_input = match keys::read_env_passphrase() {
+                        Ok(input) => input,
+                        _ => term::switch_secret_input(is_tty)?,
+                    };
+
+                    if keys::load_secret_key(&profile, secret_input).is_ok() {
+                        profile::remove(&profile)?;
+                    } else {
+                        anyhow::bail!(format!("Invalid passphrase supplied."));
+                    }
+                } else {
+                    profile::remove(&profile)?;
+                }
+
+                term::success!("Successfully removed profile {}", id);
+            } else {
+                anyhow::bail!("Cannot remove active profile; see `rad auth --help`");
             }
         }
         Object::Unknown(arg) => {
