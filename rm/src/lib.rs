@@ -23,8 +23,8 @@ Usage
 
 Options
 
-    -i        Prompt before removal
-    --help    Print help
+    --no-confirm    Do not ask for confirmation before removal
+    --help          Print help
 "#,
 };
 
@@ -48,7 +48,7 @@ impl From<&str> for Object {
 
 pub struct Options {
     object: Object,
-    prompt: bool,
+    confirm: bool,
 }
 
 impl Args for Options {
@@ -57,12 +57,12 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut object: Option<Object> = None;
-        let mut prompt = false;
+        let mut confirm = true;
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Short('i') => {
-                    prompt = true;
+                Long("no-confirm") => {
+                    confirm = false;
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
@@ -81,7 +81,7 @@ impl Args for Options {
                 object: object.ok_or_else(|| {
                     anyhow!("Urn or profile id to remove must be provided; see `rad rm --help`")
                 })?,
-                prompt,
+                confirm,
             },
             vec![],
         ))
@@ -104,7 +104,8 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                 .join("refs")
                 .join("namespaces")
                 .join(&urn.encode_id());
-            if !options.prompt
+
+            if !options.confirm
                 || term::confirm(format!(
                     "Are you sure you would like to delete {}?",
                     term::format::dim(namespace.display())
@@ -125,7 +126,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                 let config = read_only.config()?;
                 let username = config.user_name()?;
 
-                if !options.prompt
+                if !options.confirm
                     || term::confirm(format!(
                         "Are you sure you would like to delete {} ({})?",
                         term::format::dim(id),
