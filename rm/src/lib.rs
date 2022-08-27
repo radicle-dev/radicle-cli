@@ -24,8 +24,9 @@ Usage
 Options
 
     --no-confirm        Do not ask for confirmation before removal
-    --no-passphrase     Bypass password prompt and do not read environment
-                        variable
+    --no-passphrase     If profile id given, bypass passphrase prompt and
+                        do not read environment variable `RAD_PASSPHRASE`
+                        (default: false)
     --help              Print help
 "#,
 };
@@ -143,7 +144,10 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                 {
                     if options.passphrase {
                         let is_tty = atty::is(atty::Stream::Stdin);
-                        let secret_input = term::switch_secret_input(is_tty)?;
+                        let secret_input = match keys::read_env_passphrase() {
+                            Ok(input) => input,
+                            _ => term::switch_secret_input(is_tty)?,
+                        };
 
                         if keys::load_secret_key(&profile, secret_input).is_ok() {
                             profile::remove(&profile)?;

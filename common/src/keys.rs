@@ -1,6 +1,8 @@
 //! SSH and key-related functions.
 use anyhow::{Context as _, Error, Result};
 
+use zeroize::Zeroizing;
+
 use librad::crypto::keystore::crypto;
 use librad::crypto::keystore::crypto::Pwhash;
 use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
@@ -124,6 +126,13 @@ pub fn load_secret_key(
     let keypair = file_storage.get_key()?;
 
     Ok(ZeroizingSecretKey::new(keypair.secret_key))
+}
+
+pub fn read_env_passphrase() -> Result<SecUtf8, anyhow::Error> {
+    let env_var = std::env::var(RAD_PASSPHRASE)?;
+    let input: Zeroizing<String> = Zeroizing::new(env_var);
+
+    Ok(SecUtf8::from(input.trim_end()))
 }
 
 #[cfg(not(debug_assertions))]
