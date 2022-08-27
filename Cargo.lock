@@ -4687,7 +4687,6 @@ dependencies = [
  "rad-untrack",
  "radicle-common",
  "radicle-terminal",
- "zeroize",
 ]
 
 [[package]]

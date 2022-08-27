@@ -4,9 +4,7 @@ use std::fs;
 use std::str::FromStr;
 
 use anyhow::anyhow;
-use zeroize::Zeroizing;
 
-use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::git::Urn;
 
 use radicle_common::args::{Args, Error, Help};
@@ -134,14 +132,8 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                         term::format::dim(username)
                     ))
                 {
-                    let secret_input: SecUtf8 = if atty::is(atty::Stream::Stdin) {
-                        term::secret_input()
-                    } else {
-                        let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
-                        std::io::stdin().read_line(&mut input)?;
-                        SecUtf8::from(input.trim_end())
-                    };
-
+                    let is_tty = atty::is(atty::Stream::Stdin);
+                    let secret_input = term::switch_secret_input(is_tty)?;
                     if keys::load_secret_key(&profile, secret_input).is_ok() {
                         profile::remove(&profile)?;
                         term::success!("Successfully removed profile {}", id);

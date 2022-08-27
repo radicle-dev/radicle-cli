@@ -14,4 +14,3 @@ lexopt = "0.2"
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
 rad-untrack = { path = "../untrack" }
-zeroize = "1.1"
