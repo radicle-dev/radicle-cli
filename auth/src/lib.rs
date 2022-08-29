@@ -22,15 +22,14 @@ Usage
 
     rad auth [--init | --active] [<options>...] [<profile>]
 
-    If `--init` is used, name and passphrase may be given via the `--name`
-    and `--passphrase` option. Using these disables the respective input prompt.
+    If `--init` is used, name may be given via the `--name` option. Using this
+    disables the input prompt.
 
 Options
 
     --init                  Initialize a new identity
     --active                Authenticate with the currently active profile
     --name <name>           Use given name (default: none)
-    --passphrase <phrase>   Use given passphrase (default: none)
     --help                  Print help
 "#,
 };
@@ -40,7 +39,6 @@ pub struct Options {
     pub init: bool,
     pub active: bool,
     pub name: Option<String>,
-    pub passphrase: Option<String>,
     pub profile: Option<ProfileId>,
 }
 
@@ -51,7 +49,6 @@ impl Args for Options {
         let mut init = false;
         let mut active = false;
         let mut name = None;
-        let mut passphrase = None;
         let mut profile = None;
         let mut parser = lexopt::Parser::from_args(args);
 
@@ -71,22 +68,6 @@ impl Args for Options {
                         .to_owned();
 
                     name = Some(val);
-                }
-                Long("passphrase") if init && passphrase.is_none() => {
-                    let val = parser
-                        .value()?
-                        .to_str()
-                        .ok_or(anyhow::anyhow!(
-                            "invalid passphrase specified with `--passphrase`"
-                        ))?
-                        .to_owned();
-
-                    term::warning(
-                        "Passing a plain-text passphrase is considered insecure. \
-                        Please only use for testing purposes.",
-                    );
-
-                    passphrase = Some(val);
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
@@ -108,7 +89,6 @@ impl Args for Options {
                 init,
                 active,
                 name,
-                passphrase,
                 profile,
             },
             vec![],
@@ -150,11 +130,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
             .name
             .unwrap_or_else(|| term::text_input("Name", None).unwrap()),
     )?;
-    let passphrase = options
-        .passphrase
-        .map_or_else(term::secret_input_with_confirmation, |passphrase| {
-            SecUtf8::from(passphrase)
-        });
+    let passphrase = term::secret_input_with_confirmation();
     let pwhash = keys::pwhash(passphrase.clone());
     let home = profile::home();
 
@@ -317,7 +293,6 @@ mod tests {
             active: false,
             init: true,
             name: Some(name.to_owned()),
-            passphrase: Some(test::USER_PASS.to_owned()),
             profile: None,
         }
     }
