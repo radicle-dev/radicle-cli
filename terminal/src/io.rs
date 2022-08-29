@@ -1,6 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
+use zeroize::Zeroizing;
+
 use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::crypto::BoxedSigner;
 use librad::profile::Profile;
@@ -277,16 +279,6 @@ pub fn secret_input() -> SecUtf8 {
     secret_input_with_prompt("Passphrase")
 }
 
-pub fn secret_key(profile: &Profile) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
-    let passphrase = secret_input();
-    let spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
-    let key = keys::load_secret_key(profile, passphrase)?;
-
-    spinner.finish();
-
-    Ok(key)
-}
-
 // TODO: This prompt shows success just for entering a password,
 // even if the password is later found out to be wrong.
 // We should handle this differently.
@@ -308,6 +300,47 @@ pub fn secret_input_with_confirmation() -> SecUtf8 {
             .interact()
             .unwrap(),
     )
+}
+
+pub fn secret_stdin() -> Result<SecUtf8, anyhow::Error> {
+    let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
+    std::io::stdin().read_line(&mut input)?;
+
+    Ok(SecUtf8::from(input.trim_end()))
+}
+
+pub fn read_passphrase(stdin: bool, confirm: bool) -> Result<SecUtf8, anyhow::Error> {
+    let passphrase = match read_passphrase_from_env_var() {
+        Ok(input) => input,
+        _ => {
+            if stdin {
+                secret_stdin()?
+            } else if confirm {
+                secret_input_with_confirmation()
+            } else {
+                secret_input()
+            }
+        }
+    };
+
+    Ok(passphrase)
+}
+
+pub fn read_passphrase_from_env_var() -> Result<SecUtf8, anyhow::Error> {
+    let env_var = std::env::var(keys::RAD_PASSPHRASE)?;
+    let input: Zeroizing<String> = Zeroizing::new(env_var);
+
+    Ok(SecUtf8::from(input.trim_end()))
+}
+
+pub fn secret_key(profile: &Profile) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
+    let passphrase = secret_input();
+    let spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
+    let key = keys::load_secret_key(profile, passphrase)?;
+
+    spinner.finish();
+
+    Ok(key)
 }
 
 pub fn select<'a, T>(options: &'a [T], active: &'a T) -> Option<&'a T>

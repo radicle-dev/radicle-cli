@@ -4,9 +4,7 @@ use std::str::FromStr;
 
 use anyhow::Context as _;
 use radicle_common::signer::ToSigner;
-use zeroize::Zeroizing;
 
-use librad::crypto::keystore::pinentry::SecUtf8;
 use librad::profile::ProfileId;
 
 use radicle_common::args::{Args, Error, Help};
@@ -22,8 +20,11 @@ Usage
 
     rad auth [--init | --active] [<options>...] [<profile>]
 
-    If `--init` is used, name may be given via the `--name` option. Using this
-    disables the input prompt.
+    A passphrase may be given via the environment variable `RAD_PASSPHRASE`.
+    Using this disables the passphrase prompt.
+
+    If `--init` is used, a name may be given via the `--name` option. Using
+    this disables the input prompt.
 
 Options
 
@@ -116,6 +117,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     term::headline("Initializing your 🌱 profile and identity");
 
     let sock = keys::ssh_auth_sock();
+    let home = profile::home();
 
     if git::check_version().is_err() {
         term::warning(&format!(
@@ -130,18 +132,19 @@ pub fn init(options: Options) -> anyhow::Result<()> {
             .name
             .unwrap_or_else(|| term::text_input("Name", None).unwrap()),
     )?;
-    let passphrase = term::secret_input_with_confirmation();
-    let pwhash = keys::pwhash(passphrase.clone());
-    let home = profile::home();
+
+    let is_tty = atty::is(atty::Stream::Stdin);
+    let passphrase = term::read_passphrase(is_tty, true)?;
+    let secret = keys::pwhash(passphrase.clone());
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
-    let (profile, peer_id) = profile::create(home, pwhash.clone())?;
+    let (profile, peer_id) = profile::create(home, secret.clone())?;
 
     let signer = if let Ok(sock) = sock {
         spinner.finish();
         spinner = term::spinner("Adding to ssh-agent...");
 
-        keys::add(&profile, pwhash, sock.clone())?;
+        keys::add(&profile, secret, sock.clone())?;
         let signer = sock.to_signer(&profile)?;
 
         spinner.finish();
@@ -250,17 +253,12 @@ pub fn authenticate(
 
             // TODO: We should show the spinner on the passphrase prompt,
             // otherwise it seems like the passphrase is valid even if it isn't.
-            let secret_input: SecUtf8 = if atty::is(atty::Stream::Stdin) {
-                term::secret_input()
-            } else {
-                let mut input: Zeroizing<String> = Zeroizing::new(Default::default());
-                std::io::stdin().read_line(&mut input)?;
-                SecUtf8::from(input.trim_end())
-            };
-            let pass = keys::pwhash(secret_input);
-            let spinner = term::spinner("Unlocking...");
+            let is_tty = atty::is(atty::Stream::Stdin);
+            let passphrase = term::read_passphrase(is_tty, false)?;
+            let secret = keys::pwhash(passphrase);
 
-            keys::add(profile, pass, sock).context("invalid passphrase supplied")?;
+            let spinner = term::spinner("Unlocking...");
+            keys::add(profile, secret, sock).context("invalid passphrase supplied")?;
             spinner.finish();
 
             term::success!("Radicle key added to ssh-agent");

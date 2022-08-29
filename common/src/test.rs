@@ -29,6 +29,7 @@ pub mod setup {
 
     pub fn lnk_home() -> Result<(), BoxedError> {
         env::set_var(LNK_HOME, env::current_dir()?.join("lnk_home"));
+        env::set_var(keys::RAD_PASSPHRASE, USER_PASS);
         Ok(())
     }
 
