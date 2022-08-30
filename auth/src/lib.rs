@@ -20,8 +20,9 @@ Usage
 
     rad auth [--init | --active] [<options>...] [<profile>]
 
-    A passphrase may be given via the environment variable `RAD_PASSPHRASE`.
-    Using this disables the passphrase prompt.
+    A passphrase may be given via the environment variable `RAD_PASSPHRASE` or
+    via the standard input stream if `--stdin` is used. Using one of these
+    methods disables the passphrase prompt.
 
     If `--init` is used, a name may be given via the `--name` option. Using
     this disables the input prompt.
@@ -30,6 +31,7 @@ Options
 
     --init                  Initialize a new identity
     --active                Authenticate with the currently active profile
+    --stdin                 Read passphrase from stdin (default: false)
     --name <name>           Use given name (default: none)
     --help                  Print help
 "#,
@@ -39,6 +41,7 @@ Options
 pub struct Options {
     pub init: bool,
     pub active: bool,
+    pub stdin: bool,
     pub name: Option<String>,
     pub profile: Option<ProfileId>,
 }
@@ -49,6 +52,7 @@ impl Args for Options {
 
         let mut init = false;
         let mut active = false;
+        let mut stdin = false;
         let mut name = None;
         let mut profile = None;
         let mut parser = lexopt::Parser::from_args(args);
@@ -60,6 +64,9 @@ impl Args for Options {
                 }
                 Long("active") => {
                     active = true;
+                }
+                Long("stdin") => {
+                    stdin = true;
                 }
                 Long("name") if init && name.is_none() => {
                     let val = parser
@@ -89,6 +96,7 @@ impl Args for Options {
             Options {
                 init,
                 active,
+                stdin,
                 name,
                 profile,
             },
@@ -133,8 +141,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
             .unwrap_or_else(|| term::text_input("Name", None).unwrap()),
     )?;
 
-    let is_tty = atty::is(atty::Stream::Stdin);
-    let passphrase = term::read_passphrase(is_tty, true)?;
+    let passphrase = term::read_passphrase(options.stdin, true)?;
     let secret = keys::pwhash(passphrase.clone());
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
@@ -253,8 +260,7 @@ pub fn authenticate(
 
             // TODO: We should show the spinner on the passphrase prompt,
             // otherwise it seems like the passphrase is valid even if it isn't.
-            let is_tty = atty::is(atty::Stream::Stdin);
-            let passphrase = term::read_passphrase(is_tty, false)?;
+            let passphrase = term::read_passphrase(options.stdin, false)?;
             let secret = keys::pwhash(passphrase);
 
             let spinner = term::spinner("Unlocking...");
@@ -290,6 +296,7 @@ mod tests {
         Options {
             active: false,
             init: true,
+            stdin: false,
             name: Some(name.to_owned()),
             profile: None,
         }
