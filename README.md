@@ -30,11 +30,11 @@ And then to use it:
 
 First, download the package signing key:
 
-    curl https://europe-west6-apt.pkg.dev/doc/repo-signing-key.gpg | sudo apt-key add -
+    curl -fsSL https://europe-west6-apt.pkg.dev/doc/repo-signing-key.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/radicle-archive-keyring.gpg > /dev/null
 
 Then update your sources list with the radicle repository by creating a registry file:
 
-    echo "deb [arch=amd64] https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main" | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/radicle-archive-keyring.gpg] https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main" | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
 
 Then update the package list and install `radicle-cli`:
 
