@@ -66,7 +66,7 @@ mkdir --parents tmp/root
 banner "MAINTAINER"
 ###################
 
-rad auth --init --name cloudhead --passphrase cloudhead
+echo cloudhead | rad auth --init --name cloudhead --stdin
 MAINTAINER=$(rad self --profile)
 
 # Create git repo
@@ -100,7 +100,7 @@ banner "CONTRIBUTOR"
 mkdir --parents $BASE/tmp/contributor
 cd $BASE/tmp/contributor
 
-rad auth --init --name scooby --passphrase scooby
+echo scooby | rad auth --init --name scooby --stdin
 rad clone $PROJECT --seed $SEED_ADDR --no-confirm
 
 CONTRIBUTOR=$(rad self --profile)
