@@ -55,6 +55,7 @@ pub struct Options {
     object: Object,
     confirm: bool,
     passphrase: bool,
+    stdin: bool,
 }
 
 impl Args for Options {
@@ -65,6 +66,7 @@ impl Args for Options {
         let mut object: Option<Object> = None;
         let mut confirm = true;
         let mut passphrase = true;
+        let mut stdin = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
@@ -73,6 +75,9 @@ impl Args for Options {
                 }
                 Long("no-passphrase") => {
                     passphrase = false;
+                }
+                Long("stdin") => {
+                    stdin = true;
                 }
                 Long("help") => {
                     return Err(Error::Help.into());
@@ -93,6 +98,7 @@ impl Args for Options {
                 })?,
                 confirm,
                 passphrase,
+                stdin,
             },
             vec![],
         ))
@@ -146,21 +152,13 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                 }
 
                 if options.passphrase {
-                    let is_tty = atty::is(atty::Stream::Stdin);
-                    let secret_input = match keys::read_env_passphrase() {
-                        Ok(input) => input,
-                        _ => term::switch_secret_input(is_tty)?,
-                    };
-
-                    if keys::load_secret_key(&profile, secret_input).is_ok() {
-                        profile::remove(&profile)?;
-                    } else {
+                    let passphrase = term::read_passphrase(options.stdin, false)?;
+                    if keys::load_secret_key(&profile, passphrase).is_err() {
                         anyhow::bail!(format!("Invalid passphrase supplied."));
                     }
-                } else {
-                    profile::remove(&profile)?;
                 }
 
+                profile::remove(&profile)?;
                 term::success!("Successfully removed profile {}", id);
             } else {
                 anyhow::bail!("Cannot remove active profile; see `rad auth --help`");
