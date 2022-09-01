@@ -9,6 +9,7 @@ use radicle_terminal as term;
 pub const NAME: &str = "rad";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+pub const GIT_HEAD: &str = env!("GIT_HEAD");
 
 #[derive(Debug)]
 enum Command {
@@ -62,7 +63,11 @@ fn parse_args() -> anyhow::Result<Command> {
 }
 
 fn print_version() {
-    println!("{} {}", NAME, VERSION);
+    if VERSION.contains("-dev") {
+        println!("{} {}+{}", NAME, VERSION, GIT_HEAD)
+    } else {
+        println!("{} {}", NAME, VERSION)
+    }
 }
 
 fn print_help() -> anyhow::Result<()> {
