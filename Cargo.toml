@@ -42,55 +42,55 @@ members = [
 
 [patch.crates-io.link-crypto]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.link-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.link-async]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.link-replication]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.radicle-git-helpers]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.librad]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.lnk-sync]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.lnk-clib]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.lnk-profile]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.radicle-git-ext]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.git-trailers]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.git-ref-format]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.lnk-identities]
 git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-07-12"
+tag = "cycle/2022-09-06"
 
 [patch.crates-io.automerge]
 git = "https://github.com/automerge/automerge-rs"
