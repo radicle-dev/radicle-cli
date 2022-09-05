@@ -24,7 +24,7 @@ following command from inside this repository:
 
 And then to use it:
 
-    docker -ti --rm rad --help
+    docker run -it --rm rad --help
 
 ### 🐧 From APT (Debian/Ubuntu)
 
