@@ -1,6 +1,6 @@
 [package]
 name = "rad-patch"
-version = "0.1.0"
+version = "0.7.0-dev"
 authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 license = "GPL-3.0-or-later"

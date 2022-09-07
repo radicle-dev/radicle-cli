@@ -1,6 +1,6 @@
 [package]
 name = "radicle-authorized-keys"
-version = "0.1.0"
+version = "0.7.0-dev"
 edition = "2018"
 description = "Radicle authorized key utilities for managing Radicle git repository authorized keys."
 

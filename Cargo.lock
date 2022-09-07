@@ -4401,7 +4401,7 @@ dependencies = [
 
 [[package]]
 name = "rad-account"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "ethers",
@@ -4412,10 +4412,10 @@ dependencies = [
 
 [[package]]
 name = "rad-anchor"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
- "coins-bip32 0.6.0",
+ "coins-bip32 0.3.0",
  "colored 1.9.3",
  "ethers",
  "lexopt",
@@ -4431,7 +4431,7 @@ dependencies = [
 
 [[package]]
 name = "rad-auth"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "assay",
@@ -4445,7 +4445,7 @@ dependencies = [
 
 [[package]]
 name = "rad-checkout"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4457,7 +4457,7 @@ dependencies = [
 
 [[package]]
 name = "rad-clone"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4472,7 +4472,7 @@ dependencies = [
 
 [[package]]
 name = "rad-comment"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4482,7 +4482,7 @@ dependencies = [
 
 [[package]]
 name = "rad-edit"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4495,7 +4495,7 @@ dependencies = [
 
 [[package]]
 name = "rad-ens"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "ethers",
@@ -4509,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "rad-gov"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "ethers",
@@ -4524,7 +4524,7 @@ dependencies = [
 
 [[package]]
 name = "rad-help"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4558,7 +4558,7 @@ dependencies = [
 
 [[package]]
 name = "rad-init"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4570,7 +4570,7 @@ dependencies = [
 
 [[package]]
 name = "rad-inspect"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4584,7 +4584,7 @@ dependencies = [
 
 [[package]]
 name = "rad-issue"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4597,7 +4597,7 @@ dependencies = [
 
 [[package]]
 name = "rad-ls"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4608,7 +4608,7 @@ dependencies = [
 
 [[package]]
 name = "rad-merge"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4624,7 +4624,7 @@ dependencies = [
 
 [[package]]
 name = "rad-patch"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4635,7 +4635,7 @@ dependencies = [
 
 [[package]]
 name = "rad-path"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4645,7 +4645,7 @@ dependencies = [
 
 [[package]]
 name = "rad-pull"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4656,7 +4656,7 @@ dependencies = [
 
 [[package]]
 name = "rad-push"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4667,7 +4667,7 @@ dependencies = [
 
 [[package]]
 name = "rad-remote"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4678,7 +4678,7 @@ dependencies = [
 
 [[package]]
 name = "rad-review"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4688,7 +4688,7 @@ dependencies = [
 
 [[package]]
 name = "rad-reward"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "ethers",
@@ -4700,7 +4700,7 @@ dependencies = [
 
 [[package]]
 name = "rad-rm"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "atty",
@@ -4713,7 +4713,7 @@ dependencies = [
 
 [[package]]
 name = "rad-self"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4723,7 +4723,7 @@ dependencies = [
 
 [[package]]
 name = "rad-sync"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4735,7 +4735,7 @@ dependencies = [
 
 [[package]]
 name = "rad-track"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4746,7 +4746,7 @@ dependencies = [
 
 [[package]]
 name = "rad-untrack"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "lexopt",
@@ -4757,7 +4757,7 @@ dependencies = [
 
 [[package]]
 name = "radicle-cli"
-version = "0.6.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4775,7 +4775,7 @@ dependencies = [
 
 [[package]]
 name = "radicle-common"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4897,7 +4897,7 @@ source = "git+https://github.com/radicle-dev/radicle-link?tag=cycle/2022-09-06#9
 
 [[package]]
 name = "radicle-terminal"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "anyhow",
  "console",
@@ -5299,7 +5299,7 @@ checksum = "73b4b750c782965c211b42f022f59af1fbceabdd026623714f104152f1ec149f"
 
 [[package]]
 name = "safe-transaction-client"
-version = "0.1.0"
+version = "0.7.0-dev"
 dependencies = [
  "ethers",
  "futures-executor",
