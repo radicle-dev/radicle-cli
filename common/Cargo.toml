@@ -18,7 +18,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 either = { version = "1.6" }
 futures-lite = { version = "1.12" }
 git-trailers = "0.1.0"
-git2 = { version = "0.13", default-features = false, features = ["https"] }
+git2 = { version = "0.13", default-features = false, features = ["https", "vendored-openssl", "vendored-libgit2"] }
 lazy_static = "1.4.0"
 serde_json = "1.0"
 serde = "1.0"
