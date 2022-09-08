@@ -78,6 +78,46 @@ jobs:
             target/x86_64-unknown-linux-musl/debian/*.deb
 
 
+  release-arm-linux-binaries:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Configure build cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            !target/debian
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build the binaries
+        uses: addnab/docker-run-action@v3
+        with:
+            image: messense/rust-musl-cross:aarch64-musl
+            options: -v ${{ github.workspace }}:/home/rust/src -v /home/runner/.cargo/git:/root/.cargo/git -v /home/runner/.cargo/registry:/root/.cargo/registry
+            run: |
+              rustup target add aarch64-unknown-linux-musl
+              cargo build --release
+              apt update
+              apt install --yes asciidoctor
+              .github/build-man-page.bash $(find . -name '*.adoc')
+      - shell: bash
+        run: |
+          staging="radicle-cli-aarch64-unknown-linux-musl"
+          mkdir -p "$staging"
+          find target/aarch64-unknown-linux-musl/release -maxdepth 1 -name 'rad*' -executable | xargs --replace cp '{}' "$staging"/
+          cp target/aarch64-unknown-linux-musl/release/git-remote-rad "$staging"/
+          cp *.1.gz "$staging"/
+          tar czf "$staging.tar.gz" "$staging"
+      - uses: softprops/action-gh-release@v1
+        with:
+          fail_on_unmatched_files: true
+          files: |
+            radicle-cli-aarch64-unknown-linux-musl.tar.gz
+
+
   upload-deb:
     needs: release-linux-binaries
     runs-on: ubuntu-20.04
