@@ -144,6 +144,11 @@ jobs:
   release-macos-binaries:
     needs: cargo-package-version-matches-git-tag-version
     runs-on: macos-11
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
     steps:
       - run: brew install asciidoctor
       - uses: actions/checkout@v2
@@ -156,24 +161,22 @@ jobs:
             target
             !target/debian
           key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
       - name: script
         run: .github/build-man-page.bash $(find . -name '*.adoc')
         shell: bash
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
+          target: ${{ matrix.target }}
       - name: Build the release binaries
-        run: env OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl@1.1 LIBUSB_STATIC=1 cargo build --release
+        run: env OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl@1.1 LIBUSB_STATIC=1 cargo build --release --target ${{ matrix.target }}
       - name: Build the release archive
         shell: bash
         run: |
-          staging="radicle-cli-x86_64-apple-darwin"
+          staging="radicle-cli-${{ matrix.target }}"
           mkdir -p "$staging"
-          find ./target/release -maxdepth 1 -name 'rad*' -perm +111 -type f | xargs -J '{}' -n 1 cp '{}' "$staging"/
-          cp ./target/release/git-remote-rad "$staging"/
+          find ./target/${{ matrix.target }}/release -maxdepth 1 -name 'rad*' -perm +111 -type f | xargs -J '{}' -n 1 cp '{}' "$staging"/
+          cp ./target/${{ matrix.target }}/release/git-remote-rad "$staging"/
           cp *.1.gz "$staging"/
           tar czf "$staging.tar.gz" "$staging"
       - uses: softprops/action-gh-release@v1
