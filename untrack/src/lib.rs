@@ -21,7 +21,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad untrack [<peer-id>] [--all]
+    rad untrack <peer-id>
 
     Must be run within a project working copy.
 
@@ -34,7 +34,7 @@ Options
 /// Tool options.
 #[derive(Debug)]
 pub struct Options {
-    pub peer: Option<String>,
+    pub peer: String,
 }
 
 impl Args for Options {
@@ -43,13 +43,9 @@ impl Args for Options {
 
         let mut parser = lexopt::Parser::from_args(args);
         let mut peer: Option<String> = None;
-        let mut all = false;
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("all") if peer.is_none() => {
-                    all = true;
-                }
                 Value(val) if peer.is_none() => {
                     let val = val.to_string_lossy();
                     peer = Some(val.to_string());
@@ -63,10 +59,7 @@ impl Args for Options {
             }
         }
 
-        if peer.is_none() && !all {
-            return Err(Error::Usage.into());
-        }
-
+        let peer = peer.ok_or(Error::Usage)?;
         Ok((Options { peer }, vec![]))
     }
 }
@@ -102,60 +95,38 @@ pub fn execute(
     let signer = term::signer(profile)?;
     let storage = keys::storage(profile, signer)?;
 
-    if let Some(peer_str) = options.peer {
-        let peer = if let Ok(val) = PeerId::from_str(&peer_str) {
-            val
-        } else {
-            let project = project::get(&storage, urn)?
-                .ok_or_else(|| anyhow!("project {} not found in local storage", &urn))?;
-
-            if let Some(v) = get_peer_id(&project, &storage, &peer_str)? {
-                v
-            } else {
-                anyhow::bail!("invalid <peer-id> '{}'", peer_str)
-            }
-        };
-
-        tracking::untrack(
-            &storage,
-            urn,
-            peer,
-            tracking::UntrackArgs {
-                policy: tracking::policy::Untrack::MustExist,
-                prune: true,
-            },
-        )??;
-
-        if let Some(repo) = repo {
-            term::remote::remove(&peer.to_string(), &storage, repo, urn)?;
-        };
-
-        term::success!(
-            "Tracking relationship {} removed for {}",
-            term::format::dim(fmt::peer(&peer)),
-            term::format::highlight(urn)
-        );
+    let peer = if let Ok(val) = PeerId::from_str(&options.peer) {
+        val
     } else {
-        let all_untracked = tracking::untrack_all(
-            &storage,
-            urn,
-            tracking::UntrackAllArgs {
-                policy: tracking::policy::UntrackAll::Any,
-                prune: true,
-            },
-        )?;
+        let project = project::get(&storage, urn)?
+            .ok_or_else(|| anyhow!("project {} not found in local storage", &urn))?;
 
-        if let Some(repo) = repo {
-            for p in all_untracked.untracked.flatten() {
-                term::remote::remove(&p.remote.to_string(), &storage, repo, urn)?;
-            }
-        };
+        if let Some(v) = get_peer_id(&project, &storage, &options.peer)? {
+            v
+        } else {
+            anyhow::bail!("invalid <peer-id> '{}'", options.peer)
+        }
+    };
 
-        term::success!(
-            "Tracking relationships for {} removed",
-            term::format::highlight(urn)
-        );
-    }
+    tracking::untrack(
+        &storage,
+        urn,
+        peer,
+        tracking::UntrackArgs {
+            policy: tracking::policy::Untrack::MustExist,
+            prune: true,
+        },
+    )??;
+
+    if let Some(repo) = repo {
+        term::remote::remove(&peer.to_string(), &storage, repo, urn)?;
+    };
+
+    term::success!(
+        "Tracking relationship {} removed for {}",
+        term::format::dim(fmt::peer(&peer)),
+        term::format::highlight(urn)
+    );
 
     Ok(())
 }

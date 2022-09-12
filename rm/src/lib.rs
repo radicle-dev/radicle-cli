@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 
+use librad::git::tracking::git::tracking;
 use librad::git::Urn;
 use librad::PeerId;
 
@@ -111,33 +112,53 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     term::warning("Experimental tool; use at your own risk!");
 
     let profile = ctx.profile()?;
-    let storage = profile::read_only(&profile)?;
 
     match &options.object {
         Object::Project(urn) => {
-            if let Ok(Some(_)) = project::get(&storage, urn) {
-                let monorepo = profile.paths().git_dir();
-                let namespace = monorepo
-                    .join("refs")
-                    .join("namespaces")
-                    .join(&urn.encode_id());
+            let signer = term::signer(&profile)?;
+            let storage = keys::storage(&profile, signer)?;
 
-                if !options.confirm
-                    || term::confirm(format!(
-                        "Are you sure you would like to delete {}?",
-                        term::format::dim(namespace.display())
-                    ))
-                {
-                    rad_untrack::execute(urn, None, rad_untrack::Options { peer: None }, &profile)?;
-                    fs::remove_dir_all(namespace)?;
-                    term::success!("Successfully removed project {}", &urn);
-                }
-            } else {
-                anyhow::bail!("project {} does not exist", &urn)
+            if project::get(&storage, urn)?.is_none() {
+                anyhow::bail!("project {} does not exist", &urn);
             }
+            let monorepo = profile.paths().git_dir();
+            let namespace = monorepo
+                .join("refs")
+                .join("namespaces")
+                .join(&urn.encode_id());
+
+            if options.confirm
+                && !term::confirm(format!(
+                    "Are you sure you would like to delete {}?",
+                    term::format::dim(namespace.display())
+                ))
+            {
+                return Ok(());
+            }
+
+            let all_untracked = tracking::untrack_all(
+                &storage,
+                urn,
+                tracking::UntrackAllArgs {
+                    policy: tracking::policy::UntrackAll::Any,
+                    prune: true,
+                },
+            )?;
+            fs::remove_dir_all(namespace)?;
+
+            if let Ok((cwd_urn, cwd_repo)) = project::cwd() {
+                if cwd_urn == *urn {
+                    for p in all_untracked.untracked.flatten() {
+                        term::remote::remove(&p.remote.to_string(), &storage, &cwd_repo, urn)?;
+                    }
+                }
+            };
+
+            term::success!("Successfully removed project {}", &urn);
         }
         Object::User(peer_id) => {
             let profiles = profile::list()?;
+            let storage = profile::read_only(&profile)?;
             if storage.peer_id() != peer_id {
                 if let Some((storage, other)) = profiles
                     .iter()
