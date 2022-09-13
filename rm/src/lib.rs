@@ -149,7 +149,11 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
             if let Ok((cwd_urn, cwd_repo)) = project::cwd() {
                 if cwd_urn == *urn {
                     for p in all_untracked.untracked.flatten() {
-                        term::remote::remove(&p.remote.to_string(), &storage, &cwd_repo, urn)?;
+                        let err =
+                            term::remote::remove(&p.remote.to_string(), &storage, &cwd_repo, urn);
+                        if let Err(err) = err {
+                            eprintln!("unable to remove git remote '{}': {}", p.remote, err);
+                        }
                     }
                 }
             };
