@@ -34,7 +34,7 @@ url = { version = "*" }
 
 # Ethereum functionality
 
-ethers = { version = "0.6.2", optional = true }
+ethers = { version = "0.17", optional = true }
 futures-lite = { version = "1.12", optional = true }
 
 [[bin]]

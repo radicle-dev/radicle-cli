@@ -99,3 +99,7 @@ rev = "291557a019acac283e54ea31a9fad81ed65736ab"
 [patch.crates-io.libusb1-sys]
 git = "https://github.com/a1ien/rusb.git"
 rev = "050f5091c7b0fb69c0fc25edec0910abe8afadf1"
+
+[patch.crates-io.radicle-keystore]
+git = "https://github.com/radicle-dev/radicle-keystore.git"
+rev = "9cbaac582f958f3538362892b9d01b2cfcff9da5"
