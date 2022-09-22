@@ -266,7 +266,10 @@ pub fn authenticate(
         } else {
             term::success!("Signing key already in ssh-agent");
         }
-    }
+    } else {
+        term::warning("Radicle key won't be added to ssh-agent since it's not running.");
+        term::blank();
+    };
 
     Ok(())
 }
