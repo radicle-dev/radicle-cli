@@ -6,6 +6,7 @@ authors = ["The Radicle Team <dev@radicle.xyz>"]
 edition = "2018"
 rust-version = "1.63"
 build = "build.rs"
+default-run = "rad"
 
 [package.metadata.deb]
 assets = [
