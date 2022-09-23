@@ -21,6 +21,8 @@ Usage
 
     rad rm <urn | peer-id> [<option>...]
 
+    Removes a project if URN is given or user if Peer ID is given.
+
 Options
 
     --no-confirm        Do not ask for confirmation before removal
@@ -113,25 +115,25 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 
     match &options.object {
         Object::Project(urn) => {
-            let monorepo = profile.paths().git_dir();
+            if let Ok(Some(_)) = project::get(&storage, urn) {
+                let monorepo = profile.paths().git_dir();
+                let namespace = monorepo
+                    .join("refs")
+                    .join("namespaces")
+                    .join(&urn.encode_id());
 
-            if project::get(&storage, urn)?.is_none() {
-                anyhow::bail!("project {} does not exist", &urn);
-            }
-            let namespace = monorepo
-                .join("refs")
-                .join("namespaces")
-                .join(&urn.encode_id());
-
-            if !options.confirm
-                || term::confirm(format!(
-                    "Are you sure you would like to delete {}?",
-                    term::format::dim(namespace.display())
-                ))
-            {
-                rad_untrack::execute(urn, None, rad_untrack::Options { peer: None }, &profile)?;
-                fs::remove_dir_all(namespace)?;
-                term::success!("Successfully removed project {}", &urn);
+                if !options.confirm
+                    || term::confirm(format!(
+                        "Are you sure you would like to delete {}?",
+                        term::format::dim(namespace.display())
+                    ))
+                {
+                    rad_untrack::execute(urn, None, rad_untrack::Options { peer: None }, &profile)?;
+                    fs::remove_dir_all(namespace)?;
+                    term::success!("Successfully removed project {}", &urn);
+                }
+            } else {
+                anyhow::bail!("project {} does not exist", &urn)
             }
         }
         Object::User(peer_id) => {
@@ -169,7 +171,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                     anyhow::bail!("No user found with Peer ID: {}", peer_id);
                 }
             } else {
-                anyhow::bail!("Cannot remove active user; see `rad auth --help`");
+                anyhow::bail!("Cannot remove active user; see `rad rm --help`");
             }
         }
         Object::Unknown(arg) => {
