@@ -11,6 +11,7 @@ use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Pas
 
 use radicle_common::cobs::issue::Issue;
 use radicle_common::cobs::shared::CommentId;
+use radicle_common::profile;
 use radicle_common::signer::ToSigner;
 
 use super::command;
@@ -383,9 +384,26 @@ where
 }
 
 pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&'a Profile> {
+    use radicle_common::fmt;
     let active = profiles.iter().position(|p| p.id() == active.id()).unwrap();
     let selection = dialoguer::Select::with_theme(&theme())
-        .items(&profiles.iter().map(|p| p.id()).collect::<Vec<_>>())
+        .items(
+            &profiles
+                .iter()
+                .map(|p| {
+                    profile::read_only(p).map_or_else(
+                        |_| String::from("<unknown>"),
+                        |s| {
+                            format!(
+                                "{} ({})",
+                                fmt::peer(s.peer_id()),
+                                profile::name(Some(p)).unwrap_or_default()
+                            )
+                        },
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
         .default(active)
         .interact_opt()
         .unwrap();

@@ -205,16 +205,20 @@ pub fn authenticate(
         Ok(profile) => profile,
         Err(_) => {
             anyhow::bail!(
-                "Active profile could not be loaded.\n\
-                To create a new profile, run `rad auth --init`."
+                "Active identity could not be loaded.\n\
+                To create a new identity, run `rad auth --init`."
             )
         }
     };
 
     if !options.active && options.profile.is_none() {
+        let read_only = profile::read_only(&profile)?;
+        let config = read_only.config()?;
+        let username = config.user_name()?;
         term::info!(
-            "Your active profile is {}",
-            term::format::highlight(&profile.id().to_string()),
+            "Your active identity is {} {}",
+            term::format::highlight(read_only.peer_id()),
+            term::format::dim(format!("({})", username))
         );
     }
 
@@ -235,22 +239,19 @@ pub fn authenticate(
 
     let read_only = profile::read_only(selection)?;
     let config = read_only.config()?;
+    let username = config.user_name()?;
 
-    if let Some(user) = config.user()? {
-        let username = config.user_name()?;
-
-        term::headline(&format!(
-            "🌱 Authenticating as {} {}",
-            term::format::highlight(user),
-            term::format::dim(format!("({})", username))
-        ));
-    }
+    term::headline(&format!(
+        "🌱 Authenticating as {} {}",
+        term::format::highlight(read_only.peer_id()),
+        term::format::dim(format!("({})", username))
+    ));
 
     if selection.id() != profile.id() {
         let id = selection.id();
         profile::set(id)?;
 
-        term::success!("Profile {} activated", id);
+        term::success!("Identity {} activated", read_only.peer_id());
     }
 
     let profile = selection;
