@@ -1,10 +1,10 @@
 #![allow(clippy::collapsible_if)]
 
 pub mod command;
+pub mod display;
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
 pub mod format;
-pub mod identity;
 pub mod io;
 pub mod keys;
 pub mod patch;

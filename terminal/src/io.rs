@@ -14,8 +14,8 @@ use radicle_common::cobs::shared::CommentId;
 use radicle_common::signer::ToSigner;
 
 use super::command;
+use super::display;
 use super::format;
-use super::identity;
 use super::keys;
 use super::spinner::spinner;
 use super::Error;
@@ -389,7 +389,7 @@ pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&
         .items(
             &profiles
                 .iter()
-                .map(|p| identity::print(p))
+                .map(|p| display::Identity::new(p).short())
                 .collect::<Vec<_>>(),
         )
         .default(active)
