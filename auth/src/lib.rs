@@ -5,7 +5,7 @@ use std::str::FromStr;
 use anyhow::Context as _;
 use radicle_common::signer::ToSigner;
 
-use librad::profile::ProfileId;
+use librad::PeerId;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{config, git, keys, person, profile};
@@ -18,7 +18,7 @@ pub const HELP: Help = Help {
     usage: r#"
 Usage
 
-    rad auth [--init | --active] [<options>...] [<profile>]
+    rad auth [--init | --active] [<options>...] [<peer-id>]
 
     A passphrase may be given via the environment variable `RAD_PASSPHRASE` or
     via the standard input stream if `--stdin` is used. Using one of these
@@ -43,7 +43,7 @@ pub struct Options {
     pub active: bool,
     pub stdin: bool,
     pub name: Option<String>,
-    pub profile: Option<ProfileId>,
+    pub peer_id: Option<PeerId>,
 }
 
 impl Args for Options {
@@ -54,7 +54,7 @@ impl Args for Options {
         let mut active = false;
         let mut stdin = false;
         let mut name = None;
-        let mut profile = None;
+        let mut peer_id = None;
         let mut parser = lexopt::Parser::from_args(args);
 
         while let Some(arg) = parser.next()? {
@@ -82,11 +82,11 @@ impl Args for Options {
                 }
                 Value(val) => {
                     let string = val.to_str().ok_or_else(|| {
-                        anyhow::anyhow!("invalid UTF-8 string specified for profile")
+                        anyhow::anyhow!("invalid UTF-8 string specified for peer id")
                     })?;
-                    let id = ProfileId::from_str(string).context("invalid profile id specified")?;
+                    let id = PeerId::from_str(string).context("invalid peer id specified")?;
 
-                    profile = Some(id);
+                    peer_id = Some(id);
                 }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
@@ -98,7 +98,7 @@ impl Args for Options {
                 active,
                 stdin,
                 name,
-                profile,
+                peer_id,
             },
             vec![],
         ))
@@ -112,8 +112,8 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     };
 
     if options.init || profiles.is_empty() {
-        if options.profile.is_some() {
-            anyhow::bail!("you may not specify a profile id when initializing a new identity");
+        if options.peer_id.is_some() {
+            anyhow::bail!("you may not specify a peer id when initializing a new identity");
         }
         init(options)
     } else {
@@ -211,18 +211,21 @@ pub fn authenticate(
         }
     };
 
-    if !options.active && options.profile.is_none() {
+    if !options.active && options.peer_id.is_none() {
         term::info!(
             "Your active identity is {}",
-            term::identity::Formatter::new(&profile).style().print()
+            term::display::Identity::new(&profile).styled()
         );
     }
 
-    let selection = if let Some(id) = options.profile {
+    let selection = if let Some(peer_id) = options.peer_id {
         profiles
             .iter()
-            .find(|p| p.id() == &id)
-            .ok_or_else(|| anyhow::anyhow!("profile '{}' not found", id))?
+            .find(|p| match profile::read_only(p) {
+                Ok(s) => *s.peer_id() == peer_id,
+                Err(_) => false,
+            })
+            .ok_or_else(|| anyhow::anyhow!("Identity '{}' not found", peer_id))?
     } else if profiles.len() > 1 && !options.active {
         if let Some(p) = term::profile_select(profiles, &profile) {
             p
@@ -235,7 +238,7 @@ pub fn authenticate(
 
     term::headline(&format!(
         "🌱 Authenticating as {}",
-        term::identity::Formatter::new(selection).style().print()
+        term::display::Identity::new(selection).styled()
     ));
 
     if selection.id() != profile.id() {
@@ -290,7 +293,7 @@ mod tests {
             init: true,
             stdin: false,
             name: Some(name.to_owned()),
-            profile: None,
+            peer_id: None,
         }
     }
 
