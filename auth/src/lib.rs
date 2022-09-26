@@ -212,13 +212,9 @@ pub fn authenticate(
     };
 
     if !options.active && options.profile.is_none() {
-        let read_only = profile::read_only(&profile)?;
-        let config = read_only.config()?;
-        let username = config.user_name()?;
         term::info!(
-            "Your active identity is {} {}",
-            term::format::highlight(read_only.peer_id()),
-            term::format::dim(format!("({})", username))
+            "Your active identity is {}",
+            term::identity::Formatter::new(&profile).style().print()
         );
     }
 
@@ -237,21 +233,16 @@ pub fn authenticate(
         &profile
     };
 
-    let read_only = profile::read_only(selection)?;
-    let config = read_only.config()?;
-    let username = config.user_name()?;
-
     term::headline(&format!(
-        "🌱 Authenticating as {} {}",
-        term::format::highlight(read_only.peer_id()),
-        term::format::dim(format!("({})", username))
+        "🌱 Authenticating as {}",
+        term::identity::Formatter::new(selection).style().print()
     ));
 
     if selection.id() != profile.id() {
         let id = selection.id();
         profile::set(id)?;
 
-        term::success!("Identity {} activated", read_only.peer_id());
+        term::success!("Profile {} activated", id);
     }
 
     let profile = selection;
