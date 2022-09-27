@@ -9,11 +9,11 @@ use tuirealm::application::PollStrategy;
 use tuirealm::props::{AttrValue, Attribute};
 use tuirealm::tui::layout::Rect;
 use tuirealm::{Application, EventListenerCfg, NoUserEvent};
-use tuirealm::{Component, Frame};
+use tuirealm::{Component, Frame, Sub};
 
 pub mod components;
-pub mod state;
 pub mod layout;
+pub mod state;
 pub mod theme;
 
 /// A proxy that abstracts the tui-realm-specific application.
@@ -47,11 +47,16 @@ where
         Self { backend }
     }
 
-    pub fn mount<C>(&mut self, id: Id, component: C) -> Result<(), Error>
+    pub fn mount<C>(
+        &mut self,
+        id: Id,
+        component: C,
+        subs: Vec<Sub<Id, NoUserEvent>>,
+    ) -> Result<(), Error>
     where
         C: Component<Message, NoUserEvent> + 'static,
     {
-        self.backend.mount(id, Box::new(component), vec![])?;
+        self.backend.mount(id, Box::new(component), subs)?;
         Ok(())
     }
 
