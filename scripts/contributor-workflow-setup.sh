@@ -67,7 +67,7 @@ banner "MAINTAINER"
 ###################
 
 echo cloudhead | rad auth --init --name cloudhead --stdin
-MAINTAINER=$(rad self --profile)
+MAINTAINER=$(rad self --peer)
 
 # Create git repo
 mkdir --parents $BASE/tmp/maintainer/acme
@@ -103,8 +103,7 @@ cd $BASE/tmp/contributor
 echo scooby | rad auth --init --name scooby --stdin
 rad clone $PROJECT --seed $SEED_ADDR --no-confirm
 
-CONTRIBUTOR=$(rad self --profile)
-CONTRIBUTOR_PEER=$(rad self --peer)
+CONTRIBUTOR=$(rad self --peer)
 
 # Change into project directory
 cd acme
@@ -128,7 +127,7 @@ banner "MAINTAINER"
 cd $BASE/tmp/maintainer/acme
 
 rad auth $MAINTAINER
-rad track $CONTRIBUTOR_PEER
+rad track $CONTRIBUTOR
 rad patch --list
 
 rm .gitignore
