@@ -60,7 +60,17 @@ impl TryFrom<Url> for Origin {
 
         let host = url.host();
         let port = url.port().unwrap_or(seed::DEFAULT_SEED_P2P_PORT);
-        let peer = PeerId::from_str(url.username())?;
+
+        let peer = url.username();
+        if peer.is_empty() {
+            anyhow::bail!(
+                "invalid radicle URL '{}': peer id required",
+                url.to_string()
+            );
+        }
+        let peer = PeerId::from_str(peer)
+            .map_err(|_| anyhow::anyhow!("invalid radicle URL '{}': invalid peer id", peer))?;
+
         let seed = host.map(|h| sync::Seed {
             peer,
             addrs: format!("{}:{}", h, port),
