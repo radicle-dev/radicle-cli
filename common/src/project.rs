@@ -512,13 +512,14 @@ pub fn find_remote(
 /// Create a git remote for the given project and peer. This does not save the
 /// remote to the git configuration.
 pub fn remote(urn: &Urn, peer: &PeerId, name: &str) -> Result<Remote<LocalUrl>, anyhow::Error> {
-    use librad::git::types::{Flat, Force, GenericRef, Refspec};
+    use librad::git::types::{Flat, Force, Refspec};
+    use librad::git_ext::RefspecPattern;
 
     let name = RefLike::try_from(name)?;
     let url = LocalUrl::from(urn.clone());
     let remote = Remote::new(url, name.clone()).with_fetchspecs(vec![Refspec {
         src: Reference::heads(Flat, *peer),
-        dst: GenericRef::heads(Flat, name),
+        dst: RefspecPattern::try_from(format!("refs/remotes/{name}/*"))?,
         force: Force::True,
     }]);
 
@@ -554,11 +555,6 @@ pub fn peer_prefix(name: &str) -> String {
     format!("{}/{}", PEER_PREFIX, name)
 }
 
-pub fn remote_name(name: &str) -> String {
-    let peer_prefix = peer_prefix(name);
-    format!("{}/rad", peer_prefix)
-}
-
 /// Setup a project remote and tracking branch.
 pub struct SetupRemote<'a> {
     /// The project.
@@ -585,7 +581,7 @@ impl<'a> SetupRemote<'a> {
         let urn = &self.project.urn;
 
         // TODO: Handle conflicts in remote name.
-        let mut remote = self::remote(urn, peer, &remote_name(name))?;
+        let mut remote = self::remote(urn, peer, &peer_prefix(name))?;
 
         // Configure the remote in the repository.
         remote.save(repo)?;
