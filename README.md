@@ -55,7 +55,7 @@ Then update the package list and install `radicle-cli`:
     sudo apt update
     sudo apt install radicle-cli
 
-### 🍺 From Homebrew (x86_64)
+### 🍺 From Homebrew
 
-    brew tap --force-auto-update radicle/cli https://seed.alt-clients.radicle.xyz/radicle-cli-homebrew.git
+    brew tap --force-auto-update radicle/cli https://pine.radicle.garden/radicle-cli-homebrew.git
     brew install radicle-cli
