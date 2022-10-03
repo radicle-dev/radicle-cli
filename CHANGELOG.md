@@ -5,9 +5,7 @@
 ### Added
 
 - Add Dockerfile for `radicle-cli`
-- Re-organize binaries into own crate and move all sub-commands to `rad` binary 
-- Adds build metadata to version output
-- Build aarch64 Linux release binaries
+- Add build metadata to version output
 - `comment`: Comment on issues or patches
 
 ### Changed
@@ -29,9 +27,6 @@
 
 ### Changed
 
-- Update to replication v3
-- Update to rust 1.63
-- Use global seed configuration and don't setup monorepo signing any longer
 - `clone`: Correct the default project name
 - `track`: When showing peer information, show all branches other than master
 - `patch`: Various updates on patch listing, automatically push on creation 
@@ -40,8 +35,6 @@
 
 ### Added
 
-- Implemented collaborative objects (cobs)
-- Add contributor workflow script 
 - Add support for environment variable `RAD_HOME`
 - `issue`: Manage radicle issues
 - `patch`: Manage patches for radicle projects
@@ -56,8 +49,6 @@
 ### Changed
 
 - Make ssh-agent optional
-- Decouple `common` from `terminal`
-- Depend on a single tokio feature-set to speed up compilation
 - `auth`: Warn and initialize on non-active existing profile(s), disallow whitespace(s) in name
 - `ens`: Only update local identity for mainnet
 - `init`: Use ssh keys for gitsigners 
@@ -78,10 +69,6 @@
 ### Added
 
 - `inspect`: Add `--history` option
-
-### Changed
-
-- Build static binaries in release jobs
 
 ## [0.5.0] - 2022-04-13
 
@@ -118,10 +105,6 @@
 
 ## [0.3.1] - 2022-03-03
 
-### Changed
-
-- Switch from `futures` to `futures-lite`
-
 ### Fixed
 
 - `auth`: Use correct profile for storage
@@ -156,7 +139,6 @@
 
 ### Changed
 
-- Feature-gate Ethereum functionality in bins and make `ethers-rs` optional
 - `common`: Default HTTP for IPs
 - `sync`: Collapse synching progress messages
 
