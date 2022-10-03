@@ -8,7 +8,7 @@ See the [getting started guide](https://radicle.xyz/get-started.html) for setup 
 
 ## Contributing
 
-The Radicle CLI is still under development. Contributions are always welcome! Please check the [contributing page](https://app.radicle.network/seeds/seed.alt-clients.radicle.xyz/rad:git:hnrkmg77m8tfzj4gi4pa4mbhgysfgzwntjpao/tree/cc80d84ea5be6466647777224c1131b2e0ad11c8/CONTRIBUTING.md) if you want to help.
+The Radicle CLI is still under development. Contributions are always welcome! Please check the [contributing page](https://app.radicle.xyz/seeds/clients.radicle.xyz/rad:git:hnrkmg77m8tfzj4gi4pa4mbhgysfgzwntjpao/tree/cc80d84ea5be6466647777224c1131b2e0ad11c8/CONTRIBUTING.md) if you want to help.
 
 ## Installation
 

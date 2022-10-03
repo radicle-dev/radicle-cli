@@ -26,8 +26,8 @@ impl WalletConnect {
             "radicle-cli",
             Metadata {
                 description: "Interact with Radicle".into(),
-                url: "https://radicle.network".parse()?,
-                icons: vec!["https://app.radicle.network/logo.png".parse()?],
+                url: "https://radicle.xyz".parse()?,
+                icons: vec!["https://app.radicle.xyz/logo.png".parse()?],
                 name: "Radicle CLI".into(),
             },
         )?;

@@ -18,7 +18,7 @@ use radicle_terminal as term;
 use anyhow::anyhow;
 use url::Url;
 
-pub const GATEWAY_HOST: &str = "app.radicle.network";
+pub const GATEWAY_HOST: &str = "app.radicle.xyz";
 pub const HELP: Help = Help {
     name: "sync",
     description: env!("CARGO_PKG_DESCRIPTION"),

@@ -201,7 +201,7 @@ async fn setup(
                 return Err(Error::WithHint {
                     err: err.into(),
                     hint: if radicle_name {
-                        "The name must be registered with ENS to continue. Go to https://app.radicle.network/register to register."
+                        "The name must be registered with ENS to continue. Go to https://app.radicle.xyz/register to register."
                     } else {
                         "The name must be registered with ENS to continue. Go to https://app.ens.domains to register."
                     }
@@ -316,7 +316,7 @@ async fn setup(
     term::blank();
     term::tip!("To view your profile, visit:");
     term::indented(&term::format::secondary(format!(
-        "https://app.radicle.network/{}",
+        "https://app.radicle.xyz/{}",
         name
     )));
 
