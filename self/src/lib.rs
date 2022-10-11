@@ -148,6 +148,12 @@ fn all(profile: &profile::Profile) -> anyhow::Result<()> {
         term::format::tertiary(keys_path.display()),
     ]);
 
+    let seeds_path = profile.paths().seeds_file();
+    table.push([
+        String::from("Storage (seeds)"),
+        term::format::tertiary(seeds_path.display()),
+    ]);
+
     table.render_tree();
 
     Ok(())
