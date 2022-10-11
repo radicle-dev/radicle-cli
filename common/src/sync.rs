@@ -101,14 +101,15 @@ pub async fn client(
 /// Get the seeds configured for the profile.
 /// First checks local (working copy) config, then global.
 pub fn seeds(profile: &Profile) -> anyhow::Result<NonEmpty<Seed<String>>> {
-    let config = config::Config::load(profile)?;
-    let seeds = config
-        .seeds()
-        .cloned()
-        .map(|s| s.try_into())
-        .collect::<Result<Vec<_>, _>>()?;
-    if let Ok(seeds) = seeds.try_into() {
-        return Ok(seeds);
+    if let Ok(config) = config::Config::load(profile) {
+        let seeds = config
+            .seeds()
+            .cloned()
+            .map(|s| s.try_into())
+            .collect::<Result<Vec<_>, _>>()?;
+        if let Ok(seeds) = seeds.try_into() {
+            return Ok(seeds);
+        }
     }
 
     // Fallback to global seeds if no local seeds are configured.
