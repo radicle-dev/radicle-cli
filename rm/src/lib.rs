@@ -152,7 +152,11 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
                         let err =
                             term::remote::remove(&p.remote.to_string(), &storage, &cwd_repo, urn);
                         if let Err(err) = err {
-                            eprintln!("unable to remove git remote '{}': {}", p.remote, err);
+                            term::io::error(anyhow::anyhow!(
+                                "unable to remove git remote '{}': {}",
+                                p.remote,
+                                err,
+                            ));
                         }
                     }
                 }
