@@ -559,7 +559,7 @@ fn pretty_commit_version(
     revision_oid: &git::Oid,
     repo: &Option<git::Repository>,
 ) -> anyhow::Result<String> {
-    let mut oid = common::fmt::oid(revision_oid);
+    let mut oid = term::format::secondary(common::fmt::oid(revision_oid));
     let mut branches: Vec<String> = vec![];
 
     if let Some(repo) = repo {
@@ -577,7 +577,7 @@ fn pretty_commit_version(
     if !branches.is_empty() {
         oid = format!(
             "{} {}",
-            term::format::secondary(oid),
+            oid,
             term::format::yellow(format!("({})", branches.join(", "))),
         );
     }
