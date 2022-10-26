@@ -12,6 +12,10 @@ The Radicle CLI is still under development. Contributions are always welcome! Pl
 
 ## Installation
 
+### 💡 Recommended
+
+The [getting started guide](https://radicle.xyz/get-started.html) provides instructions for installing binaries. These are the recommended installation methods for most users.
+
 ### 📦 From source
 
 You can install the Radicle CLI and supporting tools by running the
@@ -40,22 +44,3 @@ And then to use it:
 > **Note**
 > It's recommended to install release builds since development builds may be incompatible with the network.
 
-### 🐧 From APT (Debian/Ubuntu)
-
-First, download the package signing key:
-
-    curl -fsSL https://europe-west6-apt.pkg.dev/doc/repo-signing-key.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/radicle-archive-keyring.gpg > /dev/null
-
-Then update your sources list with the radicle repository by creating a registry file:
-
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/radicle-archive-keyring.gpg] https://europe-west6-apt.pkg.dev/projects/radicle-services radicle-cli main" | sudo tee -a /etc/apt/sources.list.d/radicle-registry.list
-
-Then update the package list and install `radicle-cli`:
-
-    sudo apt update
-    sudo apt install radicle-cli
-
-### 🍺 From Homebrew
-
-    brew tap --force-auto-update radicle/cli https://pine.radicle.garden/radicle-cli-homebrew.git
-    brew install radicle-cli
