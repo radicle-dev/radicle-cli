@@ -54,6 +54,7 @@ pub enum State {
     Merged,
 }
 
+/*
 /// A patch is a change set that a user wants the maintainer to merge into a project's default
 /// branch.
 ///
@@ -153,6 +154,7 @@ pub fn merge_base(repo: &git2::Repository, patch: &Tag) -> Result<Option<git::Oi
 
     Ok(merge_base.map(|o| o.into()))
 }
+*/
 
 pub fn is_merged(
     repo: &git2::Repository,
@@ -213,6 +215,7 @@ pub fn create_tag(
     Ok(oid)
 }
 
+/*
 #[derive(Debug, Default)]
 pub struct MergeTargets {
     pub merged: Vec<project::PeerInfo>,
@@ -243,6 +246,7 @@ where
     }
     Ok(targets)
 }
+*/
 
 pub fn patch_merge_target_oid(
     target: cob::MergeTarget,

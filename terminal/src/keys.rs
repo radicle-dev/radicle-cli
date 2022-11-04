@@ -1,8 +1,7 @@
-use librad::crypto::keystore::pinentry::{Pinentry, SecUtf8};
-
 pub use radicle_common::keys::*;
 pub use radicle_common::signer;
 
+/*
 #[derive(Clone)]
 pub struct CachedPrompt(pub SecUtf8);
 
@@ -19,3 +18,4 @@ impl Pinentry for CachedPrompt {
         Ok(self.0.clone())
     }
 }
+*/

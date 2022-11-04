@@ -8,9 +8,7 @@ pub mod format;
 pub mod io;
 pub mod keys;
 pub mod patch;
-pub mod remote;
 pub mod spinner;
-pub mod sync;
 pub mod table;
 pub mod textbox;
 

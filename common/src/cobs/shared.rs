@@ -853,12 +853,15 @@ pub mod lookup {
     }
 }
 
+// TODO(dave):
+/*
 pub fn store<'a>(profile: &Profile, storage: &'a Storage) -> anyhow::Result<Store<'a>> {
     let whoami = person::local(storage)?;
     let cobs = Store::new(whoami, profile.paths(), storage);
 
     Ok(cobs)
 }
+*/
 
 #[cfg(test)]
 mod test {

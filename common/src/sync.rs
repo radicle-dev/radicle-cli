@@ -98,6 +98,7 @@ pub async fn client(
     Ok(client)
 }
 
+/*
 /// Get the seeds configured for the profile.
 /// First checks local (working copy) config, then global.
 pub fn seeds(profile: &Profile) -> anyhow::Result<NonEmpty<Seed<String>>> {
@@ -123,3 +124,4 @@ pub fn seeds(profile: &Profile) -> anyhow::Result<NonEmpty<Seed<String>>> {
         .try_into()
         .map_err(|_| anyhow!("No seeds configured for profile {}", profile.id()))
 }
+*/

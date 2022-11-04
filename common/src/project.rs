@@ -31,6 +31,8 @@ use librad::PeerId;
 use lnk_identities;
 use lnk_identities::working_copy_dir::WorkingCopyDir;
 
+use radicle::crypto::PublicKey;
+
 use crate as common;
 use crate::person::Ens;
 use crate::{git, person};
@@ -73,12 +75,14 @@ impl PeerIdentity {
     }
 }
 
+/*
 /// Project peer information.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PeerInfo {
     /// Peer id.
-    pub id: PeerId,
+    //pub id: PeerId,
+    pub id: PublicKey,
     /// Peer identity, if known.
     pub person: Option<PeerIdentity>,
     /// Whether or not this peer belongs to a project delegate.
@@ -113,6 +117,7 @@ impl PeerInfo {
         }
     }
 }
+*/
 
 /// Project delegate.
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -271,6 +276,7 @@ pub fn payload(name: String, description: String, default_branch: String) -> pay
     }
 }
 
+/*
 /// Create a new project identity.
 pub fn create(payload: payload::Project, storage: &Storage) -> anyhow::Result<Project> {
     let whoami = person::local(storage)?;
@@ -282,6 +288,7 @@ pub fn create(payload: payload::Project, storage: &Storage) -> anyhow::Result<Pr
 
     Ok(project)
 }
+*/
 
 /// Initialize a repo as a project.
 pub fn init(
@@ -533,6 +540,7 @@ pub fn cwd() -> anyhow::Result<(Urn, git::Repository)> {
     Ok((urn, repo))
 }
 
+/*
 /// Get the tracked peers of a project, including information about these peers.
 pub fn tracked<S>(project: &Metadata, storage: &S) -> anyhow::Result<HashMap<PeerId, PeerInfo>>
 where
@@ -549,6 +557,7 @@ where
     }
     Ok(remotes)
 }
+*/
 
 pub fn peer_prefix(name: &str) -> String {
     format!("{}/{}", PEER_PREFIX, name)

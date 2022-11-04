@@ -1,4 +1,11 @@
 //! Seed-related functionality.
+//pub const CONFIG_SEED_KEY: &str = "rad.seed";
+//pub const CONFIG_PEER_KEY: &str = "rad.peer";
+//pub const DEFAULT_SEED_GIT_LOCAL_PORT: u16 = 8778;
+//pub const DEFAULT_SEED_API_PORT: u16 = 8777;
+pub const DEFAULT_SEED_P2P_PORT: u16 = 8776;
+//pub const DEFAULT_SEED_GIT_PORT: u16 = 443;
+/*
 use std::convert::TryFrom;
 use std::net;
 use std::path::Path;
@@ -7,18 +14,13 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context as _, Result};
 use librad::crypto::peer::PeerId;
 use librad::git::Urn;
+
 use url::{Host, Url};
 
 use crate::args::Error;
 use crate::sync::Seed;
 use crate::{git, project};
 
-pub const CONFIG_SEED_KEY: &str = "rad.seed";
-pub const CONFIG_PEER_KEY: &str = "rad.peer";
-pub const DEFAULT_SEED_GIT_LOCAL_PORT: u16 = 8778;
-pub const DEFAULT_SEED_API_PORT: u16 = 8777;
-pub const DEFAULT_SEED_P2P_PORT: u16 = 8776;
-pub const DEFAULT_SEED_GIT_PORT: u16 = 443;
 
 #[derive(serde::Deserialize)]
 pub struct CommitHeader {
@@ -283,7 +285,9 @@ pub fn get_commit(
 
     Ok(commit)
 }
+*/
 
+/*
 /// Query a seed node for a project's remotes.
 pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo>, anyhow::Error> {
     seed.set_port(Some(DEFAULT_SEED_API_PORT)).unwrap();
@@ -295,7 +299,9 @@ pub fn get_remotes(mut seed: Url, project: &Urn) -> Result<Vec<project::PeerInfo
 
     Ok(response)
 }
+*/
 
+/*
 #[cfg(test)]
 mod test {
     use super::*;
@@ -342,3 +348,4 @@ mod test {
         assert_eq!(addr.port(), DEFAULT_SEED_P2P_PORT);
     }
 }
+*/

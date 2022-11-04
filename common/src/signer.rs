@@ -1,13 +1,13 @@
 use zeroize::Zeroizing;
 
-use librad::crypto::keystore::sign::ed25519;
-use librad::crypto::BoxedSignError;
-use librad::crypto::BoxedSigner;
-use librad::profile::Profile;
-use librad::SecretKey;
+use crate::keys;
+use crate::keys::link_crypto::BoxedSignError;
+use crate::keys::link_crypto::BoxedSigner;
+use crate::keys::link_crypto::SecretKey;
+use crate::keys::radicle_keystore as ed25519;
+use crate::keys::ssh_super::SshAuthSock;
 
-use lnk_clib::keys;
-use lnk_clib::keys::ssh::SshAuthSock;
+use radicle::profile::Profile;
 
 /// A trait for types that can be converted to signers.
 pub trait ToSigner {
@@ -54,26 +54,24 @@ impl ZeroizingSecretKey {
     }
 }
 
-#[async_trait::async_trait]
-impl ed25519::Signer for ZeroizingSecretKey {
+impl ed25519::SignerTrait for ZeroizingSecretKey {
     type Error = BoxedSignError;
 
     fn public_key(&self) -> ed25519::PublicKey {
         self.key.public_key()
     }
 
-    async fn sign(&self, data: &[u8]) -> Result<ed25519::Signature, Self::Error> {
-        <SecretKey as ed25519::Signer>::sign(&self.key, data)
-            .await
+    fn sign(&self, data: &[u8]) -> Result<ed25519::Signature, Self::Error> {
+        <SecretKey as ed25519::SignerTrait>::sign(&self.key, data)
             .map_err(BoxedSignError::from_std_error)
     }
 }
 
-impl librad::Signer for ZeroizingSecretKey {
+impl keys::link_crypto::Signer for ZeroizingSecretKey {
     fn sign_blocking(
         &self,
         data: &[u8],
-    ) -> Result<librad::keystore::sign::Signature, <Self as ed25519::Signer>::Error> {
+    ) -> Result<ed25519::Signature, <Self as ed25519::SignerTrait>::Error> {
         self.key
             .sign_blocking(data)
             .map_err(BoxedSignError::from_std_error)

@@ -14,7 +14,8 @@ pub mod project;
 pub mod seed;
 pub mod signer;
 pub mod sync;
-pub mod test;
+//TODO(dave): uncomment test
+//pub mod test;
 
 #[cfg(feature = "ethereum")]
 pub mod ethereum;
@@ -35,10 +36,11 @@ pub use url::Url;
 /// String formatting of various types.
 pub mod fmt {
     use librad::{collaborative_objects::ObjectId, PeerId};
+    use radicle::crypto::PublicKey;
 
     /// Format a peer id to be more compact.
-    pub fn peer(peer: &PeerId) -> String {
-        let peer = peer.default_encoding();
+    pub fn peer(peer: &PublicKey) -> String {
+        let peer = peer.to_string();
         let start = peer.chars().take(7).collect::<String>();
         let end = peer.chars().skip(peer.len() - 7).collect::<String>();
 

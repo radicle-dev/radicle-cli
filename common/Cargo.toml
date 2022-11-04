@@ -40,6 +40,19 @@ timeago = { version = "0.3.1", default-features = false }
 toml = { version = "0.5.9" }
 uuid = { version = "1.1.2", features = ["v4", "fast-rng", "serde"] }
 zeroize = "1.1"
+radicle = "0.2.0"
+radicle-node = "0.2.0"
+radicle-ssh = "0.2.0"
+secstr = "0.3"
+ed25519-zebra = "3.0"
+serde_cbor = "0.10"
+rand = "0.8"
+multibase = "0.9"
+dyn-clone = "1.0"
+rpassword = "4.0"
+scrypt = { version = "^0.10.0", default-features = false }
+generic-array = { version = "0.14", features = ["serde"] }
+chacha20poly1305 = { version = "^0.10.1", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 quickcheck = "1"

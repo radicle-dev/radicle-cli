@@ -5,7 +5,8 @@ use std::str::FromStr;
 use anyhow::Context as _;
 use radicle_common::signer::ToSigner;
 
-use librad::PeerId;
+use radicle::Profile;
+use radicle_node::service::NodeId;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{config, git, keys, person, profile};
@@ -43,7 +44,7 @@ pub struct Options {
     pub active: bool,
     pub stdin: bool,
     pub name: Option<String>,
-    pub peer_id: Option<PeerId>,
+    pub node_id: Option<NodeId>,
 }
 
 impl Args for Options {
@@ -54,7 +55,7 @@ impl Args for Options {
         let mut active = false;
         let mut stdin = false;
         let mut name = None;
-        let mut peer_id = None;
+        let mut node_id = None;
         let mut parser = lexopt::Parser::from_args(args);
 
         while let Some(arg) = parser.next()? {
@@ -84,9 +85,9 @@ impl Args for Options {
                     let string = val.to_str().ok_or_else(|| {
                         anyhow::anyhow!("invalid UTF-8 string specified for peer id")
                     })?;
-                    let id = PeerId::from_str(string).context("invalid peer id specified")?;
+                    let id = NodeId::from_str(string).context("invalid peer id specified")?;
 
-                    peer_id = Some(id);
+                    node_id = Some(id);
                 }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
@@ -98,7 +99,7 @@ impl Args for Options {
                 active,
                 stdin,
                 name,
-                peer_id,
+                node_id,
             },
             vec![],
         ))
@@ -106,18 +107,15 @@ impl Args for Options {
 }
 
 pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
-    let profiles = match profile::list() {
-        Ok(profiles) => profiles,
-        _ => vec![],
-    };
+    let profile = Profile::load();
 
-    if options.init || profiles.is_empty() {
-        if options.peer_id.is_some() {
-            anyhow::bail!("you may not specify a peer id when initializing a new identity");
+    if options.init || profile.is_err() {
+        if options.node_id.is_some() {
+            anyhow::bail!("you may not specify a node id when initializing a new identity");
         }
         init(options)
     } else {
-        authenticate(&profiles, options, ctx)
+        authenticate(&profile.unwrap(), options, ctx)
     }
 }
 
@@ -143,9 +141,10 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     let passphrase = term::read_passphrase(options.stdin, true)?;
     let secret = keys::pwhash(passphrase.clone());
+    let keypair = radicle::crypto::KeyPair::generate();
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
-    let (profile, peer_id) = profile::create(home, secret.clone())?;
+    let profile = Profile::init(keypair)?;
 
     let signer = if let Ok(sock) = sock {
         spinner.finish();
@@ -163,14 +162,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         signer
     };
 
-    spinner = term::spinner("Setting up config...");
-    config::Config::init(&profile)?;
-    spinner.finish();
-
     let storage = keys::storage(&profile, signer.clone())?;
-    let person = person::create(&profile, &name, signer, &storage)
-        .context("could not create identity document")?;
-    person::set_local(&storage, &person)?;
 
     term::success!(
         "Profile {} created.",
@@ -179,12 +171,8 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 
     term::blank();
     term::info!(
-        "Your radicle Peer ID is {}. This identifies your device.",
-        term::format::highlight(&peer_id.to_string())
-    );
-    term::info!(
-        "Your personal 🌱 URN is {}. This identifies you across devices.",
-        term::format::highlight(&person.urn().to_string())
+        "Your radicle Node ID is {}. This identifies your device.",
+        term::format::highlight(&profile.id().to_string())
     );
 
     term::blank();
@@ -197,7 +185,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
 }
 
 pub fn authenticate(
-    profiles: &[profile::Profile],
+    profiles: &profile::Profile,
     options: Options,
     ctx: impl term::Context,
 ) -> anyhow::Result<()> {
@@ -211,44 +199,19 @@ pub fn authenticate(
         }
     };
 
-    if !options.active && options.peer_id.is_none() {
+    if !options.active && options.node_id.is_none() {
         term::info!(
             "Your active identity is {}",
             term::display::Identity::new(&profile).styled()
         );
     }
 
-    let selection = if let Some(peer_id) = options.peer_id {
-        profiles
-            .iter()
-            .find(|p| match profile::read_only(p) {
-                Ok(s) => *s.peer_id() == peer_id,
-                Err(_) => false,
-            })
-            .ok_or_else(|| anyhow::anyhow!("Identity '{}' not found", peer_id))?
-    } else if profiles.len() > 1 && !options.active {
-        if let Some(p) = term::profile_select(profiles, &profile) {
-            p
-        } else {
-            return Ok(());
-        }
-    } else {
-        &profile
-    };
-
     term::headline(&format!(
         "🌱 Authenticating as {}",
-        term::display::Identity::new(selection).styled()
+        term::display::Identity::new(&profile).styled()
     ));
 
-    if selection.id() != profile.id() {
-        let id = selection.id();
-        profile::set(id)?;
-
-        term::success!("Profile {} activated", id);
-    }
-
-    let profile = selection;
+    let profile = &profile;
     if let Ok(sock) = keys::ssh_auth_sock() {
         if !keys::is_ready(profile, sock.clone())? {
             term::warning("Adding your radicle key to ssh-agent...");
@@ -296,7 +259,7 @@ mod tests {
             init: true,
             stdin: false,
             name: Some(name.to_owned()),
-            peer_id: None,
+            node_id: None,
         }
     }
 

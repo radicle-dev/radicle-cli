@@ -3,9 +3,7 @@ use std::str::FromStr;
 
 use zeroize::Zeroizing;
 
-use librad::crypto::keystore::pinentry::SecUtf8;
-use librad::crypto::BoxedSigner;
-use librad::profile::Profile;
+use secstr::SecUtf8;
 
 use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
 
@@ -180,6 +178,7 @@ pub fn abort<D: fmt::Display>(prompt: D) -> bool {
     ask(format::tertiary(prompt), false)
 }
 
+/*
 /// Get the signer. First we try getting it from ssh-agent, otherwise we prompt the user.
 pub fn signer(profile: &Profile) -> anyhow::Result<BoxedSigner> {
     let signer = if let Ok(sock) = keys::ssh_auth_sock() {
@@ -189,6 +188,7 @@ pub fn signer(profile: &Profile) -> anyhow::Result<BoxedSigner> {
     };
     Ok(signer)
 }
+*/
 
 pub fn theme() -> ColorfulTheme {
     ColorfulTheme {
@@ -334,6 +334,7 @@ pub fn read_passphrase_from_env_var() -> Result<SecUtf8, anyhow::Error> {
     Ok(SecUtf8::from(input.trim_end()))
 }
 
+/*
 pub fn secret_key(profile: &Profile) -> Result<keys::signer::ZeroizingSecretKey, anyhow::Error> {
     let passphrase = secret_input();
     let spinner = spinner("Unsealing key..."); // Nb. Spinner ends when dropped.
@@ -343,6 +344,7 @@ pub fn secret_key(profile: &Profile) -> Result<keys::signer::ZeroizingSecretKey,
 
     Ok(key)
 }
+*/
 
 pub fn select<'a, T>(options: &'a [T], active: &'a T) -> Option<&'a T>
 where
@@ -363,6 +365,7 @@ where
     result.map(|i| &options[i])
 }
 
+/*
 pub fn select_with_prompt<'a, T>(prompt: &str, options: &'a [T], active: &'a T) -> Option<&'a T>
 where
     T: fmt::Display + Eq + PartialEq,
@@ -398,6 +401,7 @@ pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&
 
     selection.map(|i| &profiles[i])
 }
+*/
 
 pub fn comment_select(issue: &Issue) -> Option<CommentId> {
     let selection = dialoguer::Select::with_theme(&theme())

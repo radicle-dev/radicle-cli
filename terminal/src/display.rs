@@ -1,8 +1,6 @@
 use std::fmt;
 
-use librad::profile::Profile;
-
-use radicle_common::profile;
+use radicle::Profile;
 
 use crate as term;
 
@@ -39,23 +37,17 @@ impl<'a> Identity<'a> {
 
 impl<'a> fmt::Display for Identity<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let read_only = profile::read_only(self.profile).map_err(|_| fmt::Error)?;
-        let username = profile::name(Some(self.profile)).map_err(|_| fmt::Error)?;
-        let username = format!("({})", username);
+        //TODO(dave): remove this unwrap
+        let profile = Profile::load().unwrap();
         let peer_id = match self.short {
-            true => radicle_common::fmt::peer(read_only.peer_id()),
-            false => read_only.peer_id().to_string(),
+            true => radicle_common::fmt::peer(profile.id()),
+            false => profile.id().to_string(),
         };
 
         if self.styled {
-            write!(
-                f,
-                "{} {}",
-                term::format::highlight(peer_id.to_string()),
-                term::format::dim(username)
-            )
+            write!(f, "{}", term::format::highlight(peer_id.to_string()),)
         } else {
-            write!(f, "{} {}", peer_id, username)
+            write!(f, "{}", peer_id)
         }
     }
 }

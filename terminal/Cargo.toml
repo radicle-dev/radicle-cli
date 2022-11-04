@@ -14,7 +14,8 @@ dialoguer = "0.10.0"
 indicatif = "0.16.2"
 console = "0.15"
 zeroize = "1.1"
-librad = { version = "0" }
+radicle = "0.2.0"
+secstr = "0.3"
 
 [dependencies.radicle-common]
 path = "../common"
