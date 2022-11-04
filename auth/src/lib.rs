@@ -3,7 +3,8 @@ use std::ffi::OsString;
 use std::str::FromStr;
 
 use anyhow::Context as _;
-use radicle_common::signer::ToSigner;
+
+use zeroize::Zeroizing;
 
 use radicle::Profile;
 use radicle_node::service::NodeId;
@@ -122,7 +123,6 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
 pub fn init(options: Options) -> anyhow::Result<()> {
     term::headline("Initializing your 🌱 profile and identity");
 
-    let sock = keys::ssh_auth_sock();
     let home = profile::home();
 
     if git::check_version().is_err() {
@@ -140,29 +140,12 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     )?;
 
     let passphrase = term::read_passphrase(options.stdin, true)?;
-    let secret = keys::pwhash(passphrase.clone());
-    let keypair = radicle::crypto::KeyPair::generate();
+    let secret = passphrase.unsecure();
 
     let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
-    let profile = Profile::init(keypair)?;
+    let profile = Profile::init(secret)?;
 
-    let signer = if let Ok(sock) = sock {
-        spinner.finish();
-        spinner = term::spinner("Adding to ssh-agent...");
-
-        keys::add(&profile, secret, sock.clone())?;
-        let signer = sock.to_signer(&profile)?;
-
-        spinner.finish();
-        signer
-    } else {
-        let signer = keys::load_secret_key(&profile, passphrase)?.to_signer(&profile)?;
-
-        spinner.finish();
-        signer
-    };
-
-    let storage = keys::storage(&profile, signer.clone())?;
+    let storage = keys::storage(&profile)?;
 
     term::success!(
         "Profile {} created.",
@@ -212,18 +195,17 @@ pub fn authenticate(
     ));
 
     let profile = &profile;
-    if let Ok(sock) = keys::ssh_auth_sock() {
-        if !keys::is_ready(profile, sock.clone())? {
-            term::warning("Adding your radicle key to ssh-agent...");
+    if !keys::is_ready(profile)? {
+        term::warning("Adding your radicle key to ssh-agent...");
 
-            // TODO: We should show the spinner on the passphrase prompt,
-            // otherwise it seems like the passphrase is valid even if it isn't.
-            let passphrase = term::read_passphrase(options.stdin, false)?;
-            let secret = keys::pwhash(passphrase);
+        // TODO: We should show the spinner on the passphrase prompt,
+        // otherwise it seems like the passphrase is valid even if it isn't.
+        let passphrase = term::read_passphrase(options.stdin, false)?;
+        let secret = Zeroizing::new(passphrase.unsecure().to_string());
 
-            let spinner = term::spinner("Unlocking...");
-            keys::add(profile, secret, sock).context("invalid passphrase supplied")?;
-            spinner.finish();
+        let spinner = term::spinner("Unlocking...");
+        keys::add(profile, secret).context("invalid passphrase supplied")?;
+        spinner.finish();
 
             term::success!("Radicle key added to ssh-agent");
         } else {
