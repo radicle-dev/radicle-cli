@@ -2,22 +2,24 @@
 use std::convert::TryInto;
 use std::fmt;
 
+/*
 use librad::git::identities;
 use librad::git::identities::project::heads::DefaultBranchHead;
 use librad::git::refs::Refs;
 use librad::git::storage::{ReadOnly, ReadOnlyStorage};
 use librad::git::{Storage, Urn};
 use librad::PeerId;
+*/
 
 use git_trailers as trailers;
-use radicle_git_ext as git;
+//use radicle_git_ext as git;
 use serde::Serialize;
 
 use crate::cobs::patch as cob;
 use crate::project;
 
 pub const TAG_PREFIX: &str = "patches/";
-
+/*
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("git: {0}")]
@@ -25,6 +27,7 @@ pub enum Error {
     #[error("storage: {0}")]
     Storage(#[from] librad::git::storage::Error),
 }
+*/
 
 /// A patch merge style.
 #[derive(Debug, PartialEq, Eq)]
@@ -154,7 +157,6 @@ pub fn merge_base(repo: &git2::Repository, patch: &Tag) -> Result<Option<git::Oi
 
     Ok(merge_base.map(|o| o.into()))
 }
-*/
 
 pub fn is_merged(
     repo: &git2::Repository,
@@ -215,7 +217,6 @@ pub fn create_tag(
     Ok(oid)
 }
 
-/*
 #[derive(Debug, Default)]
 pub struct MergeTargets {
     pub merged: Vec<project::PeerInfo>,
@@ -246,7 +247,6 @@ where
     }
     Ok(targets)
 }
-*/
 
 pub fn patch_merge_target_oid(
     target: cob::MergeTarget,
@@ -270,6 +270,7 @@ pub fn patch_merge_target_oid(
         }
     }
 }
+*/
 
 /// Return commits between the merge base and a head.
 pub fn patch_commits<'a>(

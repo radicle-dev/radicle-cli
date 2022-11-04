@@ -1,4 +1,5 @@
 #![allow(clippy::large_enum_variant)]
+/*
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::ops::{ControlFlow, Deref};
@@ -401,7 +402,9 @@ impl<'a> IssueStore<'a> {
         Ok(Some(doc))
     }
 }
+*/
 
+/*
 mod cobs {
     use super::*;
 
@@ -424,7 +427,9 @@ mod cobs {
         Ok(*cob.id())
     }
 }
+*/
 
+/*
 mod events {
     use super::*;
     use automerge::{
@@ -644,6 +649,7 @@ mod events {
         Ok(EntryContents::Automerge(change))
     }
 }
+*/
 
 #[cfg(test)]
 mod test {

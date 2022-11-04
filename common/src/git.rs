@@ -10,20 +10,23 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Context as _;
 
+/*
 use librad::git::local::url::LocalUrl;
 use librad::profile::Profile;
 use librad::reflike;
 use librad::{crypto::BoxedSigner, PeerId};
-
+*/
 pub use git2::{
     build::CheckoutBuilder, AnnotatedCommit, Commit, Direction, ErrorCode, MergeAnalysis,
     MergeOptions, Oid, Reference, Repository, Signature,
 };
+/*
 pub use librad::git::local::transport;
 pub use librad::git::types::remote::LocalFetchspec;
 pub use librad::git::types::remote::Remote;
 pub use librad::git_ext::{OneLevel, RefLike};
 pub use lnk_identities::git::set_upstream;
+*/
 
 use crate::keys;
 
@@ -135,6 +138,7 @@ pub fn git<S: AsRef<std::ffi::OsStr>>(
     )))
 }
 
+/*
 /// Configure SSH signing in the given git repo, for the given peer.
 pub fn configure_signing(repo: &Path, peer_id: &PeerId) -> Result<(), anyhow::Error> {
     let key = keys::to_ssh_key(peer_id)?;
@@ -216,6 +220,7 @@ pub fn read_gitsigners(path: &Path) -> Result<HashSet<String>, io::Error> {
     }
     Ok(keys)
 }
+*/
 
 /// Add a path to the repository's git ignore file. Creates the
 /// ignore file if it does not exist.
@@ -233,6 +238,7 @@ pub fn is_signing_configured(repo: &Path) -> Result<bool, anyhow::Error> {
     Ok(git(repo, ["config", CONFIG_SIGNING_KEY]).is_ok())
 }
 
+/*
 /// Return the list of radicle remotes for the given repository.
 pub fn remotes(repo: &git2::Repository) -> anyhow::Result<Vec<(String, PeerId)>> {
     let mut remotes = Vec::new();
@@ -262,6 +268,7 @@ pub fn rad_remote(repo: &Repository) -> anyhow::Result<Remote<LocalUrl>> {
         Err(err) => Err(err).context("could not read git remote configuration"),
     }
 }
+*/
 
 /// Setup an upstream tracking branch for the given remote and branch.
 /// Creates the tracking branch if it does not exist.
@@ -303,6 +310,7 @@ pub fn pull(repo: &Path, force: bool) -> anyhow::Result<String> {
     git(repo, args)
 }
 
+/*
 /// Fetch remote refs into working copy.
 pub fn fetch_remote(
     remote: &mut Remote<LocalUrl>,
@@ -320,6 +328,7 @@ pub fn fetch_remote(
 
     Ok(())
 }
+*/
 
 /// Clone the given repository via `git clone` into a directory.
 pub fn clone(repo: &str, destination: &Path) -> Result<String, anyhow::Error> {
@@ -339,6 +348,7 @@ pub fn check_version() -> Result<Version, anyhow::Error> {
     Ok(git_version)
 }
 
+/*
 /// Parse a remote refspec into a peer id and ref.
 pub fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
     refspec
@@ -346,6 +356,7 @@ pub fn parse_remote(refspec: &str) -> Option<(PeerId, &str)> {
         .and_then(|s| s.split_once('/'))
         .and_then(|(peer, r)| PeerId::from_str(peer).ok().map(|p| (p, r)))
 }
+*/
 
 pub fn view_diff(
     repo: &git2::Repository,
@@ -389,9 +400,11 @@ pub fn push_branch(name: &str) -> anyhow::Result<String> {
     git(Path::new("."), vec!["push", "rad", name])
 }
 
+/*
 fn write_gitsigner(mut w: impl io::Write, signer: &PeerId) -> io::Result<()> {
     writeln!(w, "{} {}", signer, keys::to_ssh_key(signer)?)
 }
+*/
 
 /// From a commit hash, return the signer's fingerprint, if any.
 pub fn commit_ssh_fingerprint(path: &Path, sha1: &str) -> Result<Option<String>, io::Error> {

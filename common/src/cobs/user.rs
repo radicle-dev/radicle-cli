@@ -1,3 +1,4 @@
+/*
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::ops::{ControlFlow, Deref};
@@ -191,7 +192,8 @@ mod cobs {
         Ok(())
     }
 }
-
+*/
+/*
 mod events {
     use super::*;
     use automerge::{
@@ -239,6 +241,7 @@ mod events {
         Ok(EntryContents::Automerge(change))
     }
 }
+*/
 
 #[cfg(test)]
 mod test {

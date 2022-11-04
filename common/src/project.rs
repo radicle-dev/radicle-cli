@@ -10,6 +10,7 @@ use either::Either;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+/*
 use librad::canonical::Cstring;
 use librad::crypto::BoxedSigner;
 use librad::git::identities::{self, project, Project};
@@ -30,6 +31,7 @@ use librad::PeerId;
 
 use lnk_identities;
 use lnk_identities::working_copy_dir::WorkingCopyDir;
+*/
 
 use radicle::crypto::PublicKey;
 
@@ -43,6 +45,7 @@ pub const URL_SCHEME: &str = "rad";
 /// Prefix for remote tracking branches from peers.
 pub const PEER_PREFIX: &str = "peers";
 
+/*
 /// Project indirect contributor identity.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct PeerIdentity {
@@ -75,7 +78,6 @@ impl PeerIdentity {
     }
 }
 
-/*
 /// Project peer information.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -117,7 +119,6 @@ impl PeerInfo {
         }
     }
 }
-*/
 
 /// Project delegate.
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -276,7 +277,6 @@ pub fn payload(name: String, description: String, default_branch: String) -> pay
     }
 }
 
-/*
 /// Create a new project identity.
 pub fn create(payload: payload::Project, storage: &Storage) -> anyhow::Result<Project> {
     let whoami = person::local(storage)?;
@@ -288,7 +288,6 @@ pub fn create(payload: payload::Project, storage: &Storage) -> anyhow::Result<Pr
 
     Ok(project)
 }
-*/
 
 /// Initialize a repo as a project.
 pub fn init(
@@ -539,6 +538,7 @@ pub fn cwd() -> anyhow::Result<(Urn, git::Repository)> {
 
     Ok((urn, repo))
 }
+*/
 
 /*
 /// Get the tracked peers of a project, including information about these peers.
@@ -557,7 +557,6 @@ where
     }
     Ok(remotes)
 }
-*/
 
 pub fn peer_prefix(name: &str) -> String {
     format!("{}/{}", PEER_PREFIX, name)
@@ -625,3 +624,4 @@ where
     let s: String = serde::Deserialize::deserialize(deserializer)?;
     s.parse().map_err(serde::de::Error::custom)
 }
+*/

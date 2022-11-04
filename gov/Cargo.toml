@@ -12,7 +12,7 @@ librad = "0"
 lexopt = "0.2"
 radicle-terminal = { path = "../terminal", features = ["ethereum"] }
 radicle-common = { path = "../common", features = ["ethereum"] }
-ethers = "0.17"
+ethers = "1.0"
 thiserror = "1.0"
 serde_json = "1"
 regex = "1.5"

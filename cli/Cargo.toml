@@ -27,14 +27,11 @@ lexopt = "0.2"
 rad-help = { path = "../help" }
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
-radicle-git-helpers = { version = "0" }
-link-identities = { version = "0" }
-librad = { version = "0" }
 url = { version = "*" }
 
 # Ethereum functionality
 
-ethers = { version = "0.17", optional = true }
+ethers = { version = "1.0", optional = true }
 futures-lite = { version = "1.12", optional = true }
 
 [[bin]]

@@ -4,12 +4,15 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use url::Url;
 
+/*
 use librad::git::Urn;
 use librad::PeerId;
+*/
 
 use crate::project::URL_SCHEME;
 use crate::{seed, sync};
 
+/*
 /// Identity origin.
 ///
 /// Represents a location from which an identity can be fetched.
@@ -89,6 +92,7 @@ impl TryFrom<Url> for Origin {
         Ok(Self { urn, seed })
     }
 }
+*/
 
 #[cfg(test)]
 mod test {

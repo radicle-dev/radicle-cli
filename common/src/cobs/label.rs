@@ -1,5 +1,5 @@
 #![allow(clippy::large_enum_variant)]
-
+/*
 use std::convert::TryFrom;
 use std::ops::ControlFlow;
 use std::str::FromStr;
@@ -135,7 +135,8 @@ impl<'a> Labels<'a> {
         }
     }
 }
-
+*/
+/*
 mod cobs {
     use super::*;
 
@@ -160,7 +161,8 @@ mod cobs {
         Ok(*cob.id())
     }
 }
-
+*/
+/*
 mod events {
     use super::*;
     use automerge::{
@@ -198,7 +200,7 @@ mod events {
         Ok(EntryContents::Automerge(doc.save_incremental()))
     }
 }
-
+*/
 #[cfg(test)]
 mod test {
     use super::*;

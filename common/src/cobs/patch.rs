@@ -1,4 +1,5 @@
 #![allow(clippy::too_many_arguments)]
+/*
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
@@ -732,7 +733,9 @@ impl Review {
         Ok(())
     }
 }
+*/
 
+/*
 mod lookup {
     use super::*;
 
@@ -805,7 +808,9 @@ mod lookup {
         })
     }
 }
+*/
 
+/*
 mod cobs {
     use super::*;
 
@@ -850,7 +855,9 @@ mod cobs {
         Ok(*cob.id())
     }
 }
+*/
 
+/*
 mod events {
     use super::*;
     use automerge::{
@@ -1068,6 +1075,7 @@ mod events {
         Ok(EntryContents::Automerge(change))
     }
 }
+*/
 
 #[cfg(test)]
 mod test {

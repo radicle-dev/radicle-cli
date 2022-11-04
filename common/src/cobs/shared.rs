@@ -1,4 +1,5 @@
 #![allow(clippy::large_enum_variant)]
+/*
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::convert::{Infallible, TryFrom};
@@ -813,7 +814,8 @@ pub enum DocumentError {
     #[error("list cannot be empty")]
     EmptyList,
 }
-
+*/
+/*
 pub mod lookup {
     use super::{Author, Comment, HashMap, Reaction, Replies};
     use super::{Document, DocumentError};
@@ -852,6 +854,7 @@ pub mod lookup {
         })
     }
 }
+*/
 
 // TODO(dave):
 /*

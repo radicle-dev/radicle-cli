@@ -7,9 +7,11 @@ use secstr::SecUtf8;
 
 use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
 
+/*
 use radicle_common::cobs::issue::Issue;
 use radicle_common::cobs::shared::CommentId;
 use radicle_common::signer::ToSigner;
+*/
 
 use super::command;
 use super::display;
@@ -401,7 +403,6 @@ pub fn profile_select<'a>(profiles: &'a [Profile], active: &Profile) -> Option<&
 
     selection.map(|i| &profiles[i])
 }
-*/
 
 pub fn comment_select(issue: &Issue) -> Option<CommentId> {
     let selection = dialoguer::Select::with_theme(&theme())
@@ -420,6 +421,7 @@ pub fn comment_select(issue: &Issue) -> Option<CommentId> {
 
     selection.map(CommentId::from)
 }
+*/
 
 pub fn markdown(content: &str) {
     if !content.is_empty() {

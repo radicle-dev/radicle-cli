@@ -1,6 +1,6 @@
 //! Person-related functionality.
 use anyhow::{Context, Error, Result};
-
+/*
 use librad::{canonical::Cstring, git::identities::local::LocalIdentity};
 
 use librad::git::identities::Person;
@@ -9,10 +9,9 @@ use librad::git::storage::Storage;
 use librad::crypto::BoxedSigner;
 use librad::identities::payload;
 use librad::identities::payload::HasNamespace;
-
-use radicle::Profile;
-
 pub use librad::git::identities::person::verify;
+*/
+use radicle::Profile;
 
 lazy_static::lazy_static! {
     static ref ENS_NAMESPACE: url::Url = "https://radicle.xyz/ethereum/ens/v1"
@@ -25,12 +24,13 @@ lazy_static::lazy_static! {
 pub struct Ens {
     pub name: String,
 }
-
+/*
 impl HasNamespace for Ens {
     fn namespace() -> &'static url::Url {
         &ENS_NAMESPACE
     }
 }
+*/
 
 /*
 // TODO(dave)

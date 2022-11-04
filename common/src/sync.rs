@@ -7,6 +7,7 @@ use std::time;
 
 use anyhow::anyhow;
 
+/*
 use librad::crypto::BoxedSigner;
 use librad::git::Urn;
 use librad::net::protocol::SendOnly;
@@ -19,15 +20,17 @@ use librad::net::{
 };
 use librad::profile::Profile;
 use librad::Signer;
-use link_async::Spawner;
 use lnk_clib::seed::store::FileStore;
 
 pub use lnk_clib::seed::{Seed, Seeds};
 pub use lnk_sync::Mode;
+use link_async::Spawner;
+*/
 
 use crate::config;
 use crate::nonempty::NonEmpty;
 
+/*
 /// Sync result of a seed.
 #[derive(Debug)]
 pub struct SyncResult {
@@ -98,7 +101,6 @@ pub async fn client(
     Ok(client)
 }
 
-/*
 /// Get the seeds configured for the profile.
 /// First checks local (working copy) config, then global.
 pub fn seeds(profile: &Profile) -> anyhow::Result<NonEmpty<Seed<String>>> {

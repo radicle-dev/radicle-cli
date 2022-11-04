@@ -3,7 +3,7 @@ use std::time;
 
 use futures_lite::StreamExt;
 use thiserror::Error;
-
+/*
 use librad::{
     git::Urn,
     net::{
@@ -15,9 +15,11 @@ use librad::{
 };
 use lnk_clib::seed::Seed;
 pub use request_pull::Success;
+*/
 
 use crate::tokio;
 
+/*
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(transparent)]
@@ -59,3 +61,4 @@ where
 
     Err(Error::NoResponse)
 }
+*/

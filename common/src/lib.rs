@@ -26,8 +26,10 @@ pub mod ethereum;
 extern crate quickcheck;
 
 pub use args::Error;
+/*
 pub use librad::git::Urn;
 pub use lnk_identities as identities;
+*/
 pub use nonempty;
 pub use serde_json as json;
 pub use tokio;
@@ -35,7 +37,7 @@ pub use url::Url;
 
 /// String formatting of various types.
 pub mod fmt {
-    use librad::{collaborative_objects::ObjectId, PeerId};
+    //use librad::{collaborative_objects::ObjectId, PeerId};
     use radicle::crypto::PublicKey;
 
     /// Format a peer id to be more compact.
@@ -52,10 +54,12 @@ pub mod fmt {
         format!("{:.7}", oid)
     }
 
+    /*
     /// Format a COB id.
     pub fn cob(id: &ObjectId) -> String {
         format!("{:.11}", id.to_string())
     }
+    */
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
