@@ -15,27 +15,27 @@ anyhow = "1.0"
 lexopt = "0.2"
 radicle-terminal = { path = "../terminal" }
 radicle-common = { path = "../common" }
-rad-self = { path = "../self" }
-rad-inspect = { path = "../inspect" }
-rad-ls = { path = "../ls" }
-rad-track = { path = "../track" }
-rad-untrack = { path = "../untrack" }
-rad-comment = { path = "../comment" }
-rad-review = { path = "../review" }
-rad-patch = { path = "../patch" }
-rad-path = { path = "../path" }
-rad-issue = { path = "../issue" }
-rad-init = { path = "../init" }
-rad-merge = { path = "../merge" }
+#rad-self = { path = "../self" }
+#rad-inspect = { path = "../inspect" }
+#rad-ls = { path = "../ls" }
+#rad-track = { path = "../track" }
+#rad-untrack = { path = "../untrack" }
+#rad-comment = { path = "../comment" }
+#rad-review = { path = "../review" }
+#rad-patch = { path = "../patch" }
+#rad-path = { path = "../path" }
+#rad-issue = { path = "../issue" }
+#rad-init = { path = "../init" }
+#rad-merge = { path = "../merge" }
 rad-auth = { path = "../auth" }
-rad-clone = { path = "../clone" }
-rad-checkout = { path = "../checkout" }
-rad-remote = { path = "../remote" }
-rad-push = { path = "../push" }
-rad-pull = { path = "../pull" }
-rad-sync = { path = "../sync" }
-rad-rm = { path = "../rm" }
-rad-edit = { path = "../edit" }
+#rad-clone = { path = "../clone" }
+#rad-checkout = { path = "../checkout" }
+#rad-remote = { path = "../remote" }
+#rad-push = { path = "../push" }
+#rad-pull = { path = "../pull" }
+#rad-sync = { path = "../sync" }
+#rad-rm = { path = "../rm" }
+#rad-edit = { path = "../edit" }
 
 # Ethereum
 

@@ -2,10 +2,12 @@ use std::ffi::OsString;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_terminal as term;
-
+/*
 #[cfg(feature = "ethereum")]
 pub use rad_account;
+*/
 pub use rad_auth;
+/*
 pub use rad_checkout;
 pub use rad_clone;
 pub use rad_comment;
@@ -30,6 +32,7 @@ pub use rad_self;
 pub use rad_sync;
 pub use rad_track;
 pub use rad_untrack;
+*/
 
 pub const HELP: Help = Help {
     name: "help",
@@ -40,6 +43,7 @@ pub const HELP: Help = Help {
 
 const COMMANDS: &[Help] = &[
     rad_auth::HELP,
+    /*
     rad_init::HELP,
     rad_self::HELP,
     rad_inspect::HELP,
@@ -58,6 +62,7 @@ const COMMANDS: &[Help] = &[
     rad_account::HELP,
     rad_rm::HELP,
     rad_edit::HELP,
+    */
     crate::HELP,
 ];
 

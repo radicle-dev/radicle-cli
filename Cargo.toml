@@ -11,86 +11,99 @@ panic = "abort"
 
 [workspace]
 members = [
-  "anchor",
-  "account",
+#  "anchor",
+#  "account",
   "terminal",
   "common",
-  "checkout",
+#  "checkout",
   "cli",
-  "ens",
+#  "ens",
   "auth",
   "help",
-  "init",
-  "ls",
-  "rm",
-  "issue",
-  "patch",
-  "path",
-  "push",
-  "pull",
-  "remote",
-  "sync",
-  "self",
-  "inspect",
-  "track",
-  "untrack",
-  "gov",
-  "edit",
-  "reward",
-  "comment",
+#  "init",
+#  "ls",
+#  "rm",
+#  "issue",
+#  "patch",
+#  "path",
+#  "push",
+#  "pull",
+#  "remote",
+#  "sync",
+#  "self",
+#  "inspect",
+#  "track",
+#  "untrack",
+#  "gov",
+#  "edit",
+#  "reward",
+#  "comment",
 ]
 
 [patch.crates-io.link-crypto]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/link-crypto"
 
 [patch.crates-io.link-identities]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/link-identities"
 
 [patch.crates-io.link-async]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/link-async"
 
 [patch.crates-io.link-replication]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/link-replication"
 
 [patch.crates-io.radicle-git-helpers]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/git-helpers"
 
 [patch.crates-io.librad]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/librad"
 
 [patch.crates-io.lnk-sync]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/cli/lnk-sync"
 
 [patch.crates-io.lnk-clib]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/cli/lnk-clib"
 
 [patch.crates-io.lnk-profile]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/cli/lnk-profile"
 
 [patch.crates-io.radicle-git-ext]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/git-ext"
 
 [patch.crates-io.git-trailers]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/git-trailers"
 
 [patch.crates-io.git-ref-format]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/git-ref-format"
 
 [patch.crates-io.lnk-identities]
-git = "https://github.com/radicle-dev/radicle-link"
-tag = "cycle/2022-09-06"
+#git = "https://github.com/radicle-dev/radicle-link"
+#tag = "cycle/2022-09-06"
+path = "../radicle-link/cli/lnk-identities"
 
 [patch.crates-io.automerge]
 git = "https://github.com/automerge/automerge-rs"
@@ -101,5 +114,15 @@ git = "https://github.com/a1ien/rusb.git"
 rev = "050f5091c7b0fb69c0fc25edec0910abe8afadf1"
 
 [patch.crates-io.radicle-keystore]
-git = "https://github.com/radicle-dev/radicle-keystore.git"
-rev = "9cbaac582f958f3538362892b9d01b2cfcff9da5"
+#git = "https://github.com/radicle-dev/radicle-keystore.git"
+#rev = "9cbaac582f958f3538362892b9d01b2cfcff9da5"
+path = "../radicle-keystore"
+
+[patch.crates-io.radicle]
+path = "../radicle-node/radicle"
+
+[patch.crates-io.radicle-node]
+path = "../radicle-node/radicle-node"
+
+[patch.crates-io.radicle-ssh]
+path = "../radicle-node/radicle-ssh"

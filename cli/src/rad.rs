@@ -102,6 +102,7 @@ fn run(command: Command) -> Result<(), Option<anyhow::Error>> {
 
 fn run_other(exe: &str, args: &[OsString]) -> Result<(), Option<anyhow::Error>> {
     match exe {
+        /*
         #[cfg(feature = "ethereum")]
         "account" => {
             term::run_command_args::<rad_account::Options, _>(
@@ -111,6 +112,7 @@ fn run_other(exe: &str, args: &[OsString]) -> Result<(), Option<anyhow::Error>> 
                 args.to_vec(),
             );
         }
+        */
         "auth" => {
             term::run_command_args::<rad_auth::Options, _>(
                 rad_auth::HELP,
@@ -119,6 +121,7 @@ fn run_other(exe: &str, args: &[OsString]) -> Result<(), Option<anyhow::Error>> 
                 args.to_vec(),
             );
         }
+        /*
         "checkout" => {
             term::run_command_args::<rad_checkout::Options, _>(
                 rad_checkout::HELP,
@@ -305,6 +308,7 @@ fn run_other(exe: &str, args: &[OsString]) -> Result<(), Option<anyhow::Error>> 
                 args.to_vec(),
             );
         }
+        */
         _ => {
             let exe = format!("{}-{}", NAME, exe);
             let status = process::Command::new(exe.clone()).args(args).status();
