@@ -1,35 +1,5 @@
 mod push;
 
-use std::convert::TryInto;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time;
-
-use anyhow::anyhow;
-
-/*
-use librad::crypto::BoxedSigner;
-use librad::git::Urn;
-use librad::net::protocol::SendOnly;
-use librad::net::{
-    self,
-    peer::{client, Client},
-    quic,
-    quic::ConnectPeer,
-    replication, Network,
-};
-use librad::profile::Profile;
-use librad::Signer;
-use lnk_clib::seed::store::FileStore;
-
-pub use lnk_clib::seed::{Seed, Seeds};
-pub use lnk_sync::Mode;
-use link_async::Spawner;
-*/
-
-use crate::config;
-use crate::nonempty::NonEmpty;
-
 /*
 /// Sync result of a seed.
 #[derive(Debug)]

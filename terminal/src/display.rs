@@ -6,8 +6,7 @@ use crate as term;
 
 /// Identity formatter that takes a profile and displays it as
 /// `peer_id` (`username`) depending on the configuration.
-pub struct Identity<'a> {
-    profile: &'a Profile,
+pub struct Identity {
     /// If true, `peer_id` is printed in its compact format e.g. `hynddpk…uf4qwge`
     short: bool,
     /// If true, `peer_id` and `username` are printed using the terminal's
@@ -15,10 +14,9 @@ pub struct Identity<'a> {
     styled: bool,
 }
 
-impl<'a> Identity<'a> {
-    pub fn new(profile: &'a Profile) -> Self {
+impl Identity {
+    pub fn new() -> Self {
         Self {
-            profile,
             short: false,
             styled: false,
         }
@@ -35,7 +33,7 @@ impl<'a> Identity<'a> {
     }
 }
 
-impl<'a> fmt::Display for Identity<'a> {
+impl fmt::Display for Identity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         //TODO(dave): remove this unwrap
         let profile = Profile::load().unwrap();

@@ -1,23 +1,10 @@
 //! User profile related functions.
-use std::fs;
-use std::{env, fmt, path};
 
 use anyhow::{anyhow, Error, Result};
-use serde::{de::DeserializeOwned, Serialize};
 
 pub use radicle::profile::{home, Profile};
-/*
-use librad::profile::Profile as OldProfile;
-use librad::crypto::{
-    keystore::{FileStorage, Keystore as _},
-    PublicKey, SecretKey,
-};
-use librad::PeerId;
-use librad::{git::storage::ReadOnly, git::Storage, keystore::crypto::Crypto};
-*/
 
 use crate::args;
-use crate::keys;
 
 /// Environment var that sets the radicle home directory.
 pub const RAD_HOME: &str = "RAD_HOME";
@@ -30,7 +17,7 @@ pub fn default() -> Result<Profile, Error> {
     };
 
     // TODO(dave): what to do with this?
-    let not_active_error = args::Error::WithHint {
+    let _not_active_error = args::Error::WithHint {
         err: anyhow!("Could not load active radicle profile"),
         hint: "To setup your radicle profile, run `rad auth --init`.",
     };

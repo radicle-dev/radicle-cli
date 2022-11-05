@@ -1,14 +1,14 @@
 //! SSH and key-related functions.
-use anyhow::{Context as _, Error, Result};
-
+use anyhow::{anyhow, Error, Result};
 use zeroize::Zeroizing;
 
+use radicle::crypto::ssh;
 use radicle::profile::Profile;
 use radicle::Storage;
 
-use radicle::crypto::ssh;
-
-use anyhow::anyhow;
+/// Env var used to pass down the passphrase to the git-remote-helper when
+/// ssh-agent isn't present.
+pub const RAD_PASSPHRASE: &str = "RAD_PASSPHRASE";
 
 /// Get the radicle signer and storage.
 pub fn storage(profile: &Profile) -> Result<Storage, Error> {

@@ -7,17 +7,9 @@ use secstr::SecUtf8;
 
 use dialoguer::{console::style, console::Style, theme::ColorfulTheme, Input, Password};
 
-/*
-use radicle_common::cobs::issue::Issue;
-use radicle_common::cobs::shared::CommentId;
-use radicle_common::signer::ToSigner;
-*/
-
 use super::command;
-use super::display;
 use super::format;
 use super::keys;
-use super::spinner::spinner;
 use super::Error;
 
 #[cfg(feature = "ethereum")]

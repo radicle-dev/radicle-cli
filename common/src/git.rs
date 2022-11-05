@@ -1,34 +1,17 @@
 //! Git-related functions and types.
-use std::collections::HashSet;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context as _;
 
-/*
-use librad::git::local::url::LocalUrl;
-use librad::profile::Profile;
-use librad::reflike;
-use librad::{crypto::BoxedSigner, PeerId};
-*/
 pub use git2::{
     build::CheckoutBuilder, AnnotatedCommit, Commit, Direction, ErrorCode, MergeAnalysis,
     MergeOptions, Oid, Reference, Repository, Signature,
 };
-/*
-pub use librad::git::local::transport;
-pub use librad::git::types::remote::LocalFetchspec;
-pub use librad::git::types::remote::Remote;
-pub use librad::git_ext::{OneLevel, RefLike};
-pub use lnk_identities::git::set_upstream;
-*/
-
-use crate::keys;
 
 pub const CONFIG_COMMIT_GPG_SIGN: &str = "commit.gpgsign";
 pub const CONFIG_SIGNING_KEY: &str = "user.signingkey";

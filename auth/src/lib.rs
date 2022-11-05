@@ -10,7 +10,7 @@ use radicle::Profile;
 use radicle_node::service::NodeId;
 
 use radicle_common::args::{Args, Error, Help};
-use radicle_common::{config, git, keys, person, profile};
+use radicle_common::{git, keys};
 use radicle_terminal as term;
 
 pub const HELP: Help = Help {
@@ -116,14 +116,12 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         }
         init(options)
     } else {
-        authenticate(&profile.unwrap(), options, ctx)
+        authenticate(options, ctx)
     }
 }
 
 pub fn init(options: Options) -> anyhow::Result<()> {
     term::headline("Initializing your 🌱 profile and identity");
-
-    let home = profile::home();
 
     if git::check_version().is_err() {
         term::warning(&format!(
@@ -133,19 +131,12 @@ pub fn init(options: Options) -> anyhow::Result<()> {
         term::blank();
     }
 
-    let name = sanitize_name(
-        options
-            .name
-            .unwrap_or_else(|| term::text_input("Name", None).unwrap()),
-    )?;
-
     let passphrase = term::read_passphrase(options.stdin, true)?;
     let secret = passphrase.unsecure();
 
-    let mut spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
+    let spinner = term::spinner("Creating your 🌱 Ed25519 keypair...");
     let profile = Profile::init(secret)?;
-
-    let storage = keys::storage(&profile)?;
+    spinner.finish();
 
     term::success!(
         "Profile {} created.",
@@ -167,11 +158,7 @@ pub fn init(options: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn authenticate(
-    profiles: &profile::Profile,
-    options: Options,
-    ctx: impl term::Context,
-) -> anyhow::Result<()> {
+pub fn authenticate(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let profile = match ctx.profile() {
         Ok(profile) => profile,
         Err(_) => {
@@ -185,13 +172,13 @@ pub fn authenticate(
     if !options.active && options.node_id.is_none() {
         term::info!(
             "Your active identity is {}",
-            term::display::Identity::new(&profile).styled()
+            term::display::Identity::new().styled()
         );
     }
 
     term::headline(&format!(
         "🌱 Authenticating as {}",
-        term::display::Identity::new(&profile).styled()
+        term::display::Identity::new().styled()
     ));
 
     let profile = &profile;
@@ -207,23 +194,12 @@ pub fn authenticate(
         keys::add(profile, secret).context("invalid passphrase supplied")?;
         spinner.finish();
 
-            term::success!("Radicle key added to ssh-agent");
-        } else {
-            term::success!("Signing key already in ssh-agent");
-        }
+        term::success!("Radicle key added to ssh-agent");
     } else {
-        term::warning("Radicle key won't be added to ssh-agent since it's not running.");
-        term::blank();
+        term::success!("Signing key already in ssh-agent");
     };
 
     Ok(())
-}
-
-fn sanitize_name(name: String) -> anyhow::Result<String> {
-    if name.contains(char::is_whitespace) {
-        anyhow::bail!("Name cannot contain whitespaces");
-    }
-    Ok(name)
 }
 
 #[cfg(test)]

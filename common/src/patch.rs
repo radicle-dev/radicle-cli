@@ -1,22 +1,5 @@
 //! Patch-related functions and types.
-use std::convert::TryInto;
 use std::fmt;
-
-/*
-use librad::git::identities;
-use librad::git::identities::project::heads::DefaultBranchHead;
-use librad::git::refs::Refs;
-use librad::git::storage::{ReadOnly, ReadOnlyStorage};
-use librad::git::{Storage, Urn};
-use librad::PeerId;
-*/
-
-use git_trailers as trailers;
-//use radicle_git_ext as git;
-use serde::Serialize;
-
-use crate::cobs::patch as cob;
-use crate::project;
 
 pub const TAG_PREFIX: &str = "patches/";
 /*

@@ -1,43 +1,4 @@
 //! Project-related functions and types.
-use std::collections::{HashMap, HashSet};
-use std::convert::{TryFrom, TryInto};
-use std::fmt;
-use std::iter;
-use std::path::PathBuf;
-
-use anyhow::{anyhow, Result};
-use either::Either;
-use serde::{Deserialize, Serialize};
-use url::Url;
-
-/*
-use librad::canonical::Cstring;
-use librad::crypto::BoxedSigner;
-use librad::git::identities::{self, project, Project};
-use librad::git::local::transport;
-use librad::git::local::url::LocalUrl;
-use librad::git::storage::{ReadOnly, Storage};
-use librad::git::tracking;
-use librad::git::types::remote::Remote;
-use librad::git::types::{Namespace, Reference};
-use librad::git::Urn;
-use librad::git_ext::{OneLevel, RefLike};
-use librad::identities::payload::{self, ProjectPayload};
-use librad::identities::SomeIdentity;
-use librad::identities::{Person, VerifiedProject};
-use librad::paths::Paths;
-use librad::profile::Profile;
-use librad::PeerId;
-
-use lnk_identities;
-use lnk_identities::working_copy_dir::WorkingCopyDir;
-*/
-
-use radicle::crypto::PublicKey;
-
-use crate as common;
-use crate::person::Ens;
-use crate::{git, person};
 
 /// URL scheme for radicle resources.
 pub const URL_SCHEME: &str = "rad";
