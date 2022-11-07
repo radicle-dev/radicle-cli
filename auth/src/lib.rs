@@ -1,13 +1,11 @@
 #![allow(clippy::or_fun_call)]
 use std::ffi::OsString;
-use std::str::FromStr;
 
 use anyhow::Context as _;
 
 use zeroize::Zeroizing;
 
 use radicle::Profile;
-use radicle_node::service::NodeId;
 
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::{git, keys};
@@ -41,11 +39,9 @@ Options
 
 #[derive(Debug)]
 pub struct Options {
-    pub init: bool,
     pub active: bool,
     pub stdin: bool,
     pub name: Option<String>,
-    pub node_id: Option<NodeId>,
 }
 
 impl Args for Options {
@@ -56,7 +52,6 @@ impl Args for Options {
         let mut active = false;
         let mut stdin = false;
         let mut name = None;
-        let mut node_id = None;
         let mut parser = lexopt::Parser::from_args(args);
 
         while let Some(arg) = parser.next()? {
@@ -82,25 +77,15 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
-                Value(val) => {
-                    let string = val.to_str().ok_or_else(|| {
-                        anyhow::anyhow!("invalid UTF-8 string specified for peer id")
-                    })?;
-                    let id = NodeId::from_str(string).context("invalid peer id specified")?;
-
-                    node_id = Some(id);
-                }
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
 
         Ok((
             Options {
-                init,
                 active,
                 stdin,
                 name,
-                node_id,
             },
             vec![],
         ))
@@ -110,10 +95,7 @@ impl Args for Options {
 pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let profile = Profile::load();
 
-    if options.init || profile.is_err() {
-        if options.node_id.is_some() {
-            anyhow::bail!("you may not specify a node id when initializing a new identity");
-        }
+    if profile.is_err() {
         init(options)
     } else {
         authenticate(options, ctx)
@@ -169,7 +151,7 @@ pub fn authenticate(options: Options, ctx: impl term::Context) -> anyhow::Result
         }
     };
 
-    if !options.active && options.node_id.is_none() {
+    if !options.active {
         term::info!(
             "Your active identity is {}",
             term::display::Identity::new().styled()
@@ -214,10 +196,8 @@ mod tests {
     fn create_auth_options(name: &str) -> Options {
         Options {
             active: false,
-            init: true,
             stdin: false,
             name: Some(name.to_owned()),
-            node_id: None,
         }
     }
 
