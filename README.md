@@ -59,3 +59,10 @@ Then update the package list and install `radicle-cli`:
 
     brew tap --force-auto-update radicle/cli https://pine.radicle.garden/radicle-cli-homebrew.git
     brew install radicle-cli
+
+### 🐧 From AUR (Arch)
+
+We provide an [AUR package](https://aur.archlinux.org/packages/radicle-cli-bin) containing precompiled
+binaries.  In order to use it, you can follow the [official installation
+instructions](https://wiki.archlinux.org/title/Arch_User_Repository#Installing_and_upgrading_packages), or use
+any of the [AUR Helpers](https://wiki.archlinux.org/title/AUR_helpers) available.
