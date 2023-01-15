@@ -1,3 +1,7 @@
+⚠️ **Notice**: Development of the Radicle CLI has moved to the [Heartwood repository](https://github.com/radicle-dev/heartwood). This repository is being deprecated.
+
+---
+
 # Radicle CLI
 
 > ✨ Command-line tooling for Radicle.
