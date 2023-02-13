@@ -4,10 +4,17 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context};
 
+use librad::git::storage::ReadOnly;
+use librad::git::Urn;
+
 use radicle_common::args::{Args, Error, Help};
 use radicle_common::cobs::issue::*;
+// use radicle_common::cobs::shared::*;
 use radicle_common::{cobs, keys, project};
 use radicle_terminal as term;
+
+#[cfg(feature = "tui")]
+mod tui;
 
 pub const HELP: Help = Help {
     name: "issue",
@@ -21,6 +28,7 @@ Usage
     rad issue delete <id>
     rad issue react <id> [--emoji <char>]
     rad issue list
+    rad issue interactive
 
 Options
 
@@ -41,6 +49,7 @@ pub enum OperationName {
     React,
     Delete,
     List,
+    Interactive,
 }
 
 impl Default for OperationName {
@@ -67,6 +76,7 @@ pub enum Operation {
         reaction: cobs::Reaction,
     },
     List,
+    Interactive,
 }
 
 /// Tool options.
@@ -125,6 +135,7 @@ impl Args for Options {
                     "d" | "delete" => op = Some(OperationName::Delete),
                     "l" | "list" => op = Some(OperationName::List),
                     "r" | "react" => op = Some(OperationName::React),
+                    "i" | "interactive" => op = Some(OperationName::Interactive),
 
                     unknown => anyhow::bail!("unknown operation '{}'", unknown),
                 },
@@ -158,6 +169,7 @@ impl Args for Options {
                 id: id.ok_or_else(|| anyhow!("an issue id to remove must be provided"))?,
             },
             OperationName::List => Operation::List,
+            OperationName::Interactive => Operation::Interactive,
         };
 
         Ok((Options { op }, vec![]))
@@ -189,43 +201,7 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
             }
         }
         Operation::Create { title, description } => {
-            let meta = Metadata {
-                title: title.unwrap_or("Enter a title".to_owned()),
-                labels: vec![],
-            };
-            let yaml = serde_yaml::to_string(&meta)?;
-            let doc = format!(
-                "{}---\n\n{}",
-                yaml,
-                description.unwrap_or("Enter a description...".to_owned())
-            );
-
-            if let Some(text) = term::Editor::new().edit(&doc)? {
-                let mut meta = String::new();
-                let mut frontmatter = false;
-                let mut lines = text.lines();
-
-                while let Some(line) = lines.by_ref().next() {
-                    if line.trim() == "---" {
-                        if frontmatter {
-                            break;
-                        } else {
-                            frontmatter = true;
-                            continue;
-                        }
-                    }
-                    if frontmatter {
-                        meta.push_str(line);
-                        meta.push('\n');
-                    }
-                }
-
-                let description: String = lines.collect::<Vec<&str>>().join("\n");
-                let meta: Metadata =
-                    serde_yaml::from_str(&meta).context("failed to parse yaml front-matter")?;
-
-                issues.create(&project, &meta.title, description.trim(), &meta.labels)?;
-            }
+            create(&project, &issues, title, description)?;
         }
         Operation::List => {
             for (id, issue) in issues.all(&project)? {
@@ -235,7 +211,80 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
         Operation::Delete { id } => {
             issues.remove(&project, &id)?;
         }
+        Operation::Interactive => {
+            tui(&storage, &project, &issues)?;
+        }
     }
 
+    Ok(())
+}
+
+fn create(
+    project: &Urn,
+    store: &IssueStore,
+    title: Option<String>,
+    description: Option<String>,
+) -> anyhow::Result<()> {
+    let meta = Metadata {
+        title: title.unwrap_or("Enter a title".to_owned()),
+        labels: vec![],
+    };
+    let yaml = serde_yaml::to_string(&meta)?;
+    let doc = format!(
+        "{}---\n\n{}",
+        yaml,
+        description.unwrap_or("Enter a description...".to_owned())
+    );
+
+    if let Some(text) = term::Editor::new().edit(&doc)? {
+        let mut meta = String::new();
+        let mut frontmatter = false;
+        let mut lines = text.lines();
+
+        while let Some(line) = lines.by_ref().next() {
+            if line.trim() == "---" {
+                if frontmatter {
+                    break;
+                } else {
+                    frontmatter = true;
+                    continue;
+                }
+            }
+            if frontmatter {
+                meta.push_str(line);
+                meta.push('\n');
+            }
+        }
+        let description: String = lines.collect::<Vec<&str>>().join("\n");
+        let meta: Metadata =
+            serde_yaml::from_str(&meta).context("failed to parse yaml front-matter")?;
+
+        store.create(project, &meta.title, description.trim(), &meta.labels)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "tui")]
+fn tui<S: AsRef<ReadOnly>>(storage: &S, project: &Urn, store: &IssueStore) -> anyhow::Result<()> {
+    use radicle_terminal_tui::Window;
+    use tui::app;
+
+    if let Some(metadata) = project::get(&storage, &project)? {
+        let mut window = Window::default();
+        window.run(&mut app::IssueTui::new(&storage, &metadata, &store))?;
+    } else {
+        anyhow::bail!("Could not load project metadata.");
+    }
+
+    Ok(())
+}
+
+#[cfg(not(feature = "tui"))]
+fn tui<S: AsRef<ReadOnly>>(
+    _storage: &S,
+    _project: &Urn,
+    _store: &IssueStore,
+) -> anyhow::Result<()> {
+    term::warning("Could not run tui. Please activate feature 'tui'.");
     Ok(())
 }
