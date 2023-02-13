@@ -118,7 +118,7 @@ pub fn execute(options: Options, profile: &profile::Profile) -> anyhow::Result<P
                 );
                 Some(*d)
             }
-            [_,_,..] => anyhow::bail!("project has more than one delegate, please specify which one you would like to checkout"),
+            [_, _, ..] => anyhow::bail!("project has more than one delegate, please specify which one you would like to checkout"),
         }
     };
 
