@@ -79,9 +79,27 @@ impl Default for Update {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum OperationName {
+    Create,
+    List,
+}
+
+impl Default for OperationName {
+    fn default() -> Self {
+        Self::List
+    }
+}
+
+#[derive(Debug)]
+pub enum Operation {
+    Create,
+    List,
+}
+
+#[derive(Debug)]
 pub struct Options {
-    pub list: bool,
+    pub op: Operation,
     pub verbose: bool,
     pub sync: bool,
     pub push: bool,
@@ -94,7 +112,7 @@ impl Args for Options {
         use lexopt::prelude::*;
 
         let mut parser = lexopt::Parser::from_args(args);
-        let mut list = false;
+        let mut op: Option<OperationName> = None;
         let mut verbose = false;
         let mut sync = true;
         let mut message = Comment::default();
@@ -103,9 +121,6 @@ impl Args for Options {
 
         while let Some(arg) = parser.next()? {
             match arg {
-                Long("list") | Short('l') => {
-                    list = true;
-                }
                 Long("verbose") | Short('v') => {
                     verbose = true;
                 }
@@ -144,13 +159,24 @@ impl Args for Options {
                 Long("help") => {
                     return Err(Error::Help.into());
                 }
+                Value(val) if op.is_none() => match val.to_string_lossy().as_ref() {
+                    "n" | "new" => op = Some(OperationName::Create),
+                    "l" | "list" => op = Some(OperationName::List),
+
+                    unknown => anyhow::bail!("unknown operation '{}'", unknown),
+                },
                 _ => return Err(anyhow::anyhow!(arg.unexpected())),
             }
         }
 
+        let op = match op.unwrap_or_default() {
+            OperationName::Create => Operation::Create,
+            OperationName::List => Operation::List,
+        };
+
         Ok((
             Options {
-                list,
+                op,
                 sync,
                 message,
                 push,
@@ -172,10 +198,9 @@ pub fn run(options: Options, ctx: impl term::Context) -> anyhow::Result<()> {
     let project = project::get(&storage, &urn)?
         .ok_or_else(|| anyhow!("couldn't load project {} from local state", urn))?;
 
-    if options.list {
-        list(&storage, Some(repo), &profile, &project, options)?;
-    } else {
-        create(&storage, &profile, &project, &repo, options)?;
+    match options.op {
+        Operation::Create => create(&storage, &profile, &project, &repo, options)?,
+        Operation::List => list(&storage, Some(repo), &profile, &project, options)?,
     }
 
     Ok(())
