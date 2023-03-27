@@ -64,13 +64,14 @@ fn parse_args() -> anyhow::Result<Command> {
 
 fn print_version() {
     if VERSION.contains("-dev") {
-        println!("{} {}+{}", NAME, VERSION, GIT_HEAD)
+        println!("{}+{}", VERSION, GIT_HEAD)
     } else {
-        println!("{} {}", NAME, VERSION)
+        println!("{}", VERSION)
     }
 }
 
 fn print_help() -> anyhow::Result<()> {
+    print!("rad ");
     print_version();
     println!("{}", DESCRIPTION);
     println!();
